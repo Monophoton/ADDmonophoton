@@ -9,6 +9,7 @@
 <use name=DataFormats/L1GlobalTrigger>
 <use name=DataFormats/TrackReco>
 <use name=DataFormats/HepMCCandidate>
+<use name=RecoEcal/EgammaCoreTools>
 <use name=SimDataFormats/GeneratorProducts> 
 <use name=CondFormats/L1TObjects>
 <use name=CondFormats/DataRecord>

@@ -61,7 +61,7 @@
 #include <map>
 #include <string>
 
-#include "/afs/cern.ch/user/s/sandhya/scratch0/CMSSW_3_1_2/src/Analysis/Analyzer/interface/Analyzer.h"
+#include "/afs/cern.ch/user/s/sandhya/scratch0/CMSSW_3_1_4/src/Analysis/Analyzer/interface/Analyzer.h"
 
 using namespace std;
 using namespace ROOT::Math::VectorUtil ;
@@ -258,7 +258,6 @@ Analyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
 	 
 	 //getting information from W+/W-
 	 if (abs(genparticle->pdgId())==24 && genparticle->status()==3) { 
-	   cout<<"getting information of W here"<<endl;
 	   is_W_event = 1;
 	   n_W_events++;
 	   gen_Wboson_pt      = genparticle->pt();
@@ -272,65 +271,89 @@ Analyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
 	   gen_Wboson_ID      = genparticle->pdgId();
 	   int daughters      = genparticle->numberOfDaughters();
 	   int iDaughter =0;
+	   cout<<"W pt:"<<genparticle->pt()<<endl;
+	   cout<<"W daughters:"<<endl;
 	   for(int i = 0;i<daughters;i++)
 	     {
 	       const reco::Candidate *daughter   = genparticle->daughter(i);
 	       if(abs(daughter->pdgId())==11) {is_Welec_event=1; n_Welec_events++;}
 	       if(abs(daughter->pdgId())==13) {is_Wmu_event=1  ; n_Wmu_events++  ;}
 	       if(abs(daughter->pdgId())==15) {is_Wtau_event=1 ; n_Wtau_events++ ;}  
-	       
+	       cout<<"ID, Status,Pt:"<<abs(daughter->pdgId())<<"   "<<daughter->status()<<"   "<<daughter->pt()<<endl;
 	       //getting leptons decaying from W
 	       if(abs(daughter->pdgId())!=24) 
 		 {
-		   //getting info of charged leptons
-		   if(abs(daughter->pdgId())==11||abs(daughter->pdgId())==13||abs(daughter->pdgId())==15)
-		     {
-		       gen_Wdaughter_pt[iDaughter]     = daughter->pt();
-		       gen_Wdaughter_px[iDaughter]     = daughter->px();
-		       gen_Wdaughter_py[iDaughter]     = daughter->py();
-		       gen_Wdaughter_pz[iDaughter]     = daughter->pz();
-		       gen_Wdaughter_phi[iDaughter]    = correct_phi(daughter->phi());
-		       gen_Wdaughter_eta[iDaughter]    = daughter->eta();
-		       gen_Wdaughter_E[iDaughter]      = daughter->energy();
-		       gen_Wdaughter_charge[iDaughter] = daughter->charge();
-		       gen_Wdaughter_ID[iDaughter]     = daughter->pdgId();
-		       iDaughter++;
-		     }
+		   gen_Wdaughter_pt[iDaughter]     = daughter->pt();
+		   gen_Wdaughter_px[iDaughter]     = daughter->px();
+		   gen_Wdaughter_py[iDaughter]     = daughter->py();
+		   gen_Wdaughter_pz[iDaughter]     = daughter->pz();
+		   gen_Wdaughter_phi[iDaughter]    = correct_phi(daughter->phi());
+		   gen_Wdaughter_eta[iDaughter]    = daughter->eta();
+		   gen_Wdaughter_E[iDaughter]      = daughter->energy();
+		   gen_Wdaughter_charge[iDaughter] = daughter->charge();
+		   gen_Wdaughter_ID[iDaughter]     = daughter->pdgId();
+		   iDaughter++;
 		 }//if(abs(daughter->pdgId())!=24)
-	       //std::cout<<"daughter loop ended"<<std::endl;
-	   }//end of for loop for daughters
+	     }//end of for loop for daughters
 	 }//end for loop of W information
 	 
-	 //getting info from decay of muons or taus
-	 if( ((abs(genparticle->pdgId())==13) || (abs(genparticle->pdgId())==15)) && (genparticle->status()==2) )
+	 //getting info from decay of muons 
+	 if( abs(genparticle->pdgId())==13 )
 	   {
+	     cout<<"parent ID, Status, Pt:"<<abs(genparticle->pdgId())<<"   "<<genparticle->status()<<"  "<< genparticle->pt()<<endl;
 	     int daughters   = genparticle->numberOfDaughters();
 	     int iDaughter=0;
 	     for(int i = 0;i<daughters;i++)
 	       {
 		 const reco::Candidate *daughter   = genparticle->daughter(i);
-		 if(abs(daughter->pdgId())!=13||abs(daughter->pdgId())!=15)
-		   {
-		     gen_Lepton_MotherID[iDaughter]     = genparticle->pdgId();
-		     gen_Lepton_MotherStatus[iDaughter] = genparticle->status();
-		     gen_Lepton_pt[iDaughter]           = daughter->pt();
-		     gen_Lepton_px[iDaughter]           = daughter->px();
-		     gen_Lepton_py[iDaughter]           = daughter->py();
-		     gen_Lepton_pz[iDaughter]           = daughter->pz();
-		     gen_Lepton_phi[iDaughter]          = correct_phi(daughter->phi());
-		     gen_Lepton_eta[iDaughter]          = daughter->eta();
-		     gen_Lepton_E[iDaughter]            = daughter->energy();
-		     gen_Lepton_ID[iDaughter]           = daughter->pdgId();
-		     gen_Lepton_status[iDaughter]       = daughter->status();
-		     gen_Lepton_charge[iDaughter]       = daughter->charge();
-		     iDaughter++;
-		   }//if(abs(daughter->pdgId()!=13)||abs(daughter->pdgId()!=15))
+		 cout<<"daughterID, status,Pt:"<<abs(daughter->pdgId())<<"   " <<daughter->status()<<"  "<< daughter->pt()<<endl;
+		 gen_Muon_ID[iDaughter]     = genparticle->pdgId();
+		 gen_Muon_Status[iDaughter] = genparticle->status();
+		 gen_Muon_Pt[iDaughter]     = genparticle->pt();
+		 gen_MuonDaughter_pt[iDaughter]           = daughter->pt();
+		 gen_MuonDaughter_px[iDaughter]           = daughter->px();
+		 gen_MuonDaughter_py[iDaughter]           = daughter->py();
+		 gen_MuonDaughter_pz[iDaughter]           = daughter->pz();
+		 gen_MuonDaughter_phi[iDaughter]          = correct_phi(daughter->phi());
+		 gen_MuonDaughter_eta[iDaughter]          = daughter->eta();
+		 gen_MuonDaughter_E[iDaughter]            = daughter->energy();
+		 gen_MuonDaughter_ID[iDaughter]           = daughter->pdgId();
+		 gen_MuonDaughter_status[iDaughter]       = daughter->status();
+		 gen_MuonDaughter_charge[iDaughter]       = daughter->charge();
+		 iDaughter++;
 	       }//for(int i = 0;i<daughters;i++)
-	   }//if((abs(genparticle->pdgId())==13||abs(genparticle->pdgId())==15) && (genparticle->status!=3) )
+	   }//if((abs(genparticle->pdgId())==13)
+
+	 //getting info from decay of taus 
+	 if( abs(genparticle->pdgId())==15 )
+	   {
+	     cout<<"parent ID, Status, Pt:"<<abs(genparticle->pdgId())<<"   "<<genparticle->status()<<"  "<< genparticle->pt()<<endl;
+	     int daughters   = genparticle->numberOfDaughters();
+	     int iDaughter=0;
+	     for(int i = 0;i<daughters;i++)
+	       {
+		 const reco::Candidate *daughter   = genparticle->daughter(i);
+		 cout<<"daughterID, status,Pt:"<<abs(daughter->pdgId())<<"   " <<daughter->status()<<"  "<< daughter->pt()<<endl;
+		 gen_tau_ID[iDaughter]           = genparticle->pdgId();
+		 gen_tau_Status[iDaughter]       = genparticle->status();
+		 gen_tau_Pt[iDaughter]           = genparticle->pt();
+		 gen_tauDaughter_pt[iDaughter]           = daughter->pt();
+		 gen_tauDaughter_px[iDaughter]           = daughter->px();
+		 gen_tauDaughter_py[iDaughter]           = daughter->py();
+		 gen_tauDaughter_pz[iDaughter]           = daughter->pz();
+		 gen_tauDaughter_phi[iDaughter]          = correct_phi(daughter->phi());
+		 gen_tauDaughter_eta[iDaughter]          = daughter->eta();
+		 gen_tauDaughter_E[iDaughter]            = daughter->energy();
+		 gen_tauDaughter_ID[iDaughter]           = daughter->pdgId();
+		 gen_tauDaughter_status[iDaughter]       = daughter->status();
+		 gen_tauDaughter_charge[iDaughter]       = daughter->charge();
+		 iDaughter++;
+	       }//for(int i = 0;i<daughters;i++)
+	   }//if((abs(genparticle->pdgId())==15)
 	 
 	 //cout<<"getting gen photon information now"<<endl;
 	 //getting information from all photons
-	 if (genparticle->pdgId()==22 && genparticle->status()==1)
+	 if (genparticle->pdgId()==22 && genparticle->status()==1 && genparticle->pt()>5.)
 	   { 
 	     //doing it this way, as I want to sort it in pt after filling everything in the container
 	     const reco::Candidate *mom = genparticle->mother();
@@ -466,9 +489,9 @@ Analyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
    myTrack_container.clear();
    for(reco::TrackCollection::const_iterator Track_iter = tracks->begin();
        Track_iter != tracks->end();++Track_iter) {
-     myTrack_container.push_back(*Track_iter);
-     
-   }
+      if(Track_iter->pt()>1.){
+	myTrack_container.push_back(*Track_iter);
+      }
    if(myTrack_container.size()>1)
      std::sort(myTrack_container.begin(),myTrack_container.end(),PtSortCriterium3());
    for(unsigned int x=0;x < myTrack_container.size();x++)
@@ -478,7 +501,7 @@ Analyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
        trk_py[x]  = myTrack_container[x].py();
        trk_pz[x]  = myTrack_container[x].pz();
        trk_phi[x] = correct_phi(myTrack_container[x].phi());
-       trk_eta[x] = myTrack_container[x].eta();
+       trk_eta[x] = myTrack_container[x].eta();}
      }//end of for loop
    }
   
@@ -1045,19 +1068,35 @@ Analyzer::beginJob(const edm::EventSetup&)
       myEvent->Branch("n_SingleHardPhoton_events",&n_SingleHardPhoton_events,"n_SingleHardPhoton_events/I");
       myEvent->Branch("n_diphoton_events",&n_diphoton_events,"n_diphoton_events/I");
 
-      //genlevel tree information of mu/tau daughter
-      myEvent->Branch("gen_LeptonMotherID",gen_Lepton_MotherID,"gen_Lepton_MotherID[3]/D");
-      myEvent->Branch("gen_LeptonMotherStatus",gen_Lepton_MotherStatus,"gen_Lepton_MotherStatus[3]/D");
-      myEvent->Branch("gen_Leptonpt",gen_Lepton_pt,"gen_Lepton_pt[3]/D");
-      myEvent->Branch("gen_Leptoneta",gen_Lepton_eta,"gen_Lepton_eta[3]/D");
-      myEvent->Branch("gen_Leptonphi",gen_Lepton_phi,"gen_Lepton_phi[3]/D");
-      myEvent->Branch("gen_Leptonpx",gen_Lepton_px,"gen_Lepton_px[3]/D");
-      myEvent->Branch("gen_Leptonpy",gen_Lepton_py,"gen_Lepton_py[3]/D");
-      myEvent->Branch("gen_Leptonpz",gen_Lepton_pz,"gen_Lepton_pz[3]/D");
-      myEvent->Branch("gen_LeptonE",gen_Lepton_E,"gen_Lepton_E[3]/D");
-      myEvent->Branch("gen_LeptonCharge",gen_Lepton_charge,"gen_Lepton_charge[3]/I");
-      myEvent->Branch("gen_LeptonStatus",gen_Lepton_status,"gen_Lepton_status[3]/I");
-      myEvent->Branch("gen_LeptonID",gen_Lepton_ID,"gen_Lepton_ID[3]/I");
+      //genlevel tree information of mu daughter
+      myEvent->Branch("gen_MuonID",gen_Muon_ID,"gen_Muon_ID[3]/D");
+      myEvent->Branch("gen_MuonStatus",gen_Muon_Status,"gen_Muon_Status[3]/D");
+      myEvent->Branch("gen_MuonPt",gen_Muon_Pt,"gen_Muon_Pt[3]/D");
+      myEvent->Branch("gen_MuonDaughterpt",gen_MuonDaughter_pt,"gen_MuonDaughter_pt[3]/D");
+      myEvent->Branch("gen_MuonDaughtereta",gen_MuonDaughter_eta,"gen_MuonDaughter_eta[3]/D");
+      myEvent->Branch("gen_MuonDaughterphi",gen_MuonDaughter_phi,"gen_MuonDaughter_phi[3]/D");
+      myEvent->Branch("gen_MuonDaughterpx",gen_MuonDaughter_px,"gen_MuonDaughter_px[3]/D");
+      myEvent->Branch("gen_MuonDaughterpy",gen_MuonDaughter_py,"gen_MuonDaughter_py[3]/D");
+      myEvent->Branch("gen_MuonDaughterpz",gen_MuonDaughter_pz,"gen_MuonDaughter_pz[3]/D");
+      myEvent->Branch("gen_MuonDaughterE",gen_MuonDaughter_E,"gen_MuonDaughter_E[3]/D");
+      myEvent->Branch("gen_MuonDaughterCharge",gen_MuonDaughter_charge,"gen_MuonDaughter_charge[3]/I");
+      myEvent->Branch("gen_MuonDaughterStatus",gen_MuonDaughter_status,"gen_MuonDaughter_status[3]/I");
+      myEvent->Branch("gen_MuonDaughterID",gen_MuonDaughter_ID,"gen_MuonDaughter_ID[3]/I");
+
+      //genlevel tree information of tau daughter
+      myEvent->Branch("gen_tauID",gen_tau_ID,"gen_tau_ID[3]/D");
+      myEvent->Branch("gen_tauStatus",gen_tau_Status,"gen_tau_Status[3]/D");
+      myEvent->Branch("gen_tauPt",gen_tau_Pt,"gen_tau_Pt[3]/D");
+      myEvent->Branch("gen_tauDaughterpt",gen_tauDaughter_pt,"gen_tauDaughter_pt[3]/D");
+      myEvent->Branch("gen_tauDaughtereta",gen_tauDaughter_eta,"gen_tauDaughter_eta[3]/D");
+      myEvent->Branch("gen_tauDaughterphi",gen_tauDaughter_phi,"gen_tauDaughter_phi[3]/D");
+      myEvent->Branch("gen_tauDaughterpx",gen_tauDaughter_px,"gen_tauDaughter_px[3]/D");
+      myEvent->Branch("gen_tauDaughterpy",gen_tauDaughter_py,"gen_tauDaughter_py[3]/D");
+      myEvent->Branch("gen_tauDaughterpz",gen_tauDaughter_pz,"gen_tauDaughter_pz[3]/D");
+      myEvent->Branch("gen_tauDaughterE",gen_tauDaughter_E,"gen_tauDaughter_E[3]/D");
+      myEvent->Branch("gen_tauDaughterCharge",gen_tauDaughter_charge,"gen_tauDaughter_charge[3]/I");
+      myEvent->Branch("gen_tauDaughterStatus",gen_tauDaughter_status,"gen_tauDaughter_status[3]/I");
+      myEvent->Branch("gen_tauDaughterID",gen_tauDaughter_ID,"gen_tauDaughter_ID[3]/I");
 
     }//end of if( rungenParticleCandidates_ )
 
