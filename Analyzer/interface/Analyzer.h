@@ -96,12 +96,12 @@ class Analyzer : public edm::EDAnalyzer {
   float chi2[10];
 
   //track variables
-  double trk_pt[100];
-  double trk_px[100];
-  double trk_py[100];
-  double trk_pz[100];
-  double trk_eta[100];
-  double trk_phi[100];
+  double trk_pt[200];
+  double trk_px[200];
+  double trk_py[200];
+  double trk_pz[200];
+  double trk_eta[200];
+  double trk_phi[200];
 
   //jet variables
   double jet_pt[100];
@@ -285,6 +285,7 @@ class Analyzer : public edm::EDAnalyzer {
   float pho_trkSumPtHollowConeDR04[100];
   int   pho_nTrkSolidConeDR04[100];
   int   pho_nTrkHollowConeDR04[100];
+  bool  pho_hasPixelSeed[100];
   double   pho_HoE[100];
   
 

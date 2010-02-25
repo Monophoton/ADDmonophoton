@@ -484,14 +484,16 @@ Analyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
    if(runtracks_){
    Handle<reco::TrackCollection> tracks;
    iEvent.getByLabel(Tracks_,tracks);
-   nTracks=tracks->size();
+   cout<<"nTracks"<<tracks->size()<<endl;
    std::vector<reco::Track>  myTrack_container;
    myTrack_container.clear();
    for(reco::TrackCollection::const_iterator Track_iter = tracks->begin();
        Track_iter != tracks->end();++Track_iter) {
-      if(Track_iter->pt()>1.){
+      if(Track_iter->pt()>5.){
 	myTrack_container.push_back(*Track_iter);
       }
+   }
+   nTracks=myTrack_container.size();
    if(myTrack_container.size()>1)
      std::sort(myTrack_container.begin(),myTrack_container.end(),PtSortCriterium3());
    for(unsigned int x=0;x < myTrack_container.size();x++)
@@ -501,9 +503,10 @@ Analyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
        trk_py[x]  = myTrack_container[x].py();
        trk_pz[x]  = myTrack_container[x].pz();
        trk_phi[x] = correct_phi(myTrack_container[x].phi());
-       trk_eta[x] = myTrack_container[x].eta();}
-     }//end of for loop
-   }
+       trk_eta[x] = myTrack_container[x].eta();
+     }
+   }//end of for loop
+
   
 
    std::vector<pat::Photon> myphoton_container;
@@ -586,6 +589,7 @@ Analyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
 	       pho_nTrkHollowConeDR03[x]     = myphoton_container[x].nTrkHollowConeDR04();
 	       pho_hcalDepth1TowerSumEtConeDR04[x] = myphoton_container[x].hcalDepth1TowerSumEtConeDR04();
 	       pho_hcalDepth2TowerSumEtConeDR04[x] = myphoton_container[x].hcalDepth2TowerSumEtConeDR04();
+	       pho_hasPixelSeed[x] = myphoton_container[x].hasPixelSeed();
 	       if(myphoton_container[x].genParticleRef().isNonnull())
 		 {
 		   matchpho_E[x]                =  myphoton_container[x].genPhoton()->energy();
@@ -1139,6 +1143,7 @@ Analyzer::beginJob(const edm::EventSetup&)
       myEvent->Branch("photon_nTrkHollowConeDR04",pho_nTrkHollowConeDR04,"pho_nTrkHollowConeDR04[nrecPhotons]/I");
       myEvent->Branch("photon_hcalDepth1TowerSumEtConeDR04",pho_hcalDepth1TowerSumEtConeDR04,"pho_hcalDepth1TowerSumEtConeDR04[nrecPhotons]/F");
       myEvent->Branch("photon_hcalDepth2TowerSumEtConeDR04",pho_hcalDepth2TowerSumEtConeDR04,"pho_hcalDepth2TowerSumEtConeDR04[nrecPhotons]/F");
+      myEvent->Branch("photon_hasPixelSeed",pho_hasPixelSeed,"pho_hasPixelSeed[recPhotons]/B");
 
       myEvent->Branch("photon_HoE",pho_HoE,"pho_HoE[nrecPhotons]/D");
       myEvent->Branch("photonpx",pho_px,"pho_px[nrecPhotons]/D");
