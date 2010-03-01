@@ -13,7 +13,7 @@
 //
 // Original Author:  Sandhya Jain
 //         Created:  Fri Apr 17 11:00:06 CEST 2009
-// $Id$
+// $Id: Analyzer.cc,v 1.3 2010/02/10 10:33:27 sandhya Exp $
 //
 //
 
@@ -62,6 +62,7 @@
 #include <string>
 
 #include "/afs/cern.ch/user/s/sandhya/scratch0/CMSSW_3_1_4/src/Analysis/Analyzer/interface/Analyzer.h"
+
 
 using namespace std;
 using namespace ROOT::Math::VectorUtil ;
@@ -124,6 +125,8 @@ Analyzer::Analyzer(const edm::ParameterSet& iConfig):
   jetLabel_(iConfig.getUntrackedParameter<edm::InputTag>("jetTag")),
   tauLabel_(iConfig.getUntrackedParameter<edm::InputTag>("tauTag")),
   metLabel_(iConfig.getUntrackedParameter<edm::InputTag>("metTag")),
+  PFmetLabel_(iConfig.getUntrackedParameter<edm::InputTag>("PFmetTag")),
+  TCmetLabel_(iConfig.getUntrackedParameter<edm::InputTag>("TCmetTag")),
   phoLabel_(iConfig.getUntrackedParameter<edm::InputTag>("photonTag")),
   rechitBLabel_(iConfig.getUntrackedParameter<edm::InputTag>("rechitBTag")),
   rechitELabel_(iConfig.getUntrackedParameter<edm::InputTag>("rechitETag")),
@@ -134,6 +137,8 @@ Analyzer::Analyzer(const edm::ParameterSet& iConfig):
   rungenParticleCandidates_(iConfig.getUntrackedParameter<bool>("rungenParticleCandidates")),
   runphotons_(iConfig.getUntrackedParameter<bool>("runphotons")),
   runmet_(iConfig.getUntrackedParameter<bool>("runmet")),
+  runPFmet_(iConfig.getUntrackedParameter<bool>("runmet")),
+  runTCmet_(iConfig.getUntrackedParameter<bool>("runmet")),
   runelectrons_(iConfig.getUntrackedParameter<bool>("runelectrons")),
   runmuons_(iConfig.getUntrackedParameter<bool>("runmuons")),
   runjets_(iConfig.getUntrackedParameter<bool>("runjets")),
@@ -152,14 +157,14 @@ Analyzer::Analyzer(const edm::ParameterSet& iConfig):
   n_diphoton_events=0;  n_SingleHardPhoton_events = 0;
   ngenphotons  = 0; //for every event, how many stable photons 
   nhardphotons = 0; //for every event, how many hard photons 
-  nvertices        = 0;
-  nTracks          = 0;
-  nrecPhotons      = 0;
+  Vertex_n         = 0;
+  Track_n          = 0;
+  Photon_n         = 0;
   ncrysPhoton      = 0;
-  njets            = 0;
-  nelectrons       = 0; 
-  nmuons           = 0;
-  ntaus            = 0;
+  Jet_n            = 0;
+  Electron_n       = 0; 
+  Muon_n           = 0;
+  Tau_n            = 0;
 }
 
 
@@ -185,7 +190,7 @@ Analyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
    using namespace reco;
 
    nevents++;
-   cout<<"Event:"<<nevents<<endl;
+   //cout<<"Event:"<<nevents<<endl;
    //getting handle to generator level information
    if( rungenParticleCandidates_ )
      {
@@ -222,7 +227,7 @@ Analyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
 	   { 
 	     is_Z_event = 1;
 	     n_Z_events++;
-	     cout<<"getting information from Z now"<<endl;
+	     //cout<"getting information from Z now"<<endl;
 	     gen_Zboson_pt  = genparticle->pt();
 	     gen_Zboson_px  = genparticle->px();
 	     gen_Zboson_py  = genparticle->py();
@@ -271,15 +276,15 @@ Analyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
 	   gen_Wboson_ID      = genparticle->pdgId();
 	   int daughters      = genparticle->numberOfDaughters();
 	   int iDaughter =0;
-	   cout<<"W pt:"<<genparticle->pt()<<endl;
-	   cout<<"W daughters:"<<endl;
+	   //cout<<"W pt:"<<genparticle->pt()<<endl;
+	   //cout<<"W daughters:"<<endl;
 	   for(int i = 0;i<daughters;i++)
 	     {
 	       const reco::Candidate *daughter   = genparticle->daughter(i);
 	       if(abs(daughter->pdgId())==11) {is_Welec_event=1; n_Welec_events++;}
 	       if(abs(daughter->pdgId())==13) {is_Wmu_event=1  ; n_Wmu_events++  ;}
 	       if(abs(daughter->pdgId())==15) {is_Wtau_event=1 ; n_Wtau_events++ ;}  
-	       cout<<"ID, Status,Pt:"<<abs(daughter->pdgId())<<"   "<<daughter->status()<<"   "<<daughter->pt()<<endl;
+	       //cout<<"ID, Status,Pt:"<<abs(daughter->pdgId())<<"   "<<daughter->status()<<"   "<<daughter->pt()<<endl;
 	       //getting leptons decaying from W
 	       if(abs(daughter->pdgId())!=24) 
 		 {
@@ -300,13 +305,13 @@ Analyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
 	 //getting info from decay of muons 
 	 if( abs(genparticle->pdgId())==13 )
 	   {
-	     cout<<"parent ID, Status, Pt:"<<abs(genparticle->pdgId())<<"   "<<genparticle->status()<<"  "<< genparticle->pt()<<endl;
+	     //cout<<"parent ID, Status, Pt:"<<abs(genparticle->pdgId())<<"   "<<genparticle->status()<<"  "<< genparticle->pt()<<endl;
 	     int daughters   = genparticle->numberOfDaughters();
 	     int iDaughter=0;
 	     for(int i = 0;i<daughters;i++)
 	       {
 		 const reco::Candidate *daughter   = genparticle->daughter(i);
-		 cout<<"daughterID, status,Pt:"<<abs(daughter->pdgId())<<"   " <<daughter->status()<<"  "<< daughter->pt()<<endl;
+		 //cout<<"daughterID, status,Pt:"<<abs(daughter->pdgId())<<"   " <<daughter->status()<<"  "<< daughter->pt()<<endl;
 		 gen_Muon_ID[iDaughter]     = genparticle->pdgId();
 		 gen_Muon_Status[iDaughter] = genparticle->status();
 		 gen_Muon_Pt[iDaughter]     = genparticle->pt();
@@ -327,13 +332,13 @@ Analyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
 	 //getting info from decay of taus 
 	 if( abs(genparticle->pdgId())==15 )
 	   {
-	     cout<<"parent ID, Status, Pt:"<<abs(genparticle->pdgId())<<"   "<<genparticle->status()<<"  "<< genparticle->pt()<<endl;
+	     //cout<<"parent ID, Status, Pt:"<<abs(genparticle->pdgId())<<"   "<<genparticle->status()<<"  "<< genparticle->pt()<<endl;
 	     int daughters   = genparticle->numberOfDaughters();
 	     int iDaughter=0;
 	     for(int i = 0;i<daughters;i++)
 	       {
 		 const reco::Candidate *daughter   = genparticle->daughter(i);
-		 cout<<"daughterID, status,Pt:"<<abs(daughter->pdgId())<<"   " <<daughter->status()<<"  "<< daughter->pt()<<endl;
+		 //cout<<"daughterID, status,Pt:"<<abs(daughter->pdgId())<<"   " <<daughter->status()<<"  "<< daughter->pt()<<endl;
 		 gen_tau_ID[iDaughter]           = genparticle->pdgId();
 		 gen_tau_Status[iDaughter]       = genparticle->status();
 		 gen_tau_Pt[iDaughter]           = genparticle->pt();
@@ -416,7 +421,7 @@ Analyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
 	       // cout<<"got the photon info right"<<endl;
 	     }//end of for loop
 	 }//end of if((mygenphoton_container.size()!=0)
-       std::cout<<"mygenphoton_container loop ended"<<std::endl; 
+       //std::cout<<"mygenphoton_container loop ended"<<std::endl; 
      }//end of if(rungenParticleCandidates_)
    
    ///// L1
@@ -453,13 +458,20 @@ Analyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
      for(unsigned int i = 0; i<n ;i++)
        {
 	 //cout<<hlNames_[i]<<" :"<<HLTR->accept(i)<<endl;
-	 HLT_chosen[ hlNames_[i]]=HLTR->accept(i);
+	 HLT_chosen[ hlNames_[i]]= HLTR->accept(i);
 	 if(hlNames_[i]=="HLT_MET50")
-	   is_HLT_MET50_event=HLTR->accept(i);
+	   HLT_MET50_event       = HLTR->accept(i);
 	 if(hlNames_[i]=="HLT_MET75")
-	   is_HLT_MET75_event=HLTR->accept(i);
+	   HLT_MET75_event       = HLTR->accept(i);
+	 if(hlNames_[i]=="HLT_Photon15_L1R")
+	   HLT_Photon15_event    = HLTR->accept(i);
 	 if(hlNames_[i]=="HLT_Photon25_L1R")
-	   is_HLT_Photon25_event=HLTR->accept(i);
+	   HLT_Photon25_event    = HLTR->accept(i);
+	 if(hlNames_[i]=="HLT_DoubleEle10_SW_L1R")
+	   HLT_DoubleEle10_event = HLTR->accept(i);
+	 if(hlNames_[i]=="HLT_DoubleMu3")
+	   HLT_DoubleMu3_event   = HLTR->accept(i);
+
        }
    }
 
@@ -467,7 +479,7 @@ Analyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
    Handle<reco::VertexCollection> recVtxs;
    iEvent.getByLabel(Vertices_, recVtxs);
    vector<Vertex> my_vertices;
-   nvertices = recVtxs->size();
+   Vertex_n = recVtxs->size();
    my_vertices.clear();
    for(reco::VertexCollection::const_iterator v=recVtxs->begin();v!=recVtxs->end(); ++v){
      my_vertices.push_back(*v);
@@ -481,19 +493,21 @@ Analyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
      }
    }
 
-   if(runtracks_){
+if(runtracks_){
    Handle<reco::TrackCollection> tracks;
    iEvent.getByLabel(Tracks_,tracks);
-   cout<<"nTracks"<<tracks->size()<<endl;
+   //cout<<"Track_n - all "<<tracks->size()<<endl;
    std::vector<reco::Track>  myTrack_container;
    myTrack_container.clear();
    for(reco::TrackCollection::const_iterator Track_iter = tracks->begin();
        Track_iter != tracks->end();++Track_iter) {
       if(Track_iter->pt()>5.){
-	myTrack_container.push_back(*Track_iter);
+        myTrack_container.push_back(*Track_iter);
+        //cout<<"nTracks abv 5 GeV: "<<myTrack_container.size()<<endl;
       }
    }
-   nTracks=myTrack_container.size();
+   //cout<<"nTracks abv 5 GeV after the loop:"<<myTrack_container.size()<<endl;
+   Track_n = myTrack_container.size();
    if(myTrack_container.size()>1)
      std::sort(myTrack_container.begin(),myTrack_container.end(),PtSortCriterium3());
    for(unsigned int x=0;x < myTrack_container.size();x++)
@@ -504,10 +518,10 @@ Analyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
        trk_pz[x]  = myTrack_container[x].pz();
        trk_phi[x] = correct_phi(myTrack_container[x].phi());
        trk_eta[x] = myTrack_container[x].eta();
-     }
-   }//end of for loop
+       //cout<<"pt: "<< trk_pt[x] << endl;
+     }//end of for loop
+   }//end of if(runtracks_)
 
-  
 
    std::vector<pat::Photon> myphoton_container;
    myphoton_container.clear();
@@ -528,7 +542,7 @@ Analyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
        iEvent.getByLabel(phoLabel_,phoHandle);
        //const edm::View<pat::Photon> & photons = *phoHandle;
        edm::View<pat::Photon>::const_iterator photon;
-       nrecPhotons = phoHandle->size();
+       Photon_n = phoHandle->size();
        //cout<<"total photons reconstructed at RECO level:"<<recphotons->size()<<endl;
        //cout<<"Step 1 : number of all layer1 Photons:"<<allLayer1Photons->size()<<endl;
        //cout<<"Step 2 : number of selected layer1 Photons:"<<selectedlayer1Photons->size()<<endl;
@@ -537,7 +551,7 @@ Analyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
        //if(allLayer1Photons->size()!=selectedlayer1Photons->size())cout<<"strange! allLayer1Photons!= selectedlayer1Photons "<<endl;
        //if(selectedlayer1Photons->size()< phoHandle->size())cout<<"strange! selectedlayer1Photons->size() < cleanLayer1Photons"<<endl;
 
-       //cout<<"photon container size:"<<nrecPhotons<<endl;
+       //cout<<"photon container size:"<<Photon_n<<endl;
        
        for(photon = phoHandle->begin();photon!=phoHandle->end();++photon){
 	 myphoton_container.push_back(*photon) ;
@@ -546,7 +560,7 @@ Analyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
 	 {
 	   for(unsigned int x=0; x < myphoton_container.size();x++)
 	     {
-	       cout<<"photon pt:"<<myphoton_container[x].pt()<<"  photon eta:"<<myphoton_container[x].eta()<<"  photon phi:"<<correct_phi(myphoton_container[x].phi())<<endl; 
+	       //cout<<"photon pt:"<<myphoton_container[x].pt()<<"  photon eta:"<<myphoton_container[x].eta()<<"  photon phi:"<<correct_phi(myphoton_container[x].phi())<<endl; 
 	       pho_E[x]                     =  myphoton_container[x].energy();
 	       pho_pt[x]                    =  myphoton_container[x].pt();
 	       pho_px[x]                    =  myphoton_container[x].px();
@@ -589,7 +603,8 @@ Analyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
 	       pho_nTrkHollowConeDR03[x]     = myphoton_container[x].nTrkHollowConeDR04();
 	       pho_hcalDepth1TowerSumEtConeDR04[x] = myphoton_container[x].hcalDepth1TowerSumEtConeDR04();
 	       pho_hcalDepth2TowerSumEtConeDR04[x] = myphoton_container[x].hcalDepth2TowerSumEtConeDR04();
-	       pho_hasPixelSeed[x] = myphoton_container[x].hasPixelSeed();
+	       pho_hasPixelSeed[x] = myphoton_container[x].hasPixelSeed(); 
+
 	       if(myphoton_container[x].genParticleRef().isNonnull())
 		 {
 		   matchpho_E[x]                =  myphoton_container[x].genPhoton()->energy();
@@ -676,7 +691,7 @@ Analyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
 			   if (j!= Brechit->end())  thishit = j;
 			   if ( j== Brechit->end())
 			     {
-			       std::cout<<"thishit not matched "<<std::endl;
+			       //std::cout<<"thishit not matched "<<std::endl;
 			       continue;
 			     }
 			   EBDetId detId  = (EBDetId)((*detitr).first);
@@ -720,8 +735,8 @@ Analyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
 		   if(myphoton_container[x].isEB())
 		   {
 		     std::vector<float> showershapes_barrel = EcalClusterTools::ShowerShapes(*(myphoton_container[x].superCluster()),barrelRecHits);
-		     cout<<"roundness for barrel photon:"<<showershapes_barrel[0]<<endl;
-		     cout<<"angle for barrel photon:"<<showershapes_barrel[1]<<endl;
+		     //cout<<"roundness for barrel photon:"<<showershapes_barrel[0]<<endl;
+		     //cout<<"angle for barrel photon:"<<showershapes_barrel[1]<<endl;
 		     pho_roundness[x]= showershapes_barrel[0];
 		     pho_angle[x]= showershapes_barrel[1];
 		   }
@@ -735,7 +750,7 @@ Analyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
 		 }//if(runrechit_)
 	     }//end of for loop over x
 	 }//if(myphoton_container.size!=0) 
-       cout<<"got photon variables"<<endl; 
+       //cout<<"got photon variables"<<endl; 
        
      }
    if(runmet_)
@@ -744,7 +759,6 @@ Analyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
        iEvent.getByLabel(metLabel_,metHandle);
        //const edm::View<pat::MET> & mets = *metHandle;
        edm::View<pat::MET>::const_iterator met;
-
        for ( met = metHandle->begin(); met != metHandle->end(); met++)
 	 {
 	   //calomet variables
@@ -771,13 +785,58 @@ Analyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
 	       Delta_phi                             = deltaphi(correct_phi(met->phi()),correct_phi(myphoton_container[0].phi()));
 	 }
      }
+   if(runPFmet_)
+     {
+       edm::Handle<edm::View<pat::MET> > metPFHandle;
+       iEvent.getByLabel(PFmetLabel_,metPFHandle);
+       const edm::View<pat::MET> & metsPF = *metPFHandle;
+       if ( metPFHandle.isValid() )
+	 {
+	   PFMetPt     = metsPF[0].et();
+	   PFMetPhi    = correct_phi(metsPF[0].phi());
+	   PFMetSumEt  = metsPF[0].sumEt();
+	   PFMetPx     = metsPF[0].px();
+	   PFMetPy     = metsPF[0].py();
+	   if(runphotons_==1)
+	     if (myphoton_container.size()!=0)
+	       Delta_phiPF  = deltaphi(PFMetPhi,correct_phi(myphoton_container[0].phi()));
+	 }
+       else
+	 {
+	   LogWarning("METEventSelector") << "No Met results for InputTag " ;
+	   return;
+	 }
+     }
+   if(runTCmet_)
+     {
+       edm::Handle<edm::View<pat::MET> > metTCHandle;
+       iEvent.getByLabel(TCmetLabel_,metTCHandle);
+       const edm::View<pat::MET> & metsTC = *metTCHandle;
+       if ( metTCHandle.isValid() )
+	 {
+	   TCMetPt     = metsTC[0].et();
+	   TCMetPhi    = metsTC[0].phi();
+	   TCMetSumEt  = metsTC[0].sumEt();
+	   TCMetPx     = metsTC[0].px();
+	   TCMetPy     = metsTC[0].py();
+	   if(runphotons_==1)
+             if (myphoton_container.size()!=0)
+               Delta_phiTC  = deltaphi(TCMetPhi,correct_phi(myphoton_container[0].phi())); 
+	 }
+       else
+	 {
+	   LogWarning("METEventSelector") << "No Met results for InputTag " ;
+	   return;
+	 } 
+       
+     }//end of if(runTCmet_)
    
    if(runjets_)
      {
        edm::Handle<edm::View<pat::Jet> > jetHandle;
        iEvent.getByLabel(jetLabel_,jetHandle);
        const edm::View<pat::Jet> & jets = *jetHandle;
-       njets=jetHandle->size();
+       Jet_n=jetHandle->size();
        size_t njetscounter=0;
        std::vector<pat::Jet>  myjet_container;
        myjet_container.clear();
@@ -806,7 +865,7 @@ Analyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
        edm::Handle<edm::View<pat::Muon> > muonHandle;
        iEvent.getByLabel(muoLabel_,muonHandle);
        vector <pat::Muon> mymuon_container;
-       nmuons = muonHandle->size();
+       Muon_n = muonHandle->size();
        const edm::View<pat::Muon> & muons = *muonHandle;   // const ... &, we don't make a copy of it!
        for(edm::View<pat::Muon>::const_iterator muon = muons.begin(); muon!=muons.end(); ++muon){
          mymuon_container.push_back(*muon);
@@ -830,7 +889,7 @@ Analyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
        edm::Handle<edm::View<pat::Electron> > electronHandle;
        iEvent.getByLabel(eleLabel_,electronHandle);
        vector<pat::Electron> myelectron_container;
-       nelectrons = electronHandle->size();
+       Electron_n = electronHandle->size();
        const edm::View<pat::Electron> & electrons = *electronHandle;   // const ... &, we don't make a copy of it!
        for(edm::View<pat::Electron>::const_iterator electron = electrons.begin(); electron!=electrons.end(); ++electron){
          myelectron_container.push_back(*electron);
@@ -855,7 +914,7 @@ Analyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
        edm::Handle<edm::View<pat::Tau> > tauHandle;
        iEvent.getByLabel(tauLabel_,tauHandle);
        vector <pat::Tau> mytau_container;
-       ntaus = tauHandle->size();
+       Tau_n = tauHandle->size();
        const edm::View<pat::Tau> & taus = *tauHandle;   // const ... &, we don't make a copy of it!
        for(edm::View<pat::Tau>::const_iterator tau = taus.begin(); tau!=taus.end(); ++tau){
          mytau_container.push_back(*tau);
@@ -887,85 +946,88 @@ Analyzer::beginJob(const edm::EventSetup&)
 
   if(runHLT_)
     {
-      myEvent->Branch("is_HLT_MET50_event",&is_HLT_MET50_event,"is_HLT_MET50_event/I");
-      myEvent->Branch("is_HLT_MET75_event",&is_HLT_MET75_event,"is_HLT_MET75_event/I");
-      myEvent->Branch("is_HLT_Photon25_event",&is_HLT_Photon25_event,"is_HLT_Photon25_event/I");
+      myEvent->Branch("HLT_MET50_event",&HLT_MET50_event,"HLT_MET50_event/I");
+      myEvent->Branch("HLT_MET75_event",&HLT_MET75_event,"HLT_MET75_event/I");
+      myEvent->Branch("HLT_Photon15_event",&HLT_Photon15_event,"HLT_Photon15_event/I");
+      myEvent->Branch("HLT_Photon25_event",&HLT_Photon25_event,"HLT_Photon25_event/I");
+      myEvent->Branch("HLT_DoubleEle10_event",&HLT_DoubleEle10_event,"HLT_DoubleEle10_event/I");
+      myEvent->Branch("HLT_DoubleMu3_event",&HLT_DoubleMu3_event,"HLT_DoubleMu3_event/I");
     }
 
   if(runvertex_)
     {
-      myEvent->Branch("nvertices",&nvertices,"nvertices/I");
-      myEvent->Branch("vx",vx,"vx[nvertices]/F");
-      myEvent->Branch("vy",vy,"vy[nvertices]/F");
-      myEvent->Branch("vz",vz,"vz[nvertices]/F");
-      myEvent->Branch("chi2",chi2,"chi2[nvertices]/F");
+      myEvent->Branch("Vertex_n",&Vertex_n,"Vertex_n/I");
+      myEvent->Branch("Vertex_x",vx,"vx[Vertex_n]/D");
+      myEvent->Branch("Vertex_y",vy,"vy[Vertex_n]/D");
+      myEvent->Branch("Vertex_z",vz,"vz[Vertex_n]/D");
+      myEvent->Branch("Vertex_chi2",chi2,"chi2[Vertex_n]/D");
     }
 
   if (runtracks_)
     {
-      myEvent->Branch("nTracks",&nTracks,"nTracks/I");
-      myEvent->Branch("trackpx",trk_px,"trk_px[nTracks]/D");
-      myEvent->Branch("trackpy",trk_py,"trk_py[nTracks]/D");
-      myEvent->Branch("trackpz",trk_pz,"trk_pz[nTracks]/D");
-      myEvent->Branch("trackpt",trk_pt,"trk_pt[nTracks]/D");
-      myEvent->Branch("tracketa",trk_eta,"trk_eta[nTracks]/D");
-      myEvent->Branch("trackphi",trk_phi,"trk_phi[nTracks]/D");
+      myEvent->Branch("Track_n",&Track_n,"Track_n/I");
+      myEvent->Branch("Track_px",trk_px,"trk_px[Track_n]/D");
+      myEvent->Branch("Track_py",trk_py,"trk_py[Track_n]/D");
+      myEvent->Branch("Track_pz",trk_pz,"trk_pz[Track_n]/D");
+      myEvent->Branch("Track_pt",trk_pt,"trk_pt[Track_n]/D");
+      myEvent->Branch("Track_eta",trk_eta,"trk_eta[Track_n]/D");
+      myEvent->Branch("Track_phi",trk_phi,"trk_phi[Track_n]/D");
     }
   if (runjets_)
     {
       //for(vector<string>::iterator corr = JET_CORR.begin(); corr!=JET_CORR.end();++corr )
       //{
-	  myEvent->Branch("number_of_jets",&njets,"njets/I");
-	  myEvent->Branch("jetpx",jet_px,"jet_px[njets]/D");
-	  myEvent->Branch("jetpy",jet_py,"jet_py[njets]/D");
-	  myEvent->Branch("jetpz",jet_pz,"jet_pz[njets]/D");
-	  myEvent->Branch("jetpt",jet_pt,"jet_pt[njets]/D");
-	  myEvent->Branch("jeteta",jet_eta,"jet_eta[njets]/D");
-	  myEvent->Branch("jetphi",jet_phi,"jet_phi[njets]/D");
-	  myEvent->Branch("jetemEnergyFraction",jet_emEnergyFraction,"jet_emEnergyFraction[njets]/D");
-	  myEvent->Branch("jetenergyFractionHadronic",jet_energyFractionHadronic,"jet_energyFractionHadronic[njets]/D");
+	  myEvent->Branch("Jet_n",&Jet_n,"Jet_n/I");
+	  myEvent->Branch("Jet_px",jet_px,"jet_px[Jet_n]/D");
+	  myEvent->Branch("Jet_py",jet_py,"jet_py[Jet_n]/D");
+	  myEvent->Branch("Jet_pz",jet_pz,"jet_pz[Jet_n]/D");
+	  myEvent->Branch("Jet_pt",jet_pt,"jet_pt[Jet_n]/D");
+	  myEvent->Branch("Jet_eta",jet_eta,"jet_eta[Jet_n]/D");
+	  myEvent->Branch("Jet_phi",jet_phi,"jet_phi[Jet_n]/D");
+	  myEvent->Branch("Jet_emEnergyFraction",jet_emEnergyFraction,"jet_emEnergyFraction[Jet_n]/D");
+	  myEvent->Branch("Jet_energyFractionHadronic",jet_energyFractionHadronic,"jet_energyFractionHadronic[Jet_n]/D");
 	  //}
     }
 
   if (runelectrons_)
     {
-      myEvent->Branch("number_of_electrons",&nelectrons,"nelectrons/I");
-      myEvent->Branch("electronpx",electron_px,"electron_px[nelectrons]/D");
-      myEvent->Branch("electronpy",electron_py,"electron_py[nelectrons]/D");
-      myEvent->Branch("electronpz",electron_pz,"electron_pz[nelectrons]/D");
-      myEvent->Branch("electronpt",electron_pt,"electron_pt[nelectrons]/D");
-      myEvent->Branch("electroneta",electron_eta,"electron_eta[nelectrons]/D");
-      myEvent->Branch("electronphi",electron_phi,"electron_phi[nelectrons]/D");
-      myEvent->Branch("electronenergy",electron_energy,"electron_energy[nelectrons]/D");
-      myEvent->Branch("electroncharge",electron_charge,"electron_charge[nelectrons]/D");
-      myEvent->Branch("electrontrkIso",electron_trkIso,"electron_trkIso[nelectrons]/D");
+      myEvent->Branch("Electron_n",&Electron_n,"Electron_n/I");
+      myEvent->Branch("Electron_px",electron_px,"electron_px[Electron_n]/D");
+      myEvent->Branch("Electron_py",electron_py,"electron_py[Electron_n]/D");
+      myEvent->Branch("Electron_pz",electron_pz,"electron_pz[Electron_n]/D");
+      myEvent->Branch("Electron_pt",electron_pt,"electron_pt[Electron_n]/D");
+      myEvent->Branch("Electron_eta",electron_eta,"electron_eta[Electron_n]/D");
+      myEvent->Branch("Electron_phi",electron_phi,"electron_phi[Electron_n]/D");
+      myEvent->Branch("Electron_energy",electron_energy,"electron_energy[Electron_n]/D");
+      myEvent->Branch("Electron_charge",electron_charge,"electron_charge[Electron_n]/D");
+      myEvent->Branch("Electron_trkIso",electron_trkIso,"electron_trkIso[Electron_n]/D");
       
     }
 
   if (runmuons_)
     {
-      myEvent->Branch("number_of_muons",&nmuons,"nmuons/I");
-      myEvent->Branch("muonpx",muon_px,"muon_px[nmuons]/D");
-      myEvent->Branch("muonpy",muon_py,"muon_py[nmuons]/D");
-      myEvent->Branch("muonpz",muon_pz,"muon_pz[nmuons]/D");
-      myEvent->Branch("muonpt",muon_pt,"muon_pt[nmuons]/D");
-      myEvent->Branch("muoneta",muon_eta,"muon_eta[nmuons]/D");
-      myEvent->Branch("muonphi",muon_phi,"muon_phi[nmuons]/D");
-      myEvent->Branch("muonenergy",muon_energy,"muon_energy[nmuons]/D");
-      myEvent->Branch("muoncharge",muon_charge,"muon_charge[nmuons]/D");
+      myEvent->Branch("Muon_n",&Muon_n,"Muon_n/I");
+      myEvent->Branch("Muon_px",muon_px,"muon_px[Muon_n]/D");
+      myEvent->Branch("Muon_py",muon_py,"muon_py[Muon_n]/D");
+      myEvent->Branch("Muon_pz",muon_pz,"muon_pz[Muon_n]/D");
+      myEvent->Branch("Muon_pt",muon_pt,"muon_pt[Muon_n]/D");
+      myEvent->Branch("Muon_eta",muon_eta,"muon_eta[Muon_n]/D");
+      myEvent->Branch("Muon_phi",muon_phi,"muon_phi[Muon_n]/D");
+      myEvent->Branch("Muon_energy",muon_energy,"muon_energy[Muon_n]/D");
+      myEvent->Branch("Muon_charge",muon_charge,"muon_charge[Muon_n]/D");
     }
 
   if (runtaus_)
     {
-      myEvent->Branch("number_of_taus",&ntaus,"ntaus/I");
-      myEvent->Branch("taupx",tau_px,"tau_px[ntaus]/D");
-      myEvent->Branch("taupy",tau_py,"tau_py[ntaus]/D");
-      myEvent->Branch("taupz",tau_pz,"tau_pz[ntaus]/D");
-      myEvent->Branch("taupt",tau_pt,"tau_pt[ntaus]/D");
-      myEvent->Branch("taueta",tau_eta,"tau_eta[ntaus]/D");
-      myEvent->Branch("tauphi",tau_phi,"tau_phi[ntaus]/D");
-      myEvent->Branch("tauenergy",tau_energy,"tau_energy[ntaus]/D");
-      myEvent->Branch("taucharge",tau_charge,"tau_charge[ntaus]/D");
+      myEvent->Branch("Tau_n",&Tau_n,"Tau_n/I");
+      myEvent->Branch("Tau_px",tau_px,"tau_px[Tau_n]/D");
+      myEvent->Branch("Tau_py",tau_py,"tau_py[Tau_n]/D");
+      myEvent->Branch("Tau_pz",tau_pz,"tau_pz[Tau_n]/D");
+      myEvent->Branch("Tau_pt",tau_pt,"tau_pt[Tau_n]/D");
+      myEvent->Branch("Tau_eta",tau_eta,"tau_eta[Tau_n]/D");
+      myEvent->Branch("Tau_phi",tau_phi,"tau_phi[Tau_n]/D");
+      myEvent->Branch("Tau_energy",tau_energy,"tau_energy[Tau_n]/D");
+      myEvent->Branch("Tau_charge",tau_charge,"tau_charge[Tau_n]/D");
     }
 
   if( rungenParticleCandidates_ )
@@ -1107,94 +1169,96 @@ Analyzer::beginJob(const edm::EventSetup&)
   if (runphotons_)
     {
       //uncorrected photon information
-      myEvent->Branch("nrecPhotons",&nrecPhotons,"nrecPhotons/I");
-      myEvent->Branch("ncrysPhoton",&ncrysPhoton,"ncrysPhoton/I");
-      myEvent->Branch("photonE",pho_E,"pho_E[nrecPhotons]/D");
-      myEvent->Branch("photonpt",pho_pt,"pho_pt[nrecPhotons]/D");
-      myEvent->Branch("photoneta",pho_eta,"pho_eta[nrecPhotons]/D");
-      myEvent->Branch("photonphi",pho_phi,"pho_phi[nrecPhotons]/D");
-      myEvent->Branch("photon_theta",pho_theta,"pho_theta[nrecPhotons]/D");
-      myEvent->Branch("photon_et",pho_et,"pho_et[nrecPhotons]/D");
-      myEvent->Branch("photonr9",pho_r9,"pho_r9[nrecPhotons]/D");
-      myEvent->Branch("photone1x5",pho_e1x5,"pho_e1x5[nrecPhotons]/F");
-      myEvent->Branch("photone2x5",pho_e2x5,"pho_e2x5[nrecPhotons]/F");
-      myEvent->Branch("photone3x3",pho_e3x3,"pho_e3x3[nrecPhotons]/F");
-      myEvent->Branch("photone5x5",pho_e5x5,"pho_e5x5[nrecPhotons]/F");
-      myEvent->Branch("photonr1x5",pho_r1x5,"pho_erx5[nrecPhotons]/F");
-      myEvent->Branch("photonr2x5",pho_r2x5,"pho_erx5[nrecPhotons]/F");
-      myEvent->Branch("photonmaxEnergyXtal",pho_maxEnergyXtal,"pho_maxEnergyXtal[nrecPhotons]/F");
-      myEvent->Branch("photonSigmaEtaEta",pho_SigmaEtaEta,"pho_SigmaEtaEta[nrecPhotons]/F");
-      myEvent->Branch("photonSigmaIetaIeta",pho_SigmaIetaIeta,"pho_SigmaIetaIeta[nrecPhotons]/F");
-      myEvent->Branch("photonRoundness",pho_roundness,"pho_roundness[nrecPhotons]/F");
-      myEvent->Branch("photonAngle",pho_angle,"pho_angle[nrecPhotons]/F");
-      myEvent->Branch("photon_ecalRecHitSumEtConeDR03",pho_ecalRecHitSumEtConeDR03,"pho_ecalRecHitSumEtConeDR03[nrecPhotons]/F");
-      myEvent->Branch("photon_hcalTowerSumEtConeDR03",pho_hcalTowerSumEtConeDR03,"pho_hcalTowerSumEtConeDR03[nrecPhotons]/F");
-      myEvent->Branch("photon_trkSumPtSolidConeDR03",pho_trkSumPtSolidConeDR03,"pho_trkSumPtSolidConeDR03[nrecPhotons]/F");
-      myEvent->Branch("photon_trkSumPtHollowConeDR03",pho_trkSumPtHollowConeDR03,"pho_trkSumPtHollowConeDR03[nrecPhotons]/F");
-      myEvent->Branch("photon_nTrkSolidConeDR03",pho_nTrkSolidConeDR03,"pho_nTrkSolidConeDR03[nrecPhotons]/I");
-      myEvent->Branch("photon_nTrkHollowConeDR03",pho_nTrkHollowConeDR03,"pho_nTrkHollowConeDR03[nrecPhotons]/I");
-      myEvent->Branch("photon_hcalDepth1TowerSumEtConeDR03",pho_hcalDepth1TowerSumEtConeDR03,"pho_hcalDepth1TowerSumEtConeDR03[nrecPhotons]/F");
-      myEvent->Branch("photon_hcalDepth2TowerSumEtConeDR03",pho_hcalDepth2TowerSumEtConeDR03,"pho_hcalDepth2TowerSumEtConeDR03[nrecPhotons]/F");
-      myEvent->Branch("photon_ecalRecHitSumEtConeDR04",pho_ecalRecHitSumEtConeDR04,"pho_ecalRecHitSumEtConeDR04[nrecPhotons]/F");
-      myEvent->Branch("photon_hcalTowerSumEtConeDR04",pho_hcalTowerSumEtConeDR04,"pho_hcalTowerSumEtConeDR04[nrecPhotons]/F");
-      myEvent->Branch("photon_trkSumPtSolidConeDR04",pho_trkSumPtSolidConeDR04,"pho_trkSumPtSolidConeDR04[nrecPhotons]/F");
-      myEvent->Branch("photon_trkSumPtHollowConeDR04",pho_trkSumPtHollowConeDR04,"pho_trkSumPtHollowConeDR04[nrecPhotons]/F");
-      myEvent->Branch("photon_nTrkSolidConeDR04",pho_nTrkSolidConeDR04,"pho_nTrkSolidConeDR04[nrecPhotons]/I");
-      myEvent->Branch("photon_nTrkHollowConeDR04",pho_nTrkHollowConeDR04,"pho_nTrkHollowConeDR04[nrecPhotons]/I");
-      myEvent->Branch("photon_hcalDepth1TowerSumEtConeDR04",pho_hcalDepth1TowerSumEtConeDR04,"pho_hcalDepth1TowerSumEtConeDR04[nrecPhotons]/F");
-      myEvent->Branch("photon_hcalDepth2TowerSumEtConeDR04",pho_hcalDepth2TowerSumEtConeDR04,"pho_hcalDepth2TowerSumEtConeDR04[nrecPhotons]/F");
-      myEvent->Branch("photon_hasPixelSeed",pho_hasPixelSeed,"pho_hasPixelSeed[recPhotons]/B");
+      myEvent->Branch("Photon_n",&Photon_n,"Photon_n/I");
+      myEvent->Branch("Photon_ncrys",&ncrysPhoton,"ncrysPhoton/I");
+      myEvent->Branch("Photon_E",pho_E,"pho_E[Photon_n]/D");
+      myEvent->Branch("Photon_pt",pho_pt,"pho_pt[Photon_n]/D");
+      myEvent->Branch("Photon_eta",pho_eta,"pho_eta[Photon_n]/D");
+      myEvent->Branch("Photon_phi",pho_phi,"pho_phi[Photon_n]/D");
+      myEvent->Branch("Photon_theta",pho_theta,"pho_theta[Photon_n]/D");
+      myEvent->Branch("Photon_et",pho_et,"pho_et[Photon_n]/D");
+      myEvent->Branch("Photonr9",pho_r9,"pho_r9[Photon_n]/D");
+      myEvent->Branch("Photon_e1x5",pho_e1x5,"pho_e1x5[Photon_n]/D");
+      myEvent->Branch("Photon_e2x5",pho_e2x5,"pho_e2x5[Photon_n]/D");
+      myEvent->Branch("Photon_e3x3",pho_e3x3,"pho_e3x3[Photon_n]/D");
+      myEvent->Branch("Photon_e5x5",pho_e5x5,"pho_e5x5[Photon_n]/D");
+      myEvent->Branch("Photon_r1x5",pho_r1x5,"pho_erx5[Photon_n]/D");
+      myEvent->Branch("Photon_r2x5",pho_r2x5,"pho_erx5[Photon_n]/D");
+      myEvent->Branch("Photon_maxEnergyXtal",pho_maxEnergyXtal,"pho_maxEnergyXtal[Photon_n]/D");
+      myEvent->Branch("Photon_SigmaEtaEta",pho_SigmaEtaEta,"pho_SigmaEtaEta[Photon_n]/D");
+      myEvent->Branch("Photon_SigmaIetaIeta",pho_SigmaIetaIeta,"pho_SigmaIetaIeta[Photon_n]/D");
+      myEvent->Branch("Photon_Roundness",pho_roundness,"pho_roundness[Photon_n]/F");
+      myEvent->Branch("Photon_Angle",pho_angle,"pho_angle[Photon_n]/F");
+      myEvent->Branch("Photon_ecalRecHitSumEtConeDR03",pho_ecalRecHitSumEtConeDR03,"pho_ecalRecHitSumEtConeDR03[Photon_n]/D");
+      myEvent->Branch("Photon_hcalTowerSumEtConeDR03",pho_hcalTowerSumEtConeDR03,"pho_hcalTowerSumEtConeDR03[Photon_n]/D");
+      myEvent->Branch("Photon_trkSumPtSolidConeDR03",pho_trkSumPtSolidConeDR03,"pho_trkSumPtSolidConeDR03[Photon_n]/D");
+      myEvent->Branch("Photon_trkSumPtHollowConeDR03",pho_trkSumPtHollowConeDR03,"pho_trkSumPtHollowConeDR03[Photon_n]/D");
+      myEvent->Branch("Photon_nTrkSolidConeDR03",pho_nTrkSolidConeDR03,"pho_nTrkSolidConeDR03[Photon_n]/I");
+      myEvent->Branch("Photon_nTrkHollowConeDR03",pho_nTrkHollowConeDR03,"pho_nTrkHollowConeDR03[Photon_n]/I");
+      myEvent->Branch("Photon_hcalDepth1TowerSumEtConeDR03",pho_hcalDepth1TowerSumEtConeDR03,"pho_hcalDepth1TowerSumEtConeDR03[Photon_n]/D");
+      myEvent->Branch("Photon_hcalDepth2TowerSumEtConeDR03",pho_hcalDepth2TowerSumEtConeDR03,"pho_hcalDepth2TowerSumEtConeDR03[Photon_n]/D");
+      myEvent->Branch("Photon_ecalRecHitSumEtConeDR04",pho_ecalRecHitSumEtConeDR04,"pho_ecalRecHitSumEtConeDR04[Photon_n]/D");
+      myEvent->Branch("Photon_hcalTowerSumEtConeDR04",pho_hcalTowerSumEtConeDR04,"pho_hcalTowerSumEtConeDR04[Photon_n]/D");
+      myEvent->Branch("Photon_trkSumPtSolidConeDR04",pho_trkSumPtSolidConeDR04,"pho_trkSumPtSolidConeDR04[Photon_n]/D");
+      myEvent->Branch("Photon_trkSumPtHollowConeDR04",pho_trkSumPtHollowConeDR04,"pho_trkSumPtHollowConeDR04[Photon_n]/D");
+      myEvent->Branch("Photon_nTrkSolidConeDR04",pho_nTrkSolidConeDR04,"pho_nTrkSolidConeDR04[Photon_n]/I");
+      myEvent->Branch("Photon_nTrkHollowConeDR04",pho_nTrkHollowConeDR04,"pho_nTrkHollowConeDR04[Photon_n]/I");
+      myEvent->Branch("Photon_hcalDepth1TowerSumEtConeDR04",pho_hcalDepth1TowerSumEtConeDR04,"pho_hcalDepth1TowerSumEtConeDR04[Photon_n]/D");
+      myEvent->Branch("Photon_hcalDepth2TowerSumEtConeDR04",pho_hcalDepth2TowerSumEtConeDR04,"pho_hcalDepth2TowerSumEtConeDR04[Photon_n]/D");
+      myEvent->Branch("Photon_hasPixelSeed",pho_hasPixelSeed,"pho_hasPixelSeed[Photon_n]/I"); 
 
-      myEvent->Branch("photon_HoE",pho_HoE,"pho_HoE[nrecPhotons]/D");
-      myEvent->Branch("photonpx",pho_px,"pho_px[nrecPhotons]/D");
-      myEvent->Branch("photonpy",pho_py,"pho_py[nrecPhotons]/D");
-      myEvent->Branch("photonpz",pho_pz,"pho_pz[nrecPhotons]/D");
-      myEvent->Branch("photon_no_of_basic_clusters",pho_size,"pho_size[nrecPhotons]/I");
+      myEvent->Branch("Photon_HoE",pho_HoE,"pho_HoE[Photon_n]/D");
+      myEvent->Branch("Photon_px",pho_px,"pho_px[Photon_n]/D");
+      myEvent->Branch("Photon_py",pho_py,"pho_py[Photon_n]/D");
+      myEvent->Branch("Photon_pz",pho_pz,"pho_pz[Photon_n]/D");
+      myEvent->Branch("Photon_no_of_basic_clusters",pho_size,"pho_size[Photon_n]/I");
       
-      myEvent->Branch("photon_sc_energy",pho_sc_energy,"pho_sc_energy[nrecPhotons]/D");
-      myEvent->Branch("photon_sc_eta",pho_sc_eta,"pho_sc_eta[nrecPhotons]/D");
-      myEvent->Branch("photon_sc_phi",pho_sc_phi,"pho_sc_phi[nrecPhotons]/D");
-      myEvent->Branch("photon_etaWidth",pho_sc_etaWidth,"pho_sc_etaWidth[nrecPhotons]/D");
-      myEvent->Branch("photon_phiWidth",pho_sc_phiWidth,"pho_sc_phiWidth[nrecPhotons]/D");
-      myEvent->Branch("photon_sc_et",pho_sc_et,"pho_sc_et[nrecPhotons]/D");
+      myEvent->Branch("Photon_sc_energy",pho_sc_energy,"pho_sc_energy[Photon_n]/D");
+      myEvent->Branch("Photon_sc_eta",pho_sc_eta,"pho_sc_eta[Photon_n]/D");
+      myEvent->Branch("Photon_sc_phi",pho_sc_phi,"pho_sc_phi[Photon_n]/D");
+      myEvent->Branch("Photon_etaWidth",pho_sc_etaWidth,"pho_sc_etaWidth[Photon_n]/D");
+      myEvent->Branch("Photon_phiWidth",pho_sc_phiWidth,"pho_sc_phiWidth[Photon_n]/D");
+      myEvent->Branch("Photon_sc_et",pho_sc_et,"pho_sc_et[Photon_n]/D");
       
-      myEvent->Branch("matchphotonE",matchpho_E,"matchpho_E[nrecPhotons]/D");
-      myEvent->Branch("matchphotonpt",matchpho_pt,"matchpho_pt[nrecPhotons]/D");
-      myEvent->Branch("matchphotoneta",matchpho_eta,"matchpho_eta[nrecPhotons]/D");
-      myEvent->Branch("matchphotonphi",matchpho_phi,"matchpho_phi[nrecPhotons]/D");
-      myEvent->Branch("matchphotonpx",matchpho_px,"matchpho_px[nrecPhotons]/D");
-      myEvent->Branch("matchphotonpy",matchpho_py,"matchpho_py[nrecPhotons]/D");
-      myEvent->Branch("matchphotonpz",matchpho_pz,"matchpho_pz[nrecPhotons]/D");
-      myEvent->Branch("ismatchedphoton",ismatchedpho,"ismatchedpho[nrecPhotons]/I");
-
       /*
-      myEvent->Branch("photon_ntracks",pho_nTracks,"pho_nTracks[nrecPhotons]/I");
-      myEvent->Branch("photon_isconverted",pho_isConverted,"pho_isConverted[nrecPhotons]/I");
-      myEvent->Branch("photon_pairInvmass",pho_pairInvariantMass,"pho_pairInvariantMass[nrecPhotons]/D");
-      myEvent->Branch("photon_pairCotThetaSeperation",pho_pairCotThetaSeparation,"pho_pairCotThetaSeparatio\
-n[nrecPhotons]/D");
-      myEvent->Branch("photon_pairmomentumX",pho_pairMomentum_x,"pho_pairMomentum_x[nrecPhotons]/D");
-      myEvent->Branch("photon_pairmomentumY",pho_pairMomentum_y,"pho_pairMomentum_y[nrecPhotons]/D");
-      myEvent->Branch("photon_pairmomentumZ",pho_pairMomentum_z,"pho_pairMomentum_z[nrecPhotons]/D");
-      myEvent->Branch("photon_EoverP",pho_EoverP,"pho_EoverP[nrecPhotons]/D");
-      myEvent->Branch("photon_vertexX",pho_vertex_x,"pho_vertex_x[nrecPhotons]/D");
-      myEvent->Branch("photon_vertexY",pho_vertex_y,"pho_vertex_y[nrecPhotons]/D");
-      myEvent->Branch("photon_vertexZ",pho_vertex_z,"pho_vertex_z[nrecPhotons]/D");
-      myEvent->Branch("photon_ZOfPrimaryVertex",pho_zOfPrimaryVertex,"pho_zOfPrimaryVertex[nrecPhotons]/D");
+      myEvent->Branch("matchphotonE",matchpho_E,"matchpho_E[Photon_n]/D");
+      myEvent->Branch("matchphotonpt",matchpho_pt,"matchpho_pt[Photon_n]/D");
+      myEvent->Branch("matchphotoneta",matchpho_eta,"matchpho_eta[Photon_n]/D");
+      myEvent->Branch("matchphotonphi",matchpho_phi,"matchpho_phi[Photon_n]/D");
+      myEvent->Branch("matchphotonpx",matchpho_px,"matchpho_px[Photon_n]/D");
+      myEvent->Branch("matchphotonpy",matchpho_py,"matchpho_py[Photon_n]/D");
+      myEvent->Branch("matchphotonpz",matchpho_pz,"matchpho_pz[Photon_n]/D");
+      myEvent->Branch("ismatchedphoton",ismatchedpho,"ismatchedpho[Photon_n]/I");
       */
 
-      myEvent->Branch("photon_timing_xtalEB",pho_timing_xtalEB,"pho_timing_xtalEB[nrecPhotons][ncrysPhoton]/D");
-      myEvent->Branch("photon_timingavg_xtalEB",pho_timingavg_xtalEB,"pho_timingavg_xtalEB[nrecPhotons]/D");
-      myEvent->Branch("photon_energy_xtalEB",pho_energy_xtalEB,"pho_energy_xtalEB[nrecPhotons][ncrysPhoton]/D");
-      myEvent->Branch("photon_ieta_xtalEB",pho_ieta_xtalEB,"pho_ieta_xtalEB[nrecPhotons][ncrysPhoton]/D");
-      myEvent->Branch("photon_iphi_xtalEB",pho_iphi_xtalEB,"pho_iphi_xtalEB[nrecPhotons][ncrysPhoton]/D");
+      /*
+      myEvent->Branch("photon_ntracks",pho_nTracks,"pho_nTracks[Photon_n]/I");
+      myEvent->Branch("photon_isconverted",pho_isConverted,"pho_isConverted[Photon_n]/I");
+      myEvent->Branch("photon_pairInvmass",pho_pairInvariantMass,"pho_pairInvariantMass[Photon_n]/D");
+      myEvent->Branch("photon_pairCotThetaSeperation",pho_pairCotThetaSeparation,"pho_pairCotThetaSeparatio\
+n[Photon_n]/D");
+      myEvent->Branch("photon_pairmomentumX",pho_pairMomentum_x,"pho_pairMomentum_x[Photon_n]/D");
+      myEvent->Branch("photon_pairmomentumY",pho_pairMomentum_y,"pho_pairMomentum_y[Photon_n]/D");
+      myEvent->Branch("photon_pairmomentumZ",pho_pairMomentum_z,"pho_pairMomentum_z[Photon_n]/D");
+      myEvent->Branch("photon_EoverP",pho_EoverP,"pho_EoverP[Photon_n]/D");
+      myEvent->Branch("photon_vertexX",pho_vertex_x,"pho_vertex_x[Photon_n]/D");
+      myEvent->Branch("photon_vertexY",pho_vertex_y,"pho_vertex_y[Photon_n]/D");
+      myEvent->Branch("photon_vertexZ",pho_vertex_z,"pho_vertex_z[Photon_n]/D");
+      myEvent->Branch("photon_ZOfPrimaryVertex",pho_zOfPrimaryVertex,"pho_zOfPrimaryVertex[Photon_n]/D");
+      */
+
+      myEvent->Branch("Photon_timing_xtalEB",pho_timing_xtalEB,"pho_timing_xtalEB[Photon_n][ncrysPhoton]/D");
+      myEvent->Branch("Photon_timingavg_xtalEB",pho_timingavg_xtalEB,"pho_timingavg_xtalEB[Photon_n]/D");
+      myEvent->Branch("Photon_energy_xtalEB",pho_energy_xtalEB,"pho_energy_xtalEB[Photon_n][ncrysPhoton]/D");
+      myEvent->Branch("Photon_ieta_xtalEB",pho_ieta_xtalEB,"pho_ieta_xtalEB[Photon_n][ncrysPhoton]/D");
+      myEvent->Branch("Photon_iphi_xtalEB",pho_iphi_xtalEB,"pho_iphi_xtalEB[Photon_n][ncrysPhoton]/D");
     }//end of if (runphotons_)
   
   if(runmet_)
     {
       //Calomet variables
       myEvent->Branch("CaloMetSigma",&CaloMetSig,"CaloMetSig/D");
-      myEvent->Branch("CaloMetCorr",&CaloMetCorr,"CaloMetCorr/D");
+      //myEvent->Branch("CaloMetCorr",&CaloMetCorr,"CaloMetCorr/D");
       myEvent->Branch("CaloMetEt",&CaloMetEt,"CaloMetEt/D");
       myEvent->Branch("CaloMetEx",&CaloMetEx,"CaloMetEx/D");
       myEvent->Branch("CaloMetEy",&CaloMetEy,"CaloMetEy/D");
@@ -1215,6 +1279,30 @@ n[nrecPhotons]/D");
     }//end of if(runmet)
   if(runmet_&& runphotons_)
     myEvent->Branch("Delta_phi",&Delta_phi,"Delta_phi/D");
+
+  if(runPFmet_)
+    {
+      myEvent->Branch("PFMetPt",&PFMetPt,"PFMetPt/D");
+      myEvent->Branch("PFMetPx",&PFMetPx,"PFMetPx/D");
+      myEvent->Branch("PFMetPy",&PFMetPy,"PFMetPy/D");
+      myEvent->Branch("PFMetPhi",&PFMetPhi,"PFMetPhi/D");
+      myEvent->Branch("PFMetSumEt",&PFMetSumEt,"PFMetSumEt/D");
+    }//end of if(runmet)
+  if(runPFmet_&& runphotons_)
+    myEvent->Branch("Delta_phiPF",&Delta_phiPF,"Delta_phiPF/D");
+
+
+  if(runTCmet_)
+    {
+      myEvent->Branch("TCMetPt",&TCMetPt,"TCMetPt/D");
+      myEvent->Branch("TCMetPx",&TCMetPx,"TCMetPx/D");
+      myEvent->Branch("TCMetPy",&TCMetPy,"TCMetPy/D");
+      myEvent->Branch("TCMetPhi",&TCMetPhi,"TCMetPhi/D");
+      myEvent->Branch("TCMetSumEt",&TCMetSumEt,"TCMetSumEt/D");
+    }//end of if(runmet)
+  if(runTCmet_&& runphotons_)
+    myEvent->Branch("Delta_phiTC",&Delta_phiTC,"Delta_phiTC/D");
+
 }
 
 // ------------ method called once each job just after ending the event loop  ------------

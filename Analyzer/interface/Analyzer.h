@@ -35,22 +35,26 @@ class Analyzer : public edm::EDAnalyzer {
 
   int ngenphotons;
   int nhardphotons;
-  int nrecPhotons;
+  int Photon_n;
   int ncrysPhoton;
-  int nvertices;
-  int nmuons;
-  int ntaus;
-  int nelectrons;
-  int nTracks;
-  int njets;
+  int Vertex_n;
+  int Muon_n;
+  int Tau_n;
+  int Electron_n;
+  int Track_n;
+  int Jet_n;
   //HLT
 
   edm::TriggerNames triggerNames_;  // TriggerNames class
   std::vector<std::string>  hlNames_;  // name of each HLT algorithm
  
-  int is_HLT_MET50_event;
-  int is_HLT_MET75_event;
-  int is_HLT_Photon25_event;
+  int HLT_MET50_event;
+  int HLT_MET75_event;
+  int HLT_Photon15_event;
+  int HLT_Photon25_event;
+  int HLT_DoubleEle10_event;
+  int HLT_DoubleMu3_event;
+
   std::map<std::string,int> HLT_chosen;
   std::map<std::string,int> L1_chosen;
 
@@ -61,6 +65,8 @@ class Analyzer : public edm::EDAnalyzer {
   edm::InputTag jetLabel_;
   edm::InputTag tauLabel_;
   edm::InputTag metLabel_;
+  edm::InputTag PFmetLabel_;
+  edm::InputTag TCmetLabel_;
   edm::InputTag phoLabel_;
   edm::InputTag rechitBLabel_;
   edm::InputTag rechitELabel_;
@@ -71,6 +77,8 @@ class Analyzer : public edm::EDAnalyzer {
   bool rungenParticleCandidates_;
   bool runphotons_;
   bool runmet_;
+  bool runPFmet_;
+  bool runTCmet_;
   bool runelectrons_;
   bool runmuons_;
   bool runjets_;
@@ -90,10 +98,10 @@ class Analyzer : public edm::EDAnalyzer {
 
 
   //vertex variables
-  float vx[10];
-  float vy[10];
-  float vz[10];
-  float chi2[10];
+  double vx[10];
+  double vy[10];
+  double vz[10];
+  double chi2[10];
 
   //track variables
   double trk_pt[200];
@@ -269,25 +277,24 @@ class Analyzer : public edm::EDAnalyzer {
   int    pho_isConverted[100];
   
   //isolation variables
-  float pho_ecalRecHitSumEtConeDR03[100];
-  float pho_hcalTowerSumEtConeDR03[100];
-  float pho_hcalDepth1TowerSumEtConeDR03[100];
-  float pho_hcalDepth2TowerSumEtConeDR03[100];
-  float pho_trkSumPtSolidConeDR03[100];
-  float pho_trkSumPtHollowConeDR03[100];
+  double pho_ecalRecHitSumEtConeDR03[100];
+  double pho_hcalTowerSumEtConeDR03[100];
+  double pho_hcalDepth1TowerSumEtConeDR03[100];
+  double pho_hcalDepth2TowerSumEtConeDR03[100];
+  double pho_trkSumPtSolidConeDR03[100];
+  double pho_trkSumPtHollowConeDR03[100];
   int   pho_nTrkSolidConeDR03[100];
   int   pho_nTrkHollowConeDR03[100];
-  float pho_ecalRecHitSumEtConeDR04[100];
-  float pho_hcalTowerSumEtConeDR04[100];
-  float pho_hcalDepth1TowerSumEtConeDR04[100];
-  float pho_hcalDepth2TowerSumEtConeDR04[100];
-  float pho_trkSumPtSolidConeDR04[100];
-  float pho_trkSumPtHollowConeDR04[100];
+  double pho_ecalRecHitSumEtConeDR04[100];
+  double pho_hcalTowerSumEtConeDR04[100];
+  double pho_hcalDepth1TowerSumEtConeDR04[100];
+  double pho_hcalDepth2TowerSumEtConeDR04[100];
+  double pho_trkSumPtSolidConeDR04[100];
+  double pho_trkSumPtHollowConeDR04[100];
   int   pho_nTrkSolidConeDR04[100];
   int   pho_nTrkHollowConeDR04[100];
-  bool  pho_hasPixelSeed[100];
   double   pho_HoE[100];
-  
+  int pho_hasPixelSeed[100];   
 
   //SC variables
   double pho_sc_energy[100];
@@ -350,7 +357,23 @@ class Analyzer : public edm::EDAnalyzer {
   double CaloMaxEtInEmTowers;
   double CaloSumEt;
   double CaloMaxEtInHadTowers;
-  
   double Delta_phi;
+
+  //PFMet variables
+  double PFMetPt;
+  double PFMetPx;
+  double PFMetPy;
+  double PFMetPhi;
+  double PFMetSumEt;
+  double Delta_phiPF;
+
+  //TCMet variables
+  double TCMetPt;
+  double TCMetPx;
+  double TCMetPy;
+  double TCMetPhi;
+  double TCMetSumEt;
+  double Delta_phiTC;
+
 };
 
