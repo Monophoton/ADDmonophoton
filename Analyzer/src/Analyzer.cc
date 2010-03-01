@@ -39,6 +39,7 @@
 #include "DataFormats/PatCandidates/interface/Photon.h"
 #include "DataFormats/PatCandidates/interface/MET.h"
 #include "DataFormats/EgammaCandidates/interface/ConversionFwd.h"
+#include "DataFormats/EgammaCandidates/interface/Conversion.h"
 #include "DataFormats/EgammaCandidates/interface/PhotonFwd.h"
 #include "DataFormats/VertexReco/interface/Vertex.h"
 #include "DataFormats/VertexReco/interface/VertexFwd.h"
@@ -490,6 +491,8 @@ Analyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
        vy[y]     = my_vertices[y].y();
        vz[y]     = my_vertices[y].z();
        chi2[y]   = my_vertices[y].chi2();
+       vtracksize[y] = my_vertices[y].tracksSize();
+       vndof[y] = my_vertices[y].ndof();
      }
    }
 
@@ -626,43 +629,53 @@ if(runtracks_){
                    matchpho_pz[x]               = -99.;
 		 }
 	       ismatchedpho[x]              =  myphoton_container[x].genParticleRef().isNonnull();
-	       /*
-	       reco::ConversionRefVector Conversions   = myphoton_container[x].conversions();
+	       reco::ConversionRefVector conversions   = myphoton_container[x].conversions();
+	       cout<<"size of conversion vector:"<<conversions.size()<<endl;
 	       for (unsigned int iConv=0; iConv<conversions.size(); iConv++) {
 		 reco::ConversionRef aConv=conversions[iConv];
-		 if (conversions[iConv]->nTracks() <2 ) continue; 
-		 if(myphoton_container[x].hasConversionTracks()==1 )
-		 {
-		   pho_nTracks[x]                    = ConvRef[0]->nTracks();
-		   pho_isConverted[x]                = ConvRef[0]->isConverted();
-		   pho_pairInvariantMass[x]          = ConvRef[0]->pairInvariantMass();
-		   pho_pairCotThetaSeparation[x]     = ConvRef[0]->pairCotThetaSeparation();
-		   pho_pairMomentum_x[x]             = ConvRef[0]->pairMomentum().x();
-		   pho_pairMomentum_y[x]             = ConvRef[0]->pairMomentum().y();
-		   pho_pairMomentum_z[x]             = ConvRef[0]->pairMomentum().z();
-		   pho_vertex_x[x]                   = ConvRef[0]->conversionVertex().x();
-		   pho_vertex_y[x]                   = ConvRef[0]->conversionVertex().y();
-		   pho_vertex_z[x]                   = ConvRef[0]->conversionVertex().z();
-		   pho_EoverP[x]                     = ConvRef[0]->EoverP();
-		   pho_zOfPrimaryVertex[x] = ConvRef[0]->zOfPrimaryVertexFromTracks();
-		 }
-	       else
-		 {
-		   pho_nTracks[x]                    = -99;
-		   pho_isConverted[x]                =   0;
-		   pho_pairInvariantMass[x]          = -99.;
-		   pho_pairCotThetaSeparation[x]     = -99.;
-		   pho_pairMomentum[x]               = -99.;
-		   pho_pairMomentum_x[x]             = -99.;
-		   pho_pairMomentum_y[x]             = -99.;
-		   pho_pairMomentum_z[x]             = -99.;
-		   pho_vertexPosition_x[x]           = -99.;
-		   pho_vertexPosition_y[x]           = -99.;
-		   pho_vertexPosition_z[x]           = -99.;
-		   pho_EoverP[x]                     = -99.;
-		   pho_zOfPrimaryVertex[x]           = -99.;
-		 }
-	       */
+		 cout<<"ntracks:"<<aConv->nTracks()<<endl;
+		 cout<<"isConverted:"<<aConv->isConverted()<<endl;
+		 if ( aConv->nTracks() <2 ) continue; 
+		 if ( aConv->conversionVertex().isValid() )
+		   {
+		     pho_nTracks[x]                    = aConv->nTracks();
+		     pho_isConverted[x]                = aConv->isConverted();
+		     pho_pairInvariantMass[x]          = aConv->pairInvariantMass();
+		     pho_pairCotThetaSeparation[x]     = aConv->pairCotThetaSeparation();
+		     pho_pairMomentum_x[x]             = aConv->pairMomentum().x();
+		     pho_pairMomentum_y[x]             = aConv->pairMomentum().y();
+		     pho_pairMomentum_z[x]             = aConv->pairMomentum().z();
+		     pho_vertex_x[x]                   = aConv->conversionVertex().x();
+		     pho_vertex_y[x]                   = aConv->conversionVertex().y();
+		     pho_vertex_z[x]                   = aConv->conversionVertex().z();
+		     pho_EoverP[x]                     = aConv->EoverP();
+		     pho_zOfPrimaryVertex[x]           = aConv->zOfPrimaryVertexFromTracks();
+		     pho_distOfMinimumApproach[x]      = aConv->distOfMinimumApproach();
+		     pho_dPhiTracksAtVtx[x]            = aConv->dPhiTracksAtVtx();
+		     pho_dPhiTracksAtEcal[x]           = aConv->dPhiTracksAtEcal();
+		     pho_dEtaTracksAtEcal[x]           = aConv->dEtaTracksAtEcal();
+		   }
+		 else
+		   {
+		     pho_nTracks[x]                    = 9999;
+		     pho_isConverted[x]                = -99;
+		     pho_pairInvariantMass[x]          = -99.;
+		     pho_pairCotThetaSeparation[x]     = -99.;
+		     pho_pairMomentum_x[x]             = -99.;
+		     pho_pairMomentum_y[x]             = -99.;
+		     pho_pairMomentum_z[x]             = -99.;
+		     pho_vertex_x[x]                   = -99.;
+		     pho_vertex_y[x]                   = -99.;
+		     pho_vertex_z[x]                   = -99.;
+		     pho_EoverP[x]                     = -99.;
+		     pho_zOfPrimaryVertex[x]           = -99.;
+		     pho_distOfMinimumApproach[x]      = -99.;
+		     pho_dPhiTracksAtVtx[x]            = -99.;
+		     pho_dPhiTracksAtEcal[x]           = -99.;
+		     pho_dEtaTracksAtEcal[x]           = -99.;
+		   }
+	       }
+	       
 	       //to get the photon hit information from every crystal of SC
 	       if(runrechit_)
 		 {
@@ -960,6 +973,8 @@ Analyzer::beginJob(const edm::EventSetup&)
       myEvent->Branch("Vertex_x",vx,"vx[Vertex_n]/D");
       myEvent->Branch("Vertex_y",vy,"vy[Vertex_n]/D");
       myEvent->Branch("Vertex_z",vz,"vz[Vertex_n]/D");
+      myEvent->Branch("Vertex_tracksize",vtracksize,"vtracksize[Vertex_n]/D");
+      myEvent->Branch("Vertex_ndof",vndof,"vndof[Vertex_n]/D");
       myEvent->Branch("Vertex_chi2",chi2,"chi2[Vertex_n]/D");
     }
 
@@ -1220,7 +1235,6 @@ Analyzer::beginJob(const edm::EventSetup&)
       myEvent->Branch("Photon_phiWidth",pho_sc_phiWidth,"pho_sc_phiWidth[Photon_n]/D");
       myEvent->Branch("Photon_sc_et",pho_sc_et,"pho_sc_et[Photon_n]/D");
       
-      /*
       myEvent->Branch("matchphotonE",matchpho_E,"matchpho_E[Photon_n]/D");
       myEvent->Branch("matchphotonpt",matchpho_pt,"matchpho_pt[Photon_n]/D");
       myEvent->Branch("matchphotoneta",matchpho_eta,"matchpho_eta[Photon_n]/D");
@@ -1229,23 +1243,23 @@ Analyzer::beginJob(const edm::EventSetup&)
       myEvent->Branch("matchphotonpy",matchpho_py,"matchpho_py[Photon_n]/D");
       myEvent->Branch("matchphotonpz",matchpho_pz,"matchpho_pz[Photon_n]/D");
       myEvent->Branch("ismatchedphoton",ismatchedpho,"ismatchedpho[Photon_n]/I");
-      */
-
-      /*
-      myEvent->Branch("photon_ntracks",pho_nTracks,"pho_nTracks[Photon_n]/I");
-      myEvent->Branch("photon_isconverted",pho_isConverted,"pho_isConverted[Photon_n]/I");
-      myEvent->Branch("photon_pairInvmass",pho_pairInvariantMass,"pho_pairInvariantMass[Photon_n]/D");
-      myEvent->Branch("photon_pairCotThetaSeperation",pho_pairCotThetaSeparation,"pho_pairCotThetaSeparatio\
-n[Photon_n]/D");
-      myEvent->Branch("photon_pairmomentumX",pho_pairMomentum_x,"pho_pairMomentum_x[Photon_n]/D");
-      myEvent->Branch("photon_pairmomentumY",pho_pairMomentum_y,"pho_pairMomentum_y[Photon_n]/D");
-      myEvent->Branch("photon_pairmomentumZ",pho_pairMomentum_z,"pho_pairMomentum_z[Photon_n]/D");
-      myEvent->Branch("photon_EoverP",pho_EoverP,"pho_EoverP[Photon_n]/D");
-      myEvent->Branch("photon_vertexX",pho_vertex_x,"pho_vertex_x[Photon_n]/D");
-      myEvent->Branch("photon_vertexY",pho_vertex_y,"pho_vertex_y[Photon_n]/D");
-      myEvent->Branch("photon_vertexZ",pho_vertex_z,"pho_vertex_z[Photon_n]/D");
-      myEvent->Branch("photon_ZOfPrimaryVertex",pho_zOfPrimaryVertex,"pho_zOfPrimaryVertex[Photon_n]/D");
-      */
+            
+      myEvent->Branch("Photon_ntracks",pho_nTracks,"pho_nTracks[Photon_n]/I");
+      myEvent->Branch("Photon_isconverted",pho_isConverted,"pho_isConverted[Photon_n]/I");
+      myEvent->Branch("Photon_pairInvmass",pho_pairInvariantMass,"pho_pairInvariantMass[Photon_n]/D");
+      myEvent->Branch("Photon_pairCotThetaSeperation",pho_pairCotThetaSeparation,"pho_pairCotThetaSeparation[Photon_n]/D");
+      myEvent->Branch("Photon_pairmomentumX",pho_pairMomentum_x,"pho_pairMomentum_x[Photon_n]/D");
+      myEvent->Branch("Photon_pairmomentumY",pho_pairMomentum_y,"pho_pairMomentum_y[Photon_n]/D");
+      myEvent->Branch("Photon_pairmomentumZ",pho_pairMomentum_z,"pho_pairMomentum_z[Photon_n]/D");
+      myEvent->Branch("Photon_EoverP",pho_EoverP,"pho_EoverP[Photon_n]/D");
+      myEvent->Branch("Photon_vertexX",pho_vertex_x,"pho_vertex_x[Photon_n]/D");
+      myEvent->Branch("Photon_vertexY",pho_vertex_y,"pho_vertex_y[Photon_n]/D");
+      myEvent->Branch("Photon_vertexZ",pho_vertex_z,"pho_vertex_z[Photon_n]/D");
+      myEvent->Branch("Photon_ZOfPrimaryVertex",pho_zOfPrimaryVertex,"pho_zOfPrimaryVertex[Photon_n]/D");
+      myEvent->Branch("Photon_distOfMinimumApproach",pho_distOfMinimumApproach,"pho_distOfMinimumApproach[Photon_n]/D");
+      myEvent->Branch("Photon_dPhiTracksAtVtx",pho_dPhiTracksAtVtx,"pho_dPhiTracksAtVtx[Photon_n]/D");
+      myEvent->Branch("Photon_dPhiTracksAtEcal",pho_dPhiTracksAtEcal,"pho_dPhiTracksAtEcal[Photon_n]/D");
+      myEvent->Branch("Photon_dEtaTracksAtVtx",pho_dEtaTracksAtEcal,"pho_dEtaTracksAtEcal[Photon_n]/D");
 
       myEvent->Branch("Photon_timing_xtalEB",pho_timing_xtalEB,"pho_timing_xtalEB[Photon_n][ncrysPhoton]/D");
       myEvent->Branch("Photon_timingavg_xtalEB",pho_timingavg_xtalEB,"pho_timingavg_xtalEB[Photon_n]/D");

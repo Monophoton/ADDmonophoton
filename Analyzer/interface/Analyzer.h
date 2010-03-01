@@ -96,12 +96,13 @@ class Analyzer : public edm::EDAnalyzer {
   TTree* myEvent;
   //variables to be filled in the tree
 
-
   //vertex variables
   double vx[10];
   double vy[10];
   double vz[10];
   double chi2[10];
+  double vtracksize[10];
+  double vndof[10];
 
   //track variables
   double trk_pt[200];
@@ -315,7 +316,6 @@ class Analyzer : public edm::EDAnalyzer {
   double matchpho_pz[100];
   int    ismatchedpho[100];
   
-  /*
   //converted photon variabes
   unsigned int pho_nTracks[100];
   double pho_pairInvariantMass[100];
@@ -328,8 +328,11 @@ class Analyzer : public edm::EDAnalyzer {
   double pho_vertex_y[100];
   double pho_vertex_z[100];
   double pho_zOfPrimaryVertex[100];
-  */
-
+  double pho_distOfMinimumApproach[100];
+  double pho_dPhiTracksAtVtx[100];      
+  double pho_dPhiTracksAtEcal[100];     
+  double pho_dEtaTracksAtEcal[100];     
+  
   //rechit information
   double pho_timing_xtalEB[100][100];
   double pho_timingavg_xtalEB[100];
