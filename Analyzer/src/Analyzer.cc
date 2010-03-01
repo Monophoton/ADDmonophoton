@@ -138,6 +138,7 @@ Analyzer::Analyzer(const edm::ParameterSet& iConfig):
   rungenParticleCandidates_(iConfig.getUntrackedParameter<bool>("rungenParticleCandidates")),
   runphotons_(iConfig.getUntrackedParameter<bool>("runphotons")),
   runmet_(iConfig.getUntrackedParameter<bool>("runmet")),
+  rungenmet_(iConfig.getUntrackedParameter<bool>("rungenmet")),
   runPFmet_(iConfig.getUntrackedParameter<bool>("runmet")),
   runTCmet_(iConfig.getUntrackedParameter<bool>("runmet")),
   runelectrons_(iConfig.getUntrackedParameter<bool>("runelectrons")),
@@ -796,6 +797,17 @@ if(runtracks_){
 	   if(runphotons_==1)
 	     if (myphoton_container.size()!=0)
 	       Delta_phi                             = deltaphi(correct_phi(met->phi()),correct_phi(myphoton_container[0].phi()));
+	   if(rungenmet_){
+	   const reco::GenMET *genMet = met->genMET();
+	   genMetPt     = genMet->et();
+	   genMetPhi    = correct_phi(genMet->phi());
+	   genMetSumEt  = genMet->sumEt();
+	   genMetPx     = genMet->px();
+	   genMetPy     = genMet->py();
+	   if(runphotons_==1)
+	     if (myphoton_container.size()!=0)
+	       Delta_phiGEN                             = deltaphi(correct_phi(genMet->phi()),correct_phi(myphoton_container[0].phi()));
+	   }
 	 }
      }
    if(runPFmet_)
@@ -1290,9 +1302,20 @@ Analyzer::beginJob(const edm::EventSetup&)
       myEvent->Branch("CaloEmEtInHF",&CaloEmEtInHF,"CaloEmEtInHF/D");
       myEvent->Branch("CaloMaxEtInEmTowers",&CaloMaxEtInEmTowers,"CaloMaxEtInEmTowers/D");
       myEvent->Branch("CaloMaxEtInHadTowers",&CaloMaxEtInHadTowers,"CaloMaxEtInHadTowers/D");
+
+      if(rungenmet_)
+	{
+	  myEvent->Branch("genMetPt",&genMetPt,"genMetPt/D");
+	  myEvent->Branch("genMetPx",&genMetPx,"genMetPx/D");
+	  myEvent->Branch("genMetPy",&genMetPy,"genMetPy/D");
+	  myEvent->Branch("genMetPhi",&genMetPhi,"genMetPhi/D");
+	  myEvent->Branch("genMetSumEt",&genMetSumEt,"genMetSumEt/D");
+	}
     }//end of if(runmet)
   if(runmet_&& runphotons_)
     myEvent->Branch("Delta_phi",&Delta_phi,"Delta_phi/D");
+  if(runmet_ && runphotons_ && rungenmet_)
+    myEvent->Branch("Delta_phiGEN",&Delta_phiGEN,"Delta_phiGEN/D");
 
   if(runPFmet_)
     {

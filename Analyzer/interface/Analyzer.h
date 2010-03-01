@@ -77,6 +77,7 @@ class Analyzer : public edm::EDAnalyzer {
   bool rungenParticleCandidates_;
   bool runphotons_;
   bool runmet_;
+  bool rungenmet_;
   bool runPFmet_;
   bool runTCmet_;
   bool runelectrons_;
@@ -377,6 +378,14 @@ class Analyzer : public edm::EDAnalyzer {
   double TCMetPhi;
   double TCMetSumEt;
   double Delta_phiTC;
+
+  //genMet variables
+  double genMetPt;
+  double genMetPx;
+  double genMetPy;
+  double genMetPhi;
+  double genMetSumEt;
+  double Delta_phiGEN;
 
 };
 
