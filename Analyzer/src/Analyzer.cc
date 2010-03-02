@@ -139,8 +139,8 @@ Analyzer::Analyzer(const edm::ParameterSet& iConfig):
   runphotons_(iConfig.getUntrackedParameter<bool>("runphotons")),
   runmet_(iConfig.getUntrackedParameter<bool>("runmet")),
   rungenmet_(iConfig.getUntrackedParameter<bool>("rungenmet")),
-  runPFmet_(iConfig.getUntrackedParameter<bool>("runmet")),
-  runTCmet_(iConfig.getUntrackedParameter<bool>("runmet")),
+  runPFmet_(iConfig.getUntrackedParameter<bool>("runPFmet")),
+  runTCmet_(iConfig.getUntrackedParameter<bool>("runTCmet")),
   runelectrons_(iConfig.getUntrackedParameter<bool>("runelectrons")),
   runmuons_(iConfig.getUntrackedParameter<bool>("runmuons")),
   runjets_(iConfig.getUntrackedParameter<bool>("runjets")),
@@ -497,7 +497,7 @@ Analyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
      }
    }
 
-if(runtracks_){
+   if(runtracks_){
    Handle<reco::TrackCollection> tracks;
    iEvent.getByLabel(Tracks_,tracks);
    //cout<<"Track_n - all "<<tracks->size()<<endl;
