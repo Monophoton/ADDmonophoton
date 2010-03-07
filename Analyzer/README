@@ -1,0 +1,13 @@
+
+Before "Successful" run of the Analyzer in 341, Please follow:
+1. Checkout V05-05-48 RecoEcal/EgammaCoreTools 
+2. Compile
+3. Correct the path of include files in .cc (line 65) and in .h (line 8)
+5. Now it "should" work. In case it does not, CMSSW_3_4_1/src/ check out 
+V01-08-08-09   CondFormats/JetMETObjects
+V01-08-23-05   JetMETCorrections/Configuration
+V07-10-05-01   PhysicsTools/PatAlgos
+and compile again.
+ 
+Now it should work. In case it still does not work, please write me here:
+sandhya.jain@cern.ch

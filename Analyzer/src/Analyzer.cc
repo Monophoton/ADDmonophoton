@@ -62,7 +62,7 @@
 #include <map>
 #include <string>
 
-#include "/afs/cern.ch/user/s/sandhya/scratch0/CMSSW_3_1_4/src/Analysis/Analyzer/interface/Analyzer.h"
+#include "/afs/cern.ch/user/s/sandhya/scratch0/CMSSW_3_4_1/src/Analysis/Analyzer/interface/Analyzer.h"
 
 
 using namespace std;
@@ -74,6 +74,61 @@ double correct_phi(double phi);
 double delta_R(double phi,double eta);
 double Theta(double eta);
 double Pl(double P,double Pt);
+
+double Analyzer::rookFractionBarrelCalculator( const reco::SuperCluster &superCluster ,const EcalRecHitCollection &recHits){
+  double rookFraction = 0.; // between 0 and 1
+
+  // get recHit crystal IDs for this superCluster
+  std::vector< std::pair<DetId, float> > myHitsPair = superCluster.hitsAndFractions();
+  //make sure hits are in barrel ecal!
+  bool isHitEcalBarrel = false;
+  if ((myHitsPair[0].first).det() == DetId::Ecal && (myHitsPair[0].first).subdetId() == EcalBarrel ){ 
+    isHitEcalBarrel = true;
+  }
+  if (isHitEcalBarrel == false){
+    cout << "this superCluster is not in Barrel Ecal! rookFractionBarrelCalculator is returning nonsense value 5.0"<<endl;
+    rookFraction = 5.0;
+    return rookFraction;
+  }
+  std::vector<DetId> usedCrystals;
+  for(unsigned int i=0; i< myHitsPair.size(); i++){
+    usedCrystals.push_back(myHitsPair[i].first);
+  }
+  // get seed energy and position
+  float seedEnergy = -20.;
+  int seedIPhi = 500;
+  int seedIEta = 500;
+  for(unsigned int i=0; i<usedCrystals.size(); i++){
+    //get pointer to recHit object
+    EcalRecHitCollection::const_iterator myRH = recHits.find(usedCrystals[i]);
+    EBDetId EBdetIdi( myRH->detid() );
+    if(myRH->energy() > seedEnergy){ 
+      seedEnergy = myRH->energy();
+      seedIPhi   = EBdetIdi.iphi();
+      seedIEta   = EBdetIdi.ieta();
+    }// if energy is larger than seed E
+  }// loop over clustered crystals
+  if (seedIEta<0) seedIEta++; // account for no ieta = 0
+  // select adjacent crystal with the most E (not diagonal!! hence the name ROOK)
+  float adjacentEnergy = -20.;
+  for(EcalRecHitCollection::const_iterator rh = recHits.begin(); rh != recHits.end(); rh++){
+    EBDetId EBdetIdi( rh->detid() );
+    int stampIPhi = EBdetIdi.iphi();
+    int stampIEta = EBdetIdi.ieta();
+    if (stampIEta<0) stampIEta++; // account for no ieta = 0
+    int deltaIEta = abs(stampIEta - seedIEta);
+    int deltaIPhi = abs(stampIPhi - seedIPhi);
+    if (deltaIPhi > 180) deltaIPhi = 360 - deltaIPhi; // account for phi wrap around
+    if( (deltaIEta==1 && deltaIPhi==0) || (deltaIEta==0 && deltaIPhi==1) ){
+      if( rh->energy() > adjacentEnergy ){
+	adjacentEnergy = rh->energy();
+      }//if energy is greatest adjacent
+    }
+  }// loop over Ecal rec Hit collection
+  rookFraction = adjacentEnergy/seedEnergy;
+  return rookFraction;
+}
+
 
 
 //
@@ -146,6 +201,7 @@ Analyzer::Analyzer(const edm::ParameterSet& iConfig):
   runjets_(iConfig.getUntrackedParameter<bool>("runjets")),
   runtaus_(iConfig.getUntrackedParameter<bool>("runtaus")),
   runHLT_(iConfig.getUntrackedParameter<bool>("runHLT")),
+  runL1_(iConfig.getUntrackedParameter<bool>("runL1")),
   runtracks_(iConfig.getUntrackedParameter<bool>("runtracks")),
   runrechit_(iConfig.getUntrackedParameter<bool>("runrechit")),
   runvertex_(iConfig.getUntrackedParameter<bool>("runvertex")),
@@ -427,23 +483,26 @@ Analyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
      }//end of if(rungenParticleCandidates_)
    
    ///// L1
-   edm::ESHandle<L1GtTriggerMenu> menuRcd;
-   iSetup.get<L1GtTriggerMenuRcd>().get(menuRcd);
-   const L1GtTriggerMenu* menu = menuRcd.product();
-   
-   edm::Handle< L1GlobalTriggerReadoutRecord > gtRecord;
-   iEvent.getByLabel( edm::InputTag("gtDigis"), gtRecord);
-   const DecisionWord dWord = gtRecord->decisionWord();  // this will get the decision word *before* masking disabled bits
-   
-   
-  //Initialize and fill the L1 flags
-  for(map<string,int>::iterator iter = L1_chosen.begin(); iter != L1_chosen.end();iter++){
-  iter->second = 0;
-  string L1name =  iter->first;
-  if ( menu->gtAlgorithmResult( L1name, dWord) ) L1_chosen[L1name] = 1;
-   else L1_chosen[ L1name ]=0;
-  }   
-   
+   if(runL1_)
+     {
+       edm::ESHandle<L1GtTriggerMenu> menuRcd;
+       iSetup.get<L1GtTriggerMenuRcd>().get(menuRcd);
+       const L1GtTriggerMenu* menu = menuRcd.product();
+       
+       edm::Handle< L1GlobalTriggerReadoutRecord > gtRecord;
+       iEvent.getByLabel( edm::InputTag("gtDigis"), gtRecord);
+       const DecisionWord dWord = gtRecord->decisionWord();  // this will get the decision word *before* masking disabled bits
+       
+       
+       //Initialize and fill the L1 flags
+       for(map<string,int>::iterator iter = L1_chosen.begin(); iter != L1_chosen.end();iter++){
+	 iter->second = 0;
+	 string L1name =  iter->first;
+	 if ( menu->gtAlgorithmResult( L1name, dWord) ) L1_chosen[L1name] = 1;
+	 else L1_chosen[ L1name ]=0;
+       } 
+     }  
+
    /////HLT
    if(runHLT_==1){
      Handle<TriggerResults> HLTR;
@@ -591,23 +650,28 @@ Analyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
 	       pho_sc_etaWidth[x]           =  myphoton_container[x].superCluster()->etaWidth();
 	       pho_sc_phiWidth[x]           =  myphoton_container[x].superCluster()->phiWidth();
 	       pho_HoE[x]                   =  myphoton_container[x].hadronicOverEm();              
-	       pho_ecalRecHitSumEtConeDR03[x]  =  myphoton_container[x].ecalRecHitSumEtConeDR03();
-	       pho_hcalTowerSumEtConeDR03[x]   =  myphoton_container[x].hcalTowerSumEtConeDR03();
-	       pho_trkSumPtHollowConeDR03[x]   =  myphoton_container[x].trkSumPtHollowConeDR03();
-	       pho_trkSumPtSolidConeDR03[x] =  myphoton_container[x].trkSumPtSolidConeDR03();
-	       pho_nTrkSolidConeDR03[x]     = myphoton_container[x].nTrkSolidConeDR03();
-	       pho_nTrkHollowConeDR03[x]     = myphoton_container[x].nTrkHollowConeDR03();
+	       pho_ecalRecHitSumEtConeDR03[x]      =  myphoton_container[x].ecalRecHitSumEtConeDR03();
+	       pho_hcalTowerSumEtConeDR03[x]       =  myphoton_container[x].hcalTowerSumEtConeDR03();
+	       pho_trkSumPtHollowConeDR03[x]       =  myphoton_container[x].trkSumPtHollowConeDR03();
+	       pho_trkSumPtSolidConeDR03[x]        =  myphoton_container[x].trkSumPtSolidConeDR03();
+	       pho_nTrkSolidConeDR03[x]            = myphoton_container[x].nTrkSolidConeDR03();
+	       pho_nTrkHollowConeDR03[x]           = myphoton_container[x].nTrkHollowConeDR03();
 	       pho_hcalDepth1TowerSumEtConeDR03[x] = myphoton_container[x].hcalDepth1TowerSumEtConeDR03();
 	       pho_hcalDepth2TowerSumEtConeDR03[x] = myphoton_container[x].hcalDepth2TowerSumEtConeDR03();
-	       pho_ecalRecHitSumEtConeDR03[x]  =  myphoton_container[x].ecalRecHitSumEtConeDR04();
-	       pho_hcalTowerSumEtConeDR03[x]   =  myphoton_container[x].hcalTowerSumEtConeDR04();
-	       pho_trkSumPtHollowConeDR03[x]   =  myphoton_container[x].trkSumPtHollowConeDR04();
-	       pho_trkSumPtSolidConeDR03[x] =  myphoton_container[x].trkSumPtSolidConeDR04();
-	       pho_nTrkSolidConeDR03[x]     = myphoton_container[x].nTrkSolidConeDR04();
-	       pho_nTrkHollowConeDR03[x]     = myphoton_container[x].nTrkHollowConeDR04();
+	       pho_ecalRecHitSumEtConeDR04[x]      =  myphoton_container[x].ecalRecHitSumEtConeDR04();
+	       pho_hcalTowerSumEtConeDR04[x]       =  myphoton_container[x].hcalTowerSumEtConeDR04();
+	       pho_trkSumPtHollowConeDR04[x]       =  myphoton_container[x].trkSumPtHollowConeDR04();
+	       pho_trkSumPtSolidConeDR04[x]        =  myphoton_container[x].trkSumPtSolidConeDR04();
+	       pho_nTrkSolidConeDR04[x]            = myphoton_container[x].nTrkSolidConeDR04();
+	       pho_nTrkHollowConeDR04[x]           = myphoton_container[x].nTrkHollowConeDR04();
 	       pho_hcalDepth1TowerSumEtConeDR04[x] = myphoton_container[x].hcalDepth1TowerSumEtConeDR04();
 	       pho_hcalDepth2TowerSumEtConeDR04[x] = myphoton_container[x].hcalDepth2TowerSumEtConeDR04();
-	       pho_hasPixelSeed[x] = myphoton_container[x].hasPixelSeed(); 
+	       pho_hasPixelSeed[x]                 = myphoton_container[x].hasPixelSeed(); 
+	       pho_isEB[x]                         = myphoton_container[x].isEB(); 
+	       pho_isEE[x]                         = myphoton_container[x].isEE();
+ 	       pho_isEBGap[x]                      = myphoton_container[x].isEBGap(); 
+ 	       pho_isEEGap[x]                      = myphoton_container[x].isEEGap(); 
+ 	       pho_isEBEEGap[x]                    = myphoton_container[x].isEBEEGap(); 
 
 	       if(myphoton_container[x].genParticleRef().isNonnull())
 		 {
@@ -629,7 +693,7 @@ Analyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
                    matchpho_py[x]               = -99.;
                    matchpho_pz[x]               = -99.;
 		 }
-	       ismatchedpho[x]              =  myphoton_container[x].genParticleRef().isNonnull();
+	       ismatchedpho[x]                         =  myphoton_container[x].genParticleRef().isNonnull();
 	       reco::ConversionRefVector conversions   = myphoton_container[x].conversions();
 	       cout<<"size of conversion vector:"<<conversions.size()<<endl;
 	       for (unsigned int iConv=0; iConv<conversions.size(); iConv++) {
@@ -655,7 +719,7 @@ Analyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
 		     pho_dPhiTracksAtVtx[x]            = aConv->dPhiTracksAtVtx();
 		     pho_dPhiTracksAtEcal[x]           = aConv->dPhiTracksAtEcal();
 		     pho_dEtaTracksAtEcal[x]           = aConv->dEtaTracksAtEcal();
-		   }
+		   }//end of if ( aConv->conversionVertex().isValid() )
 		 else
 		   {
 		     pho_nTracks[x]                    = 9999;
@@ -674,15 +738,15 @@ Analyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
 		     pho_dPhiTracksAtVtx[x]            = -99.;
 		     pho_dPhiTracksAtEcal[x]           = -99.;
 		     pho_dEtaTracksAtEcal[x]           = -99.;
-		   }
-	       }
-	       
+		   }//end of else
+	       }//end of for (unsigned int iConv=0; iConv<conversions.size(); iConv++)
+
 	       //to get the photon hit information from every crystal of SC
 	       if(runrechit_)
-		 {
+		 { 
 		   std::vector< std::pair<DetId, float> >  PhotonHit_DetIds  = myphoton_container[x].superCluster()->hitsAndFractions();
-		   Handle<EcalRecHitCollection> Brechit;//barrel                                                                            
-		   Handle<EcalRecHitCollection> Erechit;//endcap                                                                            
+		   Handle<EcalRecHitCollection> Brechit;//barrel
+		   Handle<EcalRecHitCollection> Erechit;//endcap
 		   iEvent.getByLabel(rechitBLabel_,Brechit);
 		   iEvent.getByLabel(rechitELabel_,Erechit); 
 		   const EcalRecHitCollection* barrelRecHits= Brechit.product();
@@ -695,78 +759,81 @@ Analyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
 		   int ncrys = 0;
 		   int ncrysPhoton =0;
 		   vector< std::pair<DetId, float> >::const_iterator detitr;
-		   
 		   for(detitr = PhotonHit_DetIds.begin(); detitr != PhotonHit_DetIds.end(); ++detitr)
 		     {
 		       if (((*detitr).first).det() == DetId::Ecal && ((*detitr).first).subdetId() == EcalBarrel) 
 			 {
 			   EcalRecHitCollection::const_iterator j= Brechit->find(((*detitr).first));
 			   EcalRecHitCollection::const_iterator thishit;
-			   if (j!= Brechit->end())  thishit = j;
+			   if ( j!= Brechit->end())  thishit = j;
 			   if ( j== Brechit->end())
 			     {
 			       //std::cout<<"thishit not matched "<<std::endl;
 			       continue;
 			     }
-			   EBDetId detId  = (EBDetId)((*detitr).first);
-			   crystal.rawId  = thishit->id().rawId();
-			   crystal.energy = thishit->energy();
-			   crystal.time   = thishit->time();
-			   crystal.ieta   = detId.ieta();
-			   crystal.iphi   = detId.iphi();
-			   			   
-			   //calculate timing avg
-			   if(crystal.energy > 0.1)
-			     {
-			       timing_avg  = timing_avg + crystal.time;
-			       ncrys++;
-			     } 
+			     EBDetId detId  = (EBDetId)((*detitr).first);
+			     crystal.rawId  = thishit->id().rawId();
+			     crystal.energy = thishit->energy();
+			     crystal.time   = thishit->time();
+			     crystal.ieta   = detId.ieta();
+			     crystal.iphi   = detId.iphi();
+			     //calculate timing avg
+			     if(crystal.energy > 0.1)
+			       {
+				 timing_avg  = timing_avg + crystal.time;
+				 ncrys++;
+			       } 
 			 }//end of if ((*detitr).det() == DetId::Ecal && (*detitr).subdetId() == EcalBarrel)
-		       else 
-			 {
-			   crystal.rawId  = 999;
-			   crystal.energy = -99;
-			   crystal.time   = -99;
-			   crystal.ieta   = -99;
-			   crystal.iphi   = -99;
-			 }
+			 else 
+			   {
+			     crystal.rawId  = 999;
+			     crystal.energy = -99;
+			     crystal.time   = -99;
+			     crystal.ieta   = -99;
+			     crystal.iphi   = -99;
+			   }
 		       crystalinfo_container.push_back(crystal);  
 		     }
 		   std::sort(crystalinfo_container.begin(),crystalinfo_container.end(),EnergySortCriterium());
 		   if (ncrys !=0) timing_avg = timing_avg/(double)ncrys;
 		   else timing_avg = -99.;
 		   //cout<<" total hits for this photon:"<<crystalinfo_container.size()<<endl;
-		   //cout<<" total hits contibuting for timing:"<<ncrys<<endl;
+		   //cout<<" total hits contibuting for timing(energy > 0.1):"<<ncrys<<endl;
 		   ncrysPhoton = crystalinfo_container.size(); 
 		   pho_timingavg_xtalEB[x]      = timing_avg;
 		   for (unsigned int y =0; y < crystalinfo_container.size();y++)
 		     {
 		       pho_timing_xtalEB[x][y]         = crystalinfo_container[y].time;
 		       pho_energy_xtalEB[x][y]         = crystalinfo_container[y].energy;
+		       //cout<<"energy of "<<y<<" crystal:"<<pho_energy_xtalEB[x][y]<<endl;  
 		       pho_ieta_xtalEB[x][y]           = crystalinfo_container[y].ieta;
 		       pho_iphi_xtalEB[x][y]           = crystalinfo_container[y].iphi;
-		     }
+		     }//end of for (unsigned int y =0; y < crystalinfo_container.size();y++
 		   if(myphoton_container[x].isEB())
-		   {
-		     std::vector<float> showershapes_barrel = EcalClusterTools::ShowerShapes(*(myphoton_container[x].superCluster()),barrelRecHits);
-		     //cout<<"roundness for barrel photon:"<<showershapes_barrel[0]<<endl;
-		     //cout<<"angle for barrel photon:"<<showershapes_barrel[1]<<endl;
-		     pho_roundness[x]= showershapes_barrel[0];
-		     pho_angle[x]= showershapes_barrel[1];
-		   }
-		    else{
-		      pho_roundness[x]= -99.;
-		      pho_angle[x]= -99.;
-		      //std::vector<float> showershapes_endcap = EcalClusterTools::ShowerShapes(*(myphoton_container[x].superCluster()),endcapRecHits);
-		      // cout<<"roundness for endcap photon:"<<showershapes_endcap[0]<<endl;
-		      //cout<<"angle for endcap photon:"<<showershapes_endcap[1]<<endl;
-		    }
+		     {
+		       std::vector<float> showershapes_barrel = EcalClusterTools::roundnessBarrelSuperClusters(*(myphoton_container[x].superCluster()),*barrelRecHits,0);
+		       //cout<<"roundness for barrel photon:"<<showershapes_barrel[0]<<endl;
+		       //cout<<"angle for barrel photon:"<<showershapes_barrel[1]<<endl;
+		       pho_roundness[x]    = (double)showershapes_barrel[0];
+		       pho_angle[x]        = (double)showershapes_barrel[1];
+		       pho_s9[x]           = pho_energy_xtalEB[x][0]/pho_e3x3[x];
+		       pho_rookFraction[x] = rookFractionBarrelCalculator(*( myphoton_container[x].superCluster() ), *barrelRecHits);
+		     }//end of if(myphoton_container[x].isEB())
+		    else{ 
+		      pho_roundness[x]   = -99.;
+		      pho_angle[x]       = -99.;
+		      pho_s9[x]          = -99.;
+		      pho_rookFraction[x]= -99.;
+		    }//end of else
+		   cout<<"rook fraction:"<<pho_rookFraction[x]<<endl;
+		   cout<<"s9:"<<pho_s9[x]<<endl;
+		   cout<<"pt:"<<pho_pt[x]<<endl;
 		 }//if(runrechit_)
 	     }//end of for loop over x
 	 }//if(myphoton_container.size!=0) 
        //cout<<"got photon variables"<<endl; 
-       
-     }
+     }//if(runphotons_)  
+
    if(runmet_)
      {
        edm::Handle<edm::View<pat::MET> > metHandle;
@@ -796,17 +863,18 @@ Analyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
 	   CaloMaxEtInHadTowers                  = met->maxEtInHadTowers();
 	   if(runphotons_==1)
 	     if (myphoton_container.size()!=0)
-	       Delta_phi                             = deltaphi(correct_phi(met->phi()),correct_phi(myphoton_container[0].phi()));
+	       Delta_phi                         = deltaphi(correct_phi(met->phi()),correct_phi(myphoton_container[0].phi()));
 	   if(rungenmet_){
 	   const reco::GenMET *genMet = met->genMET();
 	   genMetPt     = genMet->et();
+	   /*
 	   genMetPhi    = correct_phi(genMet->phi());
 	   genMetSumEt  = genMet->sumEt();
 	   genMetPx     = genMet->px();
 	   genMetPy     = genMet->py();
 	   if(runphotons_==1)
 	     if (myphoton_container.size()!=0)
-	       Delta_phiGEN                             = deltaphi(correct_phi(genMet->phi()),correct_phi(myphoton_container[0].phi()));
+	     Delta_phiGEN                        = deltaphi(correct_phi(genMet->phi()),correct_phi(myphoton_container[0].phi()));*/
 	   }
 	 }
      }
@@ -1214,8 +1282,8 @@ Analyzer::beginJob(const edm::EventSetup&)
       myEvent->Branch("Photon_maxEnergyXtal",pho_maxEnergyXtal,"pho_maxEnergyXtal[Photon_n]/D");
       myEvent->Branch("Photon_SigmaEtaEta",pho_SigmaEtaEta,"pho_SigmaEtaEta[Photon_n]/D");
       myEvent->Branch("Photon_SigmaIetaIeta",pho_SigmaIetaIeta,"pho_SigmaIetaIeta[Photon_n]/D");
-      myEvent->Branch("Photon_Roundness",pho_roundness,"pho_roundness[Photon_n]/F");
-      myEvent->Branch("Photon_Angle",pho_angle,"pho_angle[Photon_n]/F");
+      myEvent->Branch("Photon_Roundness",pho_roundness,"pho_roundness[Photon_n]/D");
+      myEvent->Branch("Photon_Angle",pho_angle,"pho_angle[Photon_n]/D");
       myEvent->Branch("Photon_ecalRecHitSumEtConeDR03",pho_ecalRecHitSumEtConeDR03,"pho_ecalRecHitSumEtConeDR03[Photon_n]/D");
       myEvent->Branch("Photon_hcalTowerSumEtConeDR03",pho_hcalTowerSumEtConeDR03,"pho_hcalTowerSumEtConeDR03[Photon_n]/D");
       myEvent->Branch("Photon_trkSumPtSolidConeDR03",pho_trkSumPtSolidConeDR03,"pho_trkSumPtSolidConeDR03[Photon_n]/D");
@@ -1233,6 +1301,11 @@ Analyzer::beginJob(const edm::EventSetup&)
       myEvent->Branch("Photon_hcalDepth1TowerSumEtConeDR04",pho_hcalDepth1TowerSumEtConeDR04,"pho_hcalDepth1TowerSumEtConeDR04[Photon_n]/D");
       myEvent->Branch("Photon_hcalDepth2TowerSumEtConeDR04",pho_hcalDepth2TowerSumEtConeDR04,"pho_hcalDepth2TowerSumEtConeDR04[Photon_n]/D");
       myEvent->Branch("Photon_hasPixelSeed",pho_hasPixelSeed,"pho_hasPixelSeed[Photon_n]/I"); 
+      myEvent->Branch("Photon_isEB",pho_isEB,"pho_isEB[Photon_n]/D");
+      myEvent->Branch("Photon_isEE",pho_isEE,"pho_isEE[Photon_n]/D");
+      myEvent->Branch("Photon_isEBGap",pho_isEBGap,"pho_isEBGap[Photon_n]/D");
+      myEvent->Branch("Photon_isEEGap",pho_isEEGap,"pho_isEEGap[Photon_n]/D");
+      myEvent->Branch("Photon_isEBEEGap",pho_isEBEEGap,"pho_isEBEEGap[Photon_n]/D");
 
       myEvent->Branch("Photon_HoE",pho_HoE,"pho_HoE[Photon_n]/D");
       myEvent->Branch("Photon_px",pho_px,"pho_px[Photon_n]/D");
@@ -1272,12 +1345,15 @@ Analyzer::beginJob(const edm::EventSetup&)
       myEvent->Branch("Photon_dPhiTracksAtVtx",pho_dPhiTracksAtVtx,"pho_dPhiTracksAtVtx[Photon_n]/D");
       myEvent->Branch("Photon_dPhiTracksAtEcal",pho_dPhiTracksAtEcal,"pho_dPhiTracksAtEcal[Photon_n]/D");
       myEvent->Branch("Photon_dEtaTracksAtVtx",pho_dEtaTracksAtEcal,"pho_dEtaTracksAtEcal[Photon_n]/D");
-
+      if(runrechit_){
       myEvent->Branch("Photon_timing_xtalEB",pho_timing_xtalEB,"pho_timing_xtalEB[Photon_n][ncrysPhoton]/D");
       myEvent->Branch("Photon_timingavg_xtalEB",pho_timingavg_xtalEB,"pho_timingavg_xtalEB[Photon_n]/D");
       myEvent->Branch("Photon_energy_xtalEB",pho_energy_xtalEB,"pho_energy_xtalEB[Photon_n][ncrysPhoton]/D");
       myEvent->Branch("Photon_ieta_xtalEB",pho_ieta_xtalEB,"pho_ieta_xtalEB[Photon_n][ncrysPhoton]/D");
       myEvent->Branch("Photon_iphi_xtalEB",pho_iphi_xtalEB,"pho_iphi_xtalEB[Photon_n][ncrysPhoton]/D");
+      myEvent->Branch("Photon_rookFraction",pho_rookFraction,"pho_rookFraction[Photon_n]/D");
+      myEvent->Branch("Photon_s9",pho_s9,"pho_s9[Photon_n]/D");
+      }
     }//end of if (runphotons_)
   
   if(runmet_)

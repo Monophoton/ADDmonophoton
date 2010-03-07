@@ -5,7 +5,9 @@
 #include "TGraph.h"
 #include "TCanvas.h"
 #include "TTree.h"
-#include "/afs/cern.ch/user/s/sandhya/scratch0/CMSSW_3_1_4/src/Analysis/Analyzer/interface/CrystalInfo.h"
+#include "/afs/cern.ch/user/s/sandhya/scratch0/CMSSW_3_4_1/src/Analysis/Analyzer/interface/CrystalInfo.h"
+#include "DataFormats/EgammaReco/interface/SuperCluster.h"
+#include "DataFormats/EcalRecHit/interface/EcalRecHitCollections.h"
 #include "FWCore/Framework/interface/TriggerNames.h"
 #include <string>
 
@@ -19,6 +21,7 @@ class Analyzer : public edm::EDAnalyzer {
   virtual void beginJob(const edm::EventSetup&) ;
   virtual void analyze(const edm::Event&, const edm::EventSetup&);
   virtual void endJob() ;
+  static double rookFractionBarrelCalculator( const reco::SuperCluster & ,const EcalRecHitCollection &);
 
   // ----------member data ---------------------------
   int nevents;
@@ -85,6 +88,7 @@ class Analyzer : public edm::EDAnalyzer {
   bool runjets_;
   bool runtaus_;
   bool runHLT_;
+  bool runL1_;
   bool runtracks_;
   bool runrechit_;
   bool runvertex_;
@@ -263,17 +267,22 @@ class Analyzer : public edm::EDAnalyzer {
   double pho_py[100];
   double pho_pz[100];
   double pho_r9[100];
-  float  pho_e1x5[100];
-  float pho_e2x5[100];
-  float pho_e3x3[100];
-  float pho_e5x5[100];
-  float pho_r1x5[100];
-  float pho_r2x5[100];
-  float pho_SigmaEtaEta[100];
-  float pho_SigmaIetaIeta[100];
-  float pho_roundness[100];
-  float pho_angle[100];
-  float pho_maxEnergyXtal[100];
+  double pho_isEB[100];
+  double pho_isEE[100];
+  double pho_isEBGap[100];
+  double pho_isEEGap[100];
+  double pho_isEBEEGap[100];
+  double pho_e1x5[100];
+  double pho_e2x5[100];
+  double pho_e3x3[100];
+  double pho_e5x5[100];
+  double pho_r1x5[100];
+  double pho_r2x5[100];
+  double pho_SigmaEtaEta[100];
+  double pho_SigmaIetaIeta[100];
+  double pho_roundness[100];
+  double pho_angle[100];
+  double pho_maxEnergyXtal[100];
   double pho_theta[100];
   double pho_et[100];
   int    pho_isConverted[100];
@@ -340,6 +349,8 @@ class Analyzer : public edm::EDAnalyzer {
   double pho_energy_xtalEB[100][100];
   double pho_ieta_xtalEB[100][100];
   double pho_iphi_xtalEB[100][100];
+  double pho_rookFraction[100];
+  double pho_s9[100];
 
   //calomet variables
   double CaloMetSig;
