@@ -218,7 +218,6 @@ Analyzer::Analyzer(const edm::ParameterSet& iConfig):
   Vertex_n         = 0;
   Track_n          = 0;
   Photon_n         = 0;
-  ncrysPhoton      = 0;
   Jet_n            = 0;
   Electron_n       = 0; 
   Muon_n           = 0;
@@ -246,7 +245,10 @@ Analyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
 {
    using namespace edm;
    using namespace reco;
-
+   
+   RunNumber   = iEvent.id().run();
+   EventNumber = iEvent.id().event();
+   cout<<"RunNumber:"<<RunNumber<<"     Event:"<< EventNumber<<endl;
    nevents++;
    //cout<<"Event:"<<nevents<<endl;
    //getting handle to generator level information
@@ -695,11 +697,11 @@ Analyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
 		 }
 	       ismatchedpho[x]                         =  myphoton_container[x].genParticleRef().isNonnull();
 	       reco::ConversionRefVector conversions   = myphoton_container[x].conversions();
-	       cout<<"size of conversion vector:"<<conversions.size()<<endl;
+	       //cout<<"size of conversion vector:"<<conversions.size()<<endl;
 	       for (unsigned int iConv=0; iConv<conversions.size(); iConv++) {
 		 reco::ConversionRef aConv=conversions[iConv];
-		 cout<<"ntracks:"<<aConv->nTracks()<<endl;
-		 cout<<"isConverted:"<<aConv->isConverted()<<endl;
+		 //cout<<"ntracks:"<<aConv->nTracks()<<endl;
+		 //cout<<"isConverted:"<<aConv->isConverted()<<endl;
 		 if ( aConv->nTracks() <2 ) continue; 
 		 if ( aConv->conversionVertex().isValid() )
 		   {
@@ -745,19 +747,20 @@ Analyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
 	       if(runrechit_)
 		 { 
 		   std::vector< std::pair<DetId, float> >  PhotonHit_DetIds  = myphoton_container[x].superCluster()->hitsAndFractions();
+		   //cout<<"Photon_Hits:"<<PhotonHit_DetIds.size()<<endl;
 		   Handle<EcalRecHitCollection> Brechit;//barrel
 		   Handle<EcalRecHitCollection> Erechit;//endcap
 		   iEvent.getByLabel(rechitBLabel_,Brechit);
 		   iEvent.getByLabel(rechitELabel_,Erechit); 
 		   const EcalRecHitCollection* barrelRecHits= Brechit.product();
 		   const EcalRecHitCollection* endcapRecHits= Erechit.product();
-
+		   
 		   std::vector<CrystalInfo> crystalinfo_container;
 		   crystalinfo_container.clear();
 		   CrystalInfo crystal;
 		   double timing_avg =0.0;
-		   int ncrys = 0;
-		   int ncrysPhoton =0;
+		   int ncrys   = 0;
+		   ncrysPhoton[x]= 0;
 		   vector< std::pair<DetId, float> >::const_iterator detitr;
 		   for(detitr = PhotonHit_DetIds.begin(); detitr != PhotonHit_DetIds.end(); ++detitr)
 		     {
@@ -768,23 +771,25 @@ Analyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
 			   if ( j!= Brechit->end())  thishit = j;
 			   if ( j== Brechit->end())
 			     {
-			       //std::cout<<"thishit not matched "<<std::endl;
+			       std::cout<<"thishit not matched "<<std::endl;
 			       continue;
 			     }
-			     EBDetId detId  = (EBDetId)((*detitr).first);
-			     crystal.rawId  = thishit->id().rawId();
-			     crystal.energy = thishit->energy();
-			     crystal.time   = thishit->time();
-			     crystal.ieta   = detId.ieta();
-			     crystal.iphi   = detId.iphi();
-			     //calculate timing avg
-			     if(crystal.energy > 0.1)
-			       {
-				 timing_avg  = timing_avg + crystal.time;
-				 ncrys++;
-			       } 
+			   //std::cout<<"thishit matched "<<std::endl;
+			   EBDetId detId  = (EBDetId)((*detitr).first);
+			   crystal.rawId  = thishit->id().rawId();
+			   crystal.energy = thishit->energy();
+			   crystal.time   = thishit->time();
+			   crystal.ieta   = detId.ieta();
+			   crystal.iphi   = detId.iphi();
+			   //std::cout<<"thishit energy,time: "<<crystal.energy<<"   "<< crystal.time<<std::endl;
+			   //calculate timing avg
+			   if(crystal.energy > 0.1)
+			     {
+			       timing_avg  = timing_avg + crystal.time;
+			       ncrys++;
+			     } 
 			 }//end of if ((*detitr).det() == DetId::Ecal && (*detitr).subdetId() == EcalBarrel)
-			 else 
+		       else 
 			   {
 			     crystal.rawId  = 999;
 			     crystal.energy = -99;
@@ -799,13 +804,20 @@ Analyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
 		   else timing_avg = -99.;
 		   //cout<<" total hits for this photon:"<<crystalinfo_container.size()<<endl;
 		   //cout<<" total hits contibuting for timing(energy > 0.1):"<<ncrys<<endl;
-		   ncrysPhoton = crystalinfo_container.size(); 
+		   ncrysPhoton[x] = crystalinfo_container.size(); 
+		   cout<<"ncrysPhoton:"<<ncrysPhoton[x]<<endl;
 		   pho_timingavg_xtalEB[x]      = timing_avg;
+		   for (unsigned int y =0; y < 50.;y++)
+		     {
+		       pho_timing_xtalEB[x][y]         = -99.;
+		       pho_energy_xtalEB[x][y]         = -99.;
+		       pho_ieta_xtalEB[x][y]           = -99;
+		       pho_iphi_xtalEB[x][y]           = -99;
+		     }//end of for (unsigned int y =0; y < crystalinfo_container.size();y++)
 		   for (unsigned int y =0; y < crystalinfo_container.size();y++)
 		     {
 		       pho_timing_xtalEB[x][y]         = crystalinfo_container[y].time;
 		       pho_energy_xtalEB[x][y]         = crystalinfo_container[y].energy;
-		       //cout<<"energy of "<<y<<" crystal:"<<pho_energy_xtalEB[x][y]<<endl;  
 		       pho_ieta_xtalEB[x][y]           = crystalinfo_container[y].ieta;
 		       pho_iphi_xtalEB[x][y]           = crystalinfo_container[y].iphi;
 		     }//end of for (unsigned int y =0; y < crystalinfo_container.size();y++
@@ -1035,7 +1047,9 @@ Analyzer::beginJob(const edm::EventSetup&)
   //defining a tree here
   myEvent = new TTree("myEvent","a tree with histograms");
   myEvent->Branch("nevents",&nevents,"nevents/I");
-  
+  myEvent->Branch("run",&RunNumber,"RunNumber/I");
+  myEvent->Branch("event",&EventNumber,"EventNumber/I");
+
 
   if(runHLT_)
     {
@@ -1265,7 +1279,6 @@ Analyzer::beginJob(const edm::EventSetup&)
     {
       //uncorrected photon information
       myEvent->Branch("Photon_n",&Photon_n,"Photon_n/I");
-      myEvent->Branch("Photon_ncrys",&ncrysPhoton,"ncrysPhoton/I");
       myEvent->Branch("Photon_E",pho_E,"pho_E[Photon_n]/D");
       myEvent->Branch("Photon_pt",pho_pt,"pho_pt[Photon_n]/D");
       myEvent->Branch("Photon_eta",pho_eta,"pho_eta[Photon_n]/D");
@@ -1346,11 +1359,12 @@ Analyzer::beginJob(const edm::EventSetup&)
       myEvent->Branch("Photon_dPhiTracksAtEcal",pho_dPhiTracksAtEcal,"pho_dPhiTracksAtEcal[Photon_n]/D");
       myEvent->Branch("Photon_dEtaTracksAtVtx",pho_dEtaTracksAtEcal,"pho_dEtaTracksAtEcal[Photon_n]/D");
       if(runrechit_){
-      myEvent->Branch("Photon_timing_xtalEB",pho_timing_xtalEB,"pho_timing_xtalEB[Photon_n][ncrysPhoton]/D");
+      myEvent->Branch("Photon_ncrys",ncrysPhoton,"ncrysPhoton[Photon_n]/I");
+      myEvent->Branch("Photon_timing_xtalEB",pho_timing_xtalEB,"pho_timing_xtalEB[Photon_n][50]/D");
       myEvent->Branch("Photon_timingavg_xtalEB",pho_timingavg_xtalEB,"pho_timingavg_xtalEB[Photon_n]/D");
-      myEvent->Branch("Photon_energy_xtalEB",pho_energy_xtalEB,"pho_energy_xtalEB[Photon_n][ncrysPhoton]/D");
-      myEvent->Branch("Photon_ieta_xtalEB",pho_ieta_xtalEB,"pho_ieta_xtalEB[Photon_n][ncrysPhoton]/D");
-      myEvent->Branch("Photon_iphi_xtalEB",pho_iphi_xtalEB,"pho_iphi_xtalEB[Photon_n][ncrysPhoton]/D");
+      myEvent->Branch("Photon_energy_xtalEB",pho_energy_xtalEB,"pho_energy_xtalEB[Photon_n][50]/D");
+      myEvent->Branch("Photon_ieta_xtalEB",pho_ieta_xtalEB,"pho_ieta_xtalEB[Photon_n][50]/I");
+      myEvent->Branch("Photon_iphi_xtalEB",pho_iphi_xtalEB,"pho_iphi_xtalEB[Photon_n][50]/I");
       myEvent->Branch("Photon_rookFraction",pho_rookFraction,"pho_rookFraction[Photon_n]/D");
       myEvent->Branch("Photon_s9",pho_s9,"pho_s9[Photon_n]/D");
       }

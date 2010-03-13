@@ -36,10 +36,10 @@ class Analyzer : public edm::EDAnalyzer {
   int n_Welec_events, n_Wmu_events, n_Wtau_events;
   int n_diphoton_events, n_SingleHardPhoton_events;
 
+  int RunNumber,EventNumber;
   int ngenphotons;
   int nhardphotons;
   int Photon_n;
-  int ncrysPhoton;
   int Vertex_n;
   int Muon_n;
   int Tau_n;
@@ -344,11 +344,12 @@ class Analyzer : public edm::EDAnalyzer {
   double pho_dEtaTracksAtEcal[100];     
   
   //rechit information
-  double pho_timing_xtalEB[100][100];
+  int ncrysPhoton[100];
+  double pho_timing_xtalEB[100][50];
   double pho_timingavg_xtalEB[100];
-  double pho_energy_xtalEB[100][100];
-  double pho_ieta_xtalEB[100][100];
-  double pho_iphi_xtalEB[100][100];
+  double pho_energy_xtalEB[100][50];
+  int    pho_ieta_xtalEB[100][50];
+  int    pho_iphi_xtalEB[100][50];
   double pho_rookFraction[100];
   double pho_s9[100];
 
