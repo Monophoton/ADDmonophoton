@@ -5,7 +5,7 @@
 #include "TGraph.h"
 #include "TCanvas.h"
 #include "TTree.h"
-#include "/afs/cern.ch/user/s/sandhya/scratch0/CMSSW_3_4_1/src/Analysis/Analyzer/interface/CrystalInfo.h"
+#include "/afs/cern.ch/user/s/sandhya/scratch0/CMSSW_3_5_4/src/Analysis/Analyzer/interface/CrystalInfo.h"
 #include "DataFormats/EgammaReco/interface/SuperCluster.h"
 #include "DataFormats/EcalRecHit/interface/EcalRecHitCollections.h"
 #include "FWCore/Framework/interface/TriggerNames.h"
@@ -18,7 +18,7 @@ class Analyzer : public edm::EDAnalyzer {
 
 
  private:
-  virtual void beginJob(const edm::EventSetup&) ;
+  virtual void beginJob() ;
   virtual void analyze(const edm::Event&, const edm::EventSetup&);
   virtual void endJob() ;
   static double rookFractionBarrelCalculator( const reco::SuperCluster & ,const EcalRecHitCollection &);
@@ -345,11 +345,11 @@ class Analyzer : public edm::EDAnalyzer {
   
   //rechit information
   int ncrysPhoton[100];
-  double pho_timing_xtalEB[100][50];
+  double pho_timing_xtalEB[100][100];
   double pho_timingavg_xtalEB[100];
-  double pho_energy_xtalEB[100][50];
-  int    pho_ieta_xtalEB[100][50];
-  int    pho_iphi_xtalEB[100][50];
+  double pho_energy_xtalEB[100][100];
+  int    pho_ieta_xtalEB[100][100];
+  int    pho_iphi_xtalEB[100][100];
   double pho_rookFraction[100];
   double pho_s9[100];
 

@@ -29,7 +29,6 @@
 #include "FWCore/ParameterSet/interface/ParameterSet.h"
 #include "FWCore/ServiceRegistry/interface/Service.h"
 #include "FWCore/ParameterSet/interface/InputTag.h"
-#include "PhysicsTools/UtilAlgos/interface/TFileService.h"
 #include "DataFormats/TrackReco/interface/TrackFwd.h"
 #include "DataFormats/Common/interface/View.h"
 #include "DataFormats/PatCandidates/interface/Muon.h"
@@ -62,7 +61,7 @@
 #include <map>
 #include <string>
 
-#include "/afs/cern.ch/user/s/sandhya/scratch0/CMSSW_3_4_1/src/Analysis/Analyzer/interface/Analyzer.h"
+#include "/afs/cern.ch/user/s/sandhya/scratch0/CMSSW_3_5_4/src/Analysis/Analyzer/interface/Analyzer.h"
 
 
 using namespace std;
@@ -248,7 +247,7 @@ Analyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
    
    RunNumber   = iEvent.id().run();
    EventNumber = iEvent.id().event();
-   cout<<"RunNumber:"<<RunNumber<<"     Event:"<< EventNumber<<endl;
+   cout<<"RunNumber:"<<RunNumber<<"     Event:"<< EventNumber<<"LumiSection:"<< iEvent::LUMISECTION<<endl;
    nevents++;
    //cout<<"Event:"<<nevents<<endl;
    //getting handle to generator level information
@@ -1041,7 +1040,7 @@ Analyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
 
 // ------------ method called once each job just before starting event loop  ------------
 void 
-Analyzer::beginJob(const edm::EventSetup&)
+Analyzer::beginJob()
 {
   f=new TFile(outFile_.c_str(),"RECREATE");
   //defining a tree here
@@ -1360,11 +1359,11 @@ Analyzer::beginJob(const edm::EventSetup&)
       myEvent->Branch("Photon_dEtaTracksAtVtx",pho_dEtaTracksAtEcal,"pho_dEtaTracksAtEcal[Photon_n]/D");
       if(runrechit_){
       myEvent->Branch("Photon_ncrys",ncrysPhoton,"ncrysPhoton[Photon_n]/I");
-      myEvent->Branch("Photon_timing_xtalEB",pho_timing_xtalEB,"pho_timing_xtalEB[Photon_n][50]/D");
+      myEvent->Branch("Photon_timing_xtalEB",pho_timing_xtalEB,"pho_timing_xtalEB[Photon_n][100]/D");
       myEvent->Branch("Photon_timingavg_xtalEB",pho_timingavg_xtalEB,"pho_timingavg_xtalEB[Photon_n]/D");
-      myEvent->Branch("Photon_energy_xtalEB",pho_energy_xtalEB,"pho_energy_xtalEB[Photon_n][50]/D");
-      myEvent->Branch("Photon_ieta_xtalEB",pho_ieta_xtalEB,"pho_ieta_xtalEB[Photon_n][50]/I");
-      myEvent->Branch("Photon_iphi_xtalEB",pho_iphi_xtalEB,"pho_iphi_xtalEB[Photon_n][50]/I");
+      myEvent->Branch("Photon_energy_xtalEB",pho_energy_xtalEB,"pho_energy_xtalEB[Photon_n][100]/D");
+      myEvent->Branch("Photon_ieta_xtalEB",pho_ieta_xtalEB,"pho_ieta_xtalEB[Photon_n][100]/I");
+      myEvent->Branch("Photon_iphi_xtalEB",pho_iphi_xtalEB,"pho_iphi_xtalEB[Photon_n][100]/I");
       myEvent->Branch("Photon_rookFraction",pho_rookFraction,"pho_rookFraction[Photon_n]/D");
       myEvent->Branch("Photon_s9",pho_s9,"pho_s9[Photon_n]/D");
       }
