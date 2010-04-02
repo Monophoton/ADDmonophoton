@@ -5,7 +5,7 @@
 #include "TGraph.h"
 #include "TCanvas.h"
 #include "TTree.h"
-#include "/afs/cern.ch/user/s/sandhya/scratch0/CMSSW_3_5_4/src/Analysis/Analyzer/interface/CrystalInfo.h"
+#include "/afs/cern.ch/user/s/sandhya/scratch0/CMSSW_3_5_6/src/Analysis/Analyzer/interface/CrystalInfo.h"
 #include "DataFormats/EgammaReco/interface/SuperCluster.h"
 #include "DataFormats/EcalRecHit/interface/EcalRecHitCollections.h"
 #include "FWCore/Framework/interface/TriggerNames.h"

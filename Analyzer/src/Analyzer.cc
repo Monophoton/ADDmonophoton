@@ -61,7 +61,7 @@
 #include <map>
 #include <string>
 
-#include "/afs/cern.ch/user/s/sandhya/scratch0/CMSSW_3_5_4/src/Analysis/Analyzer/interface/Analyzer.h"
+#include "/afs/cern.ch/user/s/sandhya/scratch0/CMSSW_3_5_6/src/Analysis/Analyzer/interface/Analyzer.h"
 
 
 using namespace std;
@@ -247,7 +247,7 @@ Analyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
    
    RunNumber   = iEvent.id().run();
    EventNumber = iEvent.id().event();
-   cout<<"RunNumber:"<<RunNumber<<"     Event:"<< EventNumber<<"LumiSection:"<< iEvent::LUMISECTION<<endl;
+   cout<<"RunNumber:"<<RunNumber<<"     Event:"<< EventNumber<<endl;
    nevents++;
    //cout<<"Event:"<<nevents<<endl;
    //getting handle to generator level information
@@ -806,7 +806,7 @@ Analyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
 		   ncrysPhoton[x] = crystalinfo_container.size(); 
 		   cout<<"ncrysPhoton:"<<ncrysPhoton[x]<<endl;
 		   pho_timingavg_xtalEB[x]      = timing_avg;
-		   for (unsigned int y =0; y < 50.;y++)
+		   for (unsigned int y =0; y < 100.;y++)
 		     {
 		       pho_timing_xtalEB[x][y]         = -99.;
 		       pho_energy_xtalEB[x][y]         = -99.;
