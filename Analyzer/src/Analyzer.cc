@@ -1,14 +1,15 @@
-// -*- C++ -*-
-//
+//  -*- C++ -*-
+
+///
 // Package:    Analyzer
 // Class:      Analyzer
 // 
 /**\class Analyzer Analyzer.cc Analysis/Analyzer/src/Analyzer.cc
-
- Description: <one line class summary>
+   
+Description: <one line class summary>
 
  Implementation:
-     <Notes on implementation>
+ <Notes on implementation>
 */
 //
 // Original Author:  Sandhya Jain
@@ -48,9 +49,40 @@
 #include "CondFormats/L1TObjects/interface/L1GtTriggerMenu.h"
 #include "CondFormats/DataRecord/interface/L1GtTriggerMenuRcd.h"
 #include "RecoEcal/EgammaCoreTools/interface/EcalClusterTools.h"
-
+#include "Geometry/CaloTopology/interface/CaloTopology.h"
+#include "Geometry/CaloEventSetup/interface/CaloTopologyRecord.h"
 #include "DataFormats/Common/interface/TriggerResults.h"
 #include "DataFormats/HepMCCandidate/interface/GenParticle.h"
+#include "FWCore/ParameterSet/interface/ParameterSet.h"
+#include "Geometry/CaloGeometry/interface/CaloCellGeometry.h"
+#include "Geometry/CaloGeometry/interface/CaloGeometry.h"
+#include "Geometry/Records/interface/CaloGeometryRecord.h"
+#include "DataFormats/GeometryVector/interface/GlobalPoint.h"
+#include "DataFormats/DetId/interface/DetId.h"
+#include "DataFormats/HcalRecHit/interface/HcalRecHitCollections.h"
+#include "DataFormats/EgammaReco/interface/SuperCluster.h"
+#include "DataFormats/EgammaReco/interface/SuperClusterFwd.h"
+#include "DataFormats/Candidate/interface/Particle.h"
+#include "DataFormats/Common/interface/Ref.h"
+#include "DataFormats/CaloTowers/interface/CaloTowerCollection.h"
+#include "DataFormats/HcalRecHit/interface/HBHERecHit.h"
+#include "DataFormats/HcalDigi/interface/HBHEDataFrame.h"
+#include "DataFormats/EcalRecHit/interface/EcalRecHit.h"
+#include "DataFormats/EcalRecHit/interface/EcalRecHitCollections.h"
+#include "DataFormats/CaloRecHit/interface/CaloRecHit.h"
+#include "DataFormats/CaloRecHit/interface/CaloCluster.h"
+#include "DataFormats/CaloRecHit/interface/CaloClusterFwd.h"
+#include "DataFormats/EgammaCandidates/interface/Photon.h"
+#include "DataFormats/EgammaCandidates/interface/PhotonFwd.h"
+#include "DataFormats/EcalDetId/interface/EBDetId.h"
+#include "RecoEcal/EgammaCoreTools/interface/EcalClusterTools.h"
+#include "DataFormats/MuonReco/interface/Muon.h"
+#include "DataFormats/MuonReco/interface/MuonFwd.h"
+#include "DataFormats/EgammaReco/interface/SuperCluster.h"
+#include "DataFormats/EgammaReco/interface/SuperClusterFwd.h"
+#include "Geometry/CaloGeometry/interface/CaloSubdetectorGeometry.h"
+#include "RecoCaloTools/Navigation/interface/CaloNavigator.h"
+#include "DataFormats/TrackReco/interface/Track.h"
 
 #include "TString.h"
 #include "TH1D.h"
@@ -61,8 +93,8 @@
 #include <map>
 #include <string>
 
-#include "/afs/cern.ch/user/s/sandhya/scratch0/CMSSW_3_5_6/src/Analysis/Analyzer/interface/Analyzer.h"
-
+//need to include the link of the header file Analyzer.h
+#include "/uscmst1b_scratch/lpc1/old_scratch/lpceg/yurii/af/monophoton/test/spikeclean/CMSSW_3_6_1_patch2/src/Analysis/Analyzer/interface/Analyzer.h"
 
 using namespace std;
 using namespace ROOT::Math::VectorUtil ;
@@ -76,7 +108,7 @@ double Pl(double P,double Pt);
 
 double Analyzer::rookFractionBarrelCalculator( const reco::SuperCluster &superCluster ,const EcalRecHitCollection &recHits){
   double rookFraction = 0.; // between 0 and 1
-
+  
   // get recHit crystal IDs for this superCluster
   std::vector< std::pair<DetId, float> > myHitsPair = superCluster.hitsAndFractions();
   //make sure hits are in barrel ecal!
@@ -85,7 +117,7 @@ double Analyzer::rookFractionBarrelCalculator( const reco::SuperCluster &superCl
     isHitEcalBarrel = true;
   }
   if (isHitEcalBarrel == false){
-    cout << "this superCluster is not in Barrel Ecal! rookFractionBarrelCalculator is returning nonsense value 5.0"<<endl;
+    // cout << "this superCluster is not in Barrel Ecal! rookFractionBarrelCalculator is returning nonsense value 5.0"<<endl;
     rookFraction = 5.0;
     return rookFraction;
   }
@@ -174,6 +206,8 @@ public:
 // constructors and destructor
 //
 Analyzer::Analyzer(const edm::ParameterSet& iConfig):
+  
+  
   //histocontainer_(),
   eleLabel_(iConfig.getUntrackedParameter<edm::InputTag>("electronTag")),
   muoLabel_(iConfig.getUntrackedParameter<edm::InputTag>("muonTag")),
@@ -204,31 +238,37 @@ Analyzer::Analyzer(const edm::ParameterSet& iConfig):
   runtracks_(iConfig.getUntrackedParameter<bool>("runtracks")),
   runrechit_(iConfig.getUntrackedParameter<bool>("runrechit")),
   runvertex_(iConfig.getUntrackedParameter<bool>("runvertex")),
+  
+  
+  
   init_(false)
-{
-   //now do what ever initialization is needed
-  nevents =0;
-  n_signal_events = 0; n_Z_events   = 0; n_W_events    = 0 ;
-  n_Zelec_events =  0; n_Zmu_events = 0; n_Ztau_events = 0; n_Znunu_events = 0;
-  n_Welec_events =  0; n_Wmu_events = 0; n_Wtau_events = 0;
-  n_diphoton_events=0;  n_SingleHardPhoton_events = 0;
-  ngenphotons  = 0; //for every event, how many stable photons 
-  nhardphotons = 0; //for every event, how many hard photons 
-  Vertex_n         = 0;
-  Track_n          = 0;
-  Photon_n         = 0;
-  Jet_n            = 0;
-  Electron_n       = 0; 
-  Muon_n           = 0;
-  Tau_n            = 0;
-}
+  {
+    //now do what ever initialization is needed
+    nevents =0;
+    n_signal_events = 0; n_Z_events   = 0; n_W_events    = 0 ;
+    n_Zelec_events =  0; n_Zmu_events = 0; n_Ztau_events = 0; n_Znunu_events = 0;
+    n_Welec_events =  0; n_Wmu_events = 0; n_Wtau_events = 0;
+    n_diphoton_events=0;  n_SingleHardPhoton_events = 0;
+    ngenphotons  = 0; //for every event, how many stable photons 
+    nhardphotons = 0; //for every event, how many hard photons 
+    Vertex_n         = 0;
+    Track_n          = 0;
+    Photon_n         = 0;
+    Jet_n            = 0;
+    Electron_n       = 0; 
+    Muon_n           = 0;
+    Tau_n            = 0;
+    nPhotons         = 0;
+    nMuons           = 0;
+    ncosmu           = 0;
+  }
 
 
 Analyzer::~Analyzer()
 {
-   // do anything here that needs to be done at desctruction time
-   // (e.g. close files, deallocate resources etc.)
-
+  // do anything here that needs to be done at desctruction time
+  // (e.g. close files, deallocate resources etc.)
+  
   f->Close();
   delete f;
 }
@@ -242,251 +282,254 @@ Analyzer::~Analyzer()
 void
 Analyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
 {
-   using namespace edm;
-   using namespace reco;
-   
-   RunNumber   = iEvent.id().run();
-   EventNumber = iEvent.id().event();
-   cout<<"RunNumber:"<<RunNumber<<"     Event:"<< EventNumber<<endl;
-   nevents++;
-   //cout<<"Event:"<<nevents<<endl;
-   //getting handle to generator level information
-   if( rungenParticleCandidates_ )
-     {
-       ngenphotons  = 0;
-       nhardphotons = 0;
-       is_signal_event = 0; is_Z_event   = 0; is_W_event    = 0; 
-       is_Zelec_event  = 0; is_Zmu_event = 0; is_Ztau_event = 0; is_Znunu_event =0  ;
-       is_Welec_event  = 0; is_Wmu_event = 0; is_Wtau_event = 0;
-       is_SingleHardPhoton_event=0;  is_diphoton_event=0;
+  using namespace edm;
+  using namespace reco;
+  
+  RunNumber   = iEvent.id().run();
+  EventNumber = iEvent.id().event();
+  Luminosity  = iEvent.id().luminosityBlock();
+  cout<<"RunNumber:"<<RunNumber<<"     Event:"<< EventNumber<< "luminosity"<< Luminosity<< endl;
+  nevents++;
+  //cout<<"Event:"<<nevents<<endl;
+  
+  
+  //getting handle to generator level information
+  if( rungenParticleCandidates_ )
+    {
+      ngenphotons  = 0;
+      nhardphotons = 0;
+      is_signal_event = 0; is_Z_event   = 0; is_W_event    = 0; 
+      is_Zelec_event  = 0; is_Zmu_event = 0; is_Ztau_event = 0; is_Znunu_event =0  ;
+      is_Welec_event  = 0; is_Wmu_event = 0; is_Wtau_event = 0;
+      is_SingleHardPhoton_event=0;  is_diphoton_event=0;
       
-       Handle<GenParticleCollection> genParticles;
-       iEvent.getByLabel("genParticles", genParticles); 
-       std::vector<genPho>            mygenphoton_container;
-       mygenphoton_container.clear();
-       genPho genphoton;
-       int ii =0;
-       for (GenParticleCollection::const_iterator genparticle = genParticles->begin(); genparticle != genParticles->end(); genparticle++) 
-	 {
-	   //getting information from hard scattered Graviton 
-	   if (genparticle->pdgId()==39 && genparticle->status()==3) 
-	     { 
-	       is_signal_event = 1;
-	       n_signal_events++;
-	       gen_graviton_pt  = genparticle->pt();
-	       gen_graviton_px  = genparticle->px();
-	       gen_graviton_py  = genparticle->py();
-	       gen_graviton_pz  = genparticle->pz();
-	       gen_graviton_phi = correct_phi(genparticle->phi());
-	       gen_graviton_eta = genparticle->eta();
-	       gen_graviton_E   = genparticle->energy();
-	     }
-	 //getting information from Z
-	 if (genparticle->pdgId()==23 && genparticle->status()==3) 
-	   { 
-	     is_Z_event = 1;
-	     n_Z_events++;
-	     //cout<"getting information from Z now"<<endl;
-	     gen_Zboson_pt  = genparticle->pt();
-	     gen_Zboson_px  = genparticle->px();
-	     gen_Zboson_py  = genparticle->py();
-	     gen_Zboson_pz  = genparticle->pz();
-	     gen_Zboson_phi = correct_phi(genparticle->phi());
-	     gen_Zboson_eta = genparticle->eta();
-	     gen_Zboson_E   = genparticle->energy();
-	     int daughters          = genparticle->numberOfDaughters();
-	     int iDaughter=0;
-	     for(int i = 0;i<daughters;i++)
-	       {
-		 const reco::Candidate *daughter   = genparticle->daughter(i);
-		 //cout<<"genparticle->daughter(i)"<<genparticle->daughter(i)<<std::endl;
-		 if(abs(daughter->pdgId())==12||abs(daughter->pdgId())==14||abs(daughter->pdgId())==16){is_Znunu_event=1; n_Znunu_events++;}
-		 if(daughter->pdgId()==11) { is_Zelec_event=1; n_Zelec_events++;}
-		 if(daughter->pdgId()==13) { is_Zmu_event=1  ; n_Zmu_events++  ;}
-		 if(daughter->pdgId()==15) { is_Ztau_event=1 ; n_Ztau_events++  ;}
-		 if(daughter->pdgId()!=23) 
-		   {
-		     gen_Zdaughter_pt[iDaughter]    = daughter->pt();
-		     gen_Zdaughter_px[iDaughter]    = daughter->px();
-		     gen_Zdaughter_py[iDaughter]    = daughter->py();
-		     gen_Zdaughter_pz[iDaughter]    = daughter->pz();
-		     gen_Zdaughter_phi[iDaughter]   = correct_phi(daughter->phi());
-		     gen_Zdaughter_eta[iDaughter]   = daughter->eta();
-		     gen_Zdaughter_E[iDaughter]     = daughter->energy();
-		     gen_Zdaughter_charge[iDaughter]= daughter->charge();
-		     gen_Zdaughter_ID[iDaughter]    = daughter->pdgId();
-		     iDaughter++;
-		   }//end of if(daughter->pdgId()!=23)
-	       }//end of for loop for daughters
-	   }//end for loop of Z information
-	 
-	 //getting information from W+/W-
-	 if (abs(genparticle->pdgId())==24 && genparticle->status()==3) { 
-	   is_W_event = 1;
-	   n_W_events++;
-	   gen_Wboson_pt      = genparticle->pt();
-	   gen_Wboson_px      = genparticle->px();
-	   gen_Wboson_py      = genparticle->py();
-	   gen_Wboson_pz      = genparticle->pz();
-	   gen_Wboson_phi     = correct_phi(genparticle->phi());
-	   gen_Wboson_eta     = genparticle->eta();
-	   gen_Wboson_E       = genparticle->energy();
-	   gen_Wboson_charge  = genparticle->charge();
-	   gen_Wboson_ID      = genparticle->pdgId();
-	   int daughters      = genparticle->numberOfDaughters();
-	   int iDaughter =0;
-	   //cout<<"W pt:"<<genparticle->pt()<<endl;
-	   //cout<<"W daughters:"<<endl;
-	   for(int i = 0;i<daughters;i++)
-	     {
-	       const reco::Candidate *daughter   = genparticle->daughter(i);
-	       if(abs(daughter->pdgId())==11) {is_Welec_event=1; n_Welec_events++;}
-	       if(abs(daughter->pdgId())==13) {is_Wmu_event=1  ; n_Wmu_events++  ;}
-	       if(abs(daughter->pdgId())==15) {is_Wtau_event=1 ; n_Wtau_events++ ;}  
-	       //cout<<"ID, Status,Pt:"<<abs(daughter->pdgId())<<"   "<<daughter->status()<<"   "<<daughter->pt()<<endl;
-	       //getting leptons decaying from W
-	       if(abs(daughter->pdgId())!=24) 
+      Handle<GenParticleCollection> genParticles;
+      iEvent.getByLabel("genParticles", genParticles); 
+      std::vector<genPho>            mygenphoton_container;
+      mygenphoton_container.clear();
+      genPho genphoton;
+      int ii =0;
+      for (GenParticleCollection::const_iterator genparticle = genParticles->begin(); genparticle != genParticles->end(); genparticle++) 
+	{
+	  //getting information from hard scattered Graviton 
+	  if (genparticle->pdgId()==39 && genparticle->status()==3) 
+	    { 
+	      is_signal_event= 1;
+	      n_signal_events++;
+	      gen_graviton_pt  = genparticle->pt();
+	      gen_graviton_px  = genparticle->px();
+	      gen_graviton_py  = genparticle->py();
+	      gen_graviton_pz  = genparticle->pz();
+	      gen_graviton_phi = correct_phi(genparticle->phi());
+	      gen_graviton_eta = genparticle->eta();
+	      gen_graviton_E   = genparticle->energy();
+	    }
+	  //getting information from Z
+	  if (genparticle->pdgId()==23 && genparticle->status()==3) 
+	    { 
+	      is_Z_event = 1;
+	       n_Z_events++;
+	       //cout<"getting information from Z now"<<endl;
+	       gen_Zboson_pt  = genparticle->pt();
+	       gen_Zboson_px  = genparticle->px();
+	       gen_Zboson_py  = genparticle->py();
+	       gen_Zboson_pz  = genparticle->pz();
+	       gen_Zboson_phi = correct_phi(genparticle->phi());
+	       gen_Zboson_eta = genparticle->eta();
+	       gen_Zboson_E   = genparticle->energy();
+	       int daughters          = genparticle->numberOfDaughters();
+	       int iDaughter=0;
+	       for(int i = 0;i<daughters;i++)
 		 {
-		   gen_Wdaughter_pt[iDaughter]     = daughter->pt();
-		   gen_Wdaughter_px[iDaughter]     = daughter->px();
-		   gen_Wdaughter_py[iDaughter]     = daughter->py();
-		   gen_Wdaughter_pz[iDaughter]     = daughter->pz();
-		   gen_Wdaughter_phi[iDaughter]    = correct_phi(daughter->phi());
-		   gen_Wdaughter_eta[iDaughter]    = daughter->eta();
-		   gen_Wdaughter_E[iDaughter]      = daughter->energy();
-		   gen_Wdaughter_charge[iDaughter] = daughter->charge();
-		   gen_Wdaughter_ID[iDaughter]     = daughter->pdgId();
-		   iDaughter++;
-		 }//if(abs(daughter->pdgId())!=24)
-	     }//end of for loop for daughters
-	 }//end for loop of W information
-	 
-	 //getting info from decay of muons 
-	 if( abs(genparticle->pdgId())==13 )
-	   {
-	     //cout<<"parent ID, Status, Pt:"<<abs(genparticle->pdgId())<<"   "<<genparticle->status()<<"  "<< genparticle->pt()<<endl;
-	     int daughters   = genparticle->numberOfDaughters();
-	     int iDaughter=0;
-	     for(int i = 0;i<daughters;i++)
-	       {
-		 const reco::Candidate *daughter   = genparticle->daughter(i);
-		 //cout<<"daughterID, status,Pt:"<<abs(daughter->pdgId())<<"   " <<daughter->status()<<"  "<< daughter->pt()<<endl;
-		 gen_Muon_ID[iDaughter]     = genparticle->pdgId();
-		 gen_Muon_Status[iDaughter] = genparticle->status();
-		 gen_Muon_Pt[iDaughter]     = genparticle->pt();
-		 gen_MuonDaughter_pt[iDaughter]           = daughter->pt();
-		 gen_MuonDaughter_px[iDaughter]           = daughter->px();
-		 gen_MuonDaughter_py[iDaughter]           = daughter->py();
-		 gen_MuonDaughter_pz[iDaughter]           = daughter->pz();
-		 gen_MuonDaughter_phi[iDaughter]          = correct_phi(daughter->phi());
-		 gen_MuonDaughter_eta[iDaughter]          = daughter->eta();
-		 gen_MuonDaughter_E[iDaughter]            = daughter->energy();
-		 gen_MuonDaughter_ID[iDaughter]           = daughter->pdgId();
-		 gen_MuonDaughter_status[iDaughter]       = daughter->status();
-		 gen_MuonDaughter_charge[iDaughter]       = daughter->charge();
-		 iDaughter++;
-	       }//for(int i = 0;i<daughters;i++)
-	   }//if((abs(genparticle->pdgId())==13)
-
-	 //getting info from decay of taus 
-	 if( abs(genparticle->pdgId())==15 )
-	   {
-	     //cout<<"parent ID, Status, Pt:"<<abs(genparticle->pdgId())<<"   "<<genparticle->status()<<"  "<< genparticle->pt()<<endl;
-	     int daughters   = genparticle->numberOfDaughters();
-	     int iDaughter=0;
-	     for(int i = 0;i<daughters;i++)
-	       {
-		 const reco::Candidate *daughter   = genparticle->daughter(i);
-		 //cout<<"daughterID, status,Pt:"<<abs(daughter->pdgId())<<"   " <<daughter->status()<<"  "<< daughter->pt()<<endl;
-		 gen_tau_ID[iDaughter]           = genparticle->pdgId();
-		 gen_tau_Status[iDaughter]       = genparticle->status();
-		 gen_tau_Pt[iDaughter]           = genparticle->pt();
-		 gen_tauDaughter_pt[iDaughter]           = daughter->pt();
-		 gen_tauDaughter_px[iDaughter]           = daughter->px();
-		 gen_tauDaughter_py[iDaughter]           = daughter->py();
-		 gen_tauDaughter_pz[iDaughter]           = daughter->pz();
-		 gen_tauDaughter_phi[iDaughter]          = correct_phi(daughter->phi());
-		 gen_tauDaughter_eta[iDaughter]          = daughter->eta();
-		 gen_tauDaughter_E[iDaughter]            = daughter->energy();
-		 gen_tauDaughter_ID[iDaughter]           = daughter->pdgId();
-		 gen_tauDaughter_status[iDaughter]       = daughter->status();
-		 gen_tauDaughter_charge[iDaughter]       = daughter->charge();
-		 iDaughter++;
-	       }//for(int i = 0;i<daughters;i++)
-	   }//if((abs(genparticle->pdgId())==15)
-	 
-	 //cout<<"getting gen photon information now"<<endl;
-	 //getting information from all photons
-	 if (genparticle->pdgId()==22 && genparticle->status()==1 && genparticle->pt()>5.)
-	   { 
-	     //doing it this way, as I want to sort it in pt after filling everything in the container
-	     const reco::Candidate *mom = genparticle->mother();
-	     genphoton.motherID = mom->pdgId();
-	     genphoton.motherPt = mom->pt();
-	     genphoton.motherEta = mom->eta();
-	     genphoton.motherPhi = correct_phi(mom->phi());
-	     genphoton.pt  = genparticle->pt();
-	     genphoton.px  = genparticle->px();
-	     genphoton.py  = genparticle->py();
-	     genphoton.pz  = genparticle->pz();
-	     genphoton.phi = correct_phi(genparticle->phi());
-	     genphoton.eta = genparticle->eta();
-	     genphoton.E   = genparticle->energy();
-	     mygenphoton_container.push_back(genphoton); ngenphotons++;
-	   }//end of if (genparticle->pdgId()==22 && genparticle->status()==1)
- 
-	 if (genparticle->pdgId()==22 && genparticle->status()==3) 
-	   {
-	     gen_Hpho_pt[nhardphotons]  = genparticle->pt();
-	     gen_Hpho_px[nhardphotons]  = genparticle->px();
-	     gen_Hpho_py[nhardphotons]  = genparticle->py();
-	     gen_Hpho_pz[nhardphotons]  = genparticle->pz();
-	     gen_Hpho_phi[nhardphotons] = correct_phi(genparticle->phi());
-	     gen_Hpho_eta[nhardphotons] = genparticle->eta();
-	     gen_Hpho_E[nhardphotons]   = genparticle->energy();
-	     nhardphotons++;
-	   }//end of if (genparticle->pdgId()==22 && genparticle->status()==3)
-	 ii++;
-       }//end of for (GenParticleCollection::const_iterator genparticle = genParticles->begin(); genparticle != genParticles->end(); genparticle++)
-     
-       if (nhardphotons==1) 
-	 {
-	   n_SingleHardPhoton_events++;
-	   is_SingleHardPhoton_event=1;
-	 }
-       if (nhardphotons==2)
-	 {
-	   n_diphoton_events++; 
-	   is_diphoton_event=1;
-	 }
-
-       if(mygenphoton_container.size()!=0)
-	 {
-	   std::sort(mygenphoton_container.begin(),mygenphoton_container.end(),PtSortCriterium());
-	   for(unsigned int x=0;x < mygenphoton_container.size(); x++)
-             {
-	       //std::cout<<"genphoton motherID:"<<mygenphoton_container[x].motherID<<endl;
-	       gen_pho_motherPt[x]   = mygenphoton_container[x].motherPt;
-	       gen_pho_motherEta[x]  = mygenphoton_container[x].motherEta;
-	       gen_pho_motherPhi[x]  = mygenphoton_container[x].motherPhi;
-	       gen_pho_motherID[x]   = mygenphoton_container[x].motherID;
-               gen_pho_pt[x]         = mygenphoton_container[x].pt;
-               gen_pho_px[x]         = mygenphoton_container[x].px;
-               gen_pho_py[x]         = mygenphoton_container[x].py;
-               gen_pho_pz[x]         = mygenphoton_container[x].pz;
-               gen_pho_phi[x]        = mygenphoton_container[x].phi;
-               gen_pho_eta[x]        = mygenphoton_container[x].eta;
-               gen_pho_E[x]          = mygenphoton_container[x].E;
-	       // cout<<"got the photon info right"<<endl;
-	     }//end of for loop
-	 }//end of if((mygenphoton_container.size()!=0)
-       //std::cout<<"mygenphoton_container loop ended"<<std::endl; 
-     }//end of if(rungenParticleCandidates_)
-   
-   ///// L1
-   if(runL1_)
-     {
-       edm::ESHandle<L1GtTriggerMenu> menuRcd;
+		   const reco::Candidate *daughter   = genparticle->daughter(i);
+		   //cout<<"genparticle->daughter(i)"<<genparticle->daughter(i)<<std::endl;
+		   if(abs(daughter->pdgId())==12||abs(daughter->pdgId())==14||abs(daughter->pdgId())==16){is_Znunu_event=1; n_Znunu_events++;}
+		   if(daughter->pdgId()==11) { is_Zelec_event=1; n_Zelec_events++;}
+		   if(daughter->pdgId()==13) { is_Zmu_event=1  ; n_Zmu_events++  ;}
+		   if(daughter->pdgId()==15) { is_Ztau_event=1 ; n_Ztau_events++  ;}
+		   if(daughter->pdgId()!=23) 
+		     {
+		       gen_Zdaughter_pt[iDaughter]    = daughter->pt();
+		       gen_Zdaughter_px[iDaughter]    = daughter->px();
+		       gen_Zdaughter_py[iDaughter]    = daughter->py();
+		       gen_Zdaughter_pz[iDaughter]    = daughter->pz();
+		       gen_Zdaughter_phi[iDaughter]   = correct_phi(daughter->phi());
+		       gen_Zdaughter_eta[iDaughter]   = daughter->eta();
+		       gen_Zdaughter_E[iDaughter]     = daughter->energy();
+		       gen_Zdaughter_charge[iDaughter]= daughter->charge();
+		       gen_Zdaughter_ID[iDaughter]    = daughter->pdgId();
+		       iDaughter++;
+		     }//end of if(daughter->pdgId()!=23)
+		 }//end of for loop for daughters
+	    }//end for loop of Z information
+	  
+	  //getting information from W+/W-
+	  if (abs(genparticle->pdgId())==24 && genparticle->status()==3) { 
+	    is_W_event = 1;
+	    n_W_events++;
+	    gen_Wboson_pt      = genparticle->pt();
+	    gen_Wboson_px      = genparticle->px();
+	    gen_Wboson_py      = genparticle->py();
+	    gen_Wboson_pz      = genparticle->pz();
+	    gen_Wboson_phi     = correct_phi(genparticle->phi());
+	    gen_Wboson_eta     = genparticle->eta();
+	    gen_Wboson_E       = genparticle->energy();
+	    gen_Wboson_charge  = genparticle->charge();
+	    gen_Wboson_ID      = genparticle->pdgId();
+	    int daughters      = genparticle->numberOfDaughters();
+	    int iDaughter =0;
+	    //cout<<"W pt:"<<genparticle->pt()<<endl;
+	    //cout<<"W daughters:"<<endl;
+	    for(int i = 0;i<daughters;i++)
+	      {
+		const reco::Candidate *daughter   = genparticle->daughter(i);
+		if(abs(daughter->pdgId())==11) {is_Welec_event=1; n_Welec_events++;}
+		if(abs(daughter->pdgId())==13) {is_Wmu_event=1  ; n_Wmu_events++  ;}
+		if(abs(daughter->pdgId())==15) {is_Wtau_event=1 ; n_Wtau_events++ ;}  
+		//cout<<"ID, Staus,Pt:"<<abs(daughter->pdgId())<<"   "<<daughter->status()<<"   "<<daughter->pt()<<endl;
+		//getting leptons decaying from W
+		if(abs(daughter->pdgId())!=24) 
+		  {
+		    gen_Wdaughter_pt[iDaughter]     = daughter->pt();
+		    gen_Wdaughter_px[iDaughter]     = daughter->px();
+		    gen_Wdaughter_py[iDaughter]     = daughter->py();
+		    gen_Wdaughter_pz[iDaughter]     = daughter->pz();
+		    gen_Wdaughter_phi[iDaughter]    = correct_phi(daughter->phi());
+		    gen_Wdaughter_eta[iDaughter]    = daughter->eta();
+		    gen_Wdaughter_E[iDaughter]      = daughter->energy();
+		    gen_Wdaughter_charge[iDaughter] = daughter->charge();
+		    gen_Wdaughter_ID[iDaughter]     = daughter->pdgId();
+		    iDaughter++;
+		  }//if(abs(daughter->pdgId())!=24)
+	      }//end of for loop for daughters
+	  }//end for loop of W information
+	  
+	   //getting info from decay of muons 
+	  if( abs(genparticle->pdgId())==13 )
+	    {
+	      //cout<<"parent ID, Status, Pt:"<<abs(genparticle->pdgId())<<"   "<<genparticle->status()<<"  "<< genparticle->pt()<<endl;
+	      int daughters   = genparticle->numberOfDaughters();
+	      int iDaughter=0;
+	      for(int i = 0;i<daughters;i++)
+		{
+		  const reco::Candidate *daughter   = genparticle->daughter(i);
+		  //cout<<"daughterID, status,Pt:"<<abs(daughter->pdgId())<<"   " <<daughter->status()<<"  "<< daughter->pt()<<endl;
+		  gen_Muon_ID[iDaughter]     = genparticle->pdgId();
+		  gen_Muon_Status[iDaughter] = genparticle->status();
+		  gen_Muon_Pt[iDaughter]     = genparticle->pt();
+		  gen_MuonDaughter_pt[iDaughter]           = daughter->pt();
+		  gen_MuonDaughter_px[iDaughter]           = daughter->px();
+		  gen_MuonDaughter_py[iDaughter]           = daughter->py();
+		  gen_MuonDaughter_pz[iDaughter]           = daughter->pz();
+		  gen_MuonDaughter_phi[iDaughter]          = correct_phi(daughter->phi());
+		  gen_MuonDaughter_eta[iDaughter]          = daughter->eta();
+		  gen_MuonDaughter_E[iDaughter]            = daughter->energy();
+		  gen_MuonDaughter_ID[iDaughter]           = daughter->pdgId();
+		  gen_MuonDaughter_status[iDaughter]       = daughter->status();
+		  gen_MuonDaughter_charge[iDaughter]       = daughter->charge();
+		  iDaughter++;
+		}//for(int i = 0;i<daughters;i++)
+	    }//if((abs(genparticle->pdgId())==13)
+	  
+	  //getting info from decay of taus 
+	  if( abs(genparticle->pdgId())==15 )
+	    {
+	      //cout<<"parent ID, Status, Pt:"<<abs(genparticle->pdgId())<<"   "<<genparticle->status()<<"  "<< genparticle->pt()<<endl;
+	      int daughters   = genparticle->numberOfDaughters();
+	      int iDaughter=0;
+	      for(int i = 0;i<daughters;i++)
+		{
+		  const reco::Candidate *daughter   = genparticle->daughter(i);
+		  //cout<<"daughterID, status,Pt:"<<abs(daughter->pdgId())<<"   " <<daughter->status()<<"  "<< daughter->pt()<<endl;
+		  gen_tau_ID[iDaughter]           = genparticle->pdgId();
+		  gen_tau_Status[iDaughter]       = genparticle->status();
+		  gen_tau_Pt[iDaughter]           = genparticle->pt();
+		  gen_tauDaughter_pt[iDaughter]           = daughter->pt();
+		  gen_tauDaughter_px[iDaughter]           = daughter->px();
+		  gen_tauDaughter_py[iDaughter]           = daughter->py();
+		  gen_tauDaughter_pz[iDaughter]           = daughter->pz();
+		  gen_tauDaughter_phi[iDaughter]          = correct_phi(daughter->phi());
+		  gen_tauDaughter_eta[iDaughter]          = daughter->eta();
+		  gen_tauDaughter_E[iDaughter]            = daughter->energy();
+		  gen_tauDaughter_ID[iDaughter]           = daughter->pdgId();
+		  gen_tauDaughter_status[iDaughter]       = daughter->status();
+		  gen_tauDaughter_charge[iDaughter]       = daughter->charge();
+		  iDaughter++;
+		}//for(int i = 0;i<daughters;i++)
+	    }//if((abs(genparticle->pdgId())==15)
+	  
+	  //cout<<"getting gen photon information now"<<endl;
+	  //getting information from all photons
+	  if (genparticle->pdgId()==22 && genparticle->status()==1 && genparticle->pt()>5.)
+	    { 
+	      //doing it this way, as I want to sort it in pt after filling everything in the container
+	      const reco::Candidate *mom = genparticle->mother();
+	      genphoton.motherID = mom->pdgId();
+	      genphoton.motherPt = mom->pt();
+	      genphoton.motherEta = mom->eta();
+	      genphoton.motherPhi = correct_phi(mom->phi());
+	      genphoton.pt  = genparticle->pt();
+	      genphoton.px  = genparticle->px();
+	      genphoton.py  = genparticle->py();
+	      genphoton.pz  = genparticle->pz();
+	      genphoton.phi = correct_phi(genparticle->phi());
+	      genphoton.eta = genparticle->eta();
+	      genphoton.E   = genparticle->energy();
+	      mygenphoton_container.push_back(genphoton); ngenphotons++;
+	    }//end of if (genparticle->pdgId()==22 && genparticle->status()==1)
+	  
+	  if (genparticle->pdgId()==22 && genparticle->status()==3) 
+	    {
+	      gen_Hpho_pt[nhardphotons]  = genparticle->pt();
+	      gen_Hpho_px[nhardphotons]  = genparticle->px();
+	      gen_Hpho_py[nhardphotons]  = genparticle->py();
+	      gen_Hpho_pz[nhardphotons]  = genparticle->pz();
+	      gen_Hpho_phi[nhardphotons] = correct_phi(genparticle->phi());
+	      gen_Hpho_eta[nhardphotons] = genparticle->eta();
+	      gen_Hpho_E[nhardphotons]   = genparticle->energy();
+	      nhardphotons++;
+	    }//end of if (genparticle->pdgId()==22 && genparticle->status()==3)
+	  ii++;
+	}//end of for (GenParticleCollection::const_iterator genparticle = genParticles->begin(); genparticle != genParticles->end(); genparticle++)
+      
+      if (nhardphotons==1) 
+	{
+	  n_SingleHardPhoton_events++;
+	  is_SingleHardPhoton_event=1;
+	}
+      if (nhardphotons==2)
+	{
+	  n_diphoton_events++; 
+	  is_diphoton_event=1;
+	}
+      
+      if(mygenphoton_container.size()!=0)
+	{
+	  std::sort(mygenphoton_container.begin(),mygenphoton_container.end(),PtSortCriterium());
+	  for(unsigned int x=0;x < mygenphoton_container.size(); x++)
+	    {
+	      //std::cout<<"genphoton motherID:"<<mygenphoton_container[x].motherID<<endl;
+	      gen_pho_motherPt[x]   = mygenphoton_container[x].motherPt;
+	      gen_pho_motherEta[x]  = mygenphoton_container[x].motherEta;
+	      gen_pho_motherPhi[x]  = mygenphoton_container[x].motherPhi;
+	      gen_pho_motherID[x]   = mygenphoton_container[x].motherID;
+	      gen_pho_pt[x]         = mygenphoton_container[x].pt;
+	      gen_pho_px[x]         = mygenphoton_container[x].px;
+	      gen_pho_py[x]         = mygenphoton_container[x].py;
+	      gen_pho_pz[x]         = mygenphoton_container[x].pz;
+	      gen_pho_phi[x]        = mygenphoton_container[x].phi;
+	      gen_pho_eta[x]        = mygenphoton_container[x].eta;
+	      gen_pho_E[x]          = mygenphoton_container[x].E;
+	      // cout<<"got the photon info right"<<endl;
+	    }//end of for loop
+	}//end of if((mygenphoton_container.size()!=0)
+      //std::cout<<"mygenphoton_container loop ended"<<std::endl; 
+    }//end of if(rungenParticleCandidates_)
+  
+  ///// L1
+  if(runL1_)
+    {
+      edm::ESHandle<L1GtTriggerMenu> menuRcd;
        iSetup.get<L1GtTriggerMenuRcd>().get(menuRcd);
        const L1GtTriggerMenu* menu = menuRcd.product();
        
@@ -502,188 +545,768 @@ Analyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
 	 if ( menu->gtAlgorithmResult( L1name, dWord) ) L1_chosen[L1name] = 1;
 	 else L1_chosen[ L1name ]=0;
        } 
-     }  
-
-   /////HLT
-   if(runHLT_==1){
-     Handle<TriggerResults> HLTR;
-     iEvent.getByLabel(hlTriggerResults_,HLTR);
-     if (!init_) {
-       init_=true;
-       triggerNames_.init(*HLTR);
-       hlNames_=triggerNames_.triggerNames();
-     }
-
-     // decision for each HL algorithm
-     const unsigned int n(hlNames_.size());
-     
-     for(unsigned int i = 0; i<n ;i++)
-       {
-	 //cout<<hlNames_[i]<<" :"<<HLTR->accept(i)<<endl;
-	 HLT_chosen[ hlNames_[i]]= HLTR->accept(i);
-	 if(hlNames_[i]=="HLT_MET50")
-	   HLT_MET50_event       = HLTR->accept(i);
-	 if(hlNames_[i]=="HLT_MET75")
-	   HLT_MET75_event       = HLTR->accept(i);
-	 if(hlNames_[i]=="HLT_Photon15_L1R")
-	   HLT_Photon15_event    = HLTR->accept(i);
-	 if(hlNames_[i]=="HLT_Photon25_L1R")
-	   HLT_Photon25_event    = HLTR->accept(i);
-	 if(hlNames_[i]=="HLT_DoubleEle10_SW_L1R")
-	   HLT_DoubleEle10_event = HLTR->accept(i);
-	 if(hlNames_[i]=="HLT_DoubleMu3")
-	   HLT_DoubleMu3_event   = HLTR->accept(i);
-
-       }
-   }
-
-   if(runvertex_){
-   Handle<reco::VertexCollection> recVtxs;
-   iEvent.getByLabel(Vertices_, recVtxs);
-   vector<Vertex> my_vertices;
-   Vertex_n = recVtxs->size();
-   my_vertices.clear();
-   for(reco::VertexCollection::const_iterator v=recVtxs->begin();v!=recVtxs->end(); ++v){
-     my_vertices.push_back(*v);
-   }
-   for (unsigned int y = 0; y <  my_vertices.size();y++)
-     {
-       vx[y]     = my_vertices[y].x();
-       vy[y]     = my_vertices[y].y();
-       vz[y]     = my_vertices[y].z();
-       chi2[y]   = my_vertices[y].chi2();
-       vtracksize[y] = my_vertices[y].tracksSize();
-       vndof[y] = my_vertices[y].ndof();
-     }
-   }
-
-   if(runtracks_){
-   Handle<reco::TrackCollection> tracks;
-   iEvent.getByLabel(Tracks_,tracks);
-   //cout<<"Track_n - all "<<tracks->size()<<endl;
-   std::vector<reco::Track>  myTrack_container;
-   myTrack_container.clear();
-   for(reco::TrackCollection::const_iterator Track_iter = tracks->begin();
-       Track_iter != tracks->end();++Track_iter) {
-      if(Track_iter->pt()>5.){
-        myTrack_container.push_back(*Track_iter);
-        //cout<<"nTracks abv 5 GeV: "<<myTrack_container.size()<<endl;
+    }  
+  
+  /////HLT
+  if(runHLT_==1){
+    Handle<TriggerResults> HLTR;
+    iEvent.getByLabel(hlTriggerResults_,HLTR);
+    if (!init_) {
+      init_=true;
+      //triggerNames_.init(*HLTR); 
+      //comment out this line and added a header file in interface to work with 361patch2
+      hlNames_=triggerNames_.triggerNames();
+      
+    }
+    //hlNames_= triggerNames_.triggerNames();
+    
+    // decision for each HL algorithm
+    const unsigned int n(hlNames_.size());
+    
+    for(unsigned int i = 0; i<n ;i++)
+      {
+	//cout<<hlNames_[i]<<" :"<<HLTR->accept(i)<<endl;
+	HLT_chosen[ hlNames_[i]]= HLTR->accept(i);
+	if(hlNames_[i]=="HLT_MET50")
+	  HLT_MET50_event       = HLTR->accept(i);
+	if(hlNames_[i]=="HLT_MET75")
+	  HLT_MET75_event       = HLTR->accept(i);
+	if(hlNames_[i]=="HLT_Photon15_L1R")
+	  HLT_Photon15_event    = HLTR->accept(i);
+	if(hlNames_[i]=="HLT_Photon25_L1R")
+	  HLT_Photon25_event    = HLTR->accept(i);
+	if(hlNames_[i]=="HLT_DoubleEle10_SW_L1R")
+	  HLT_DoubleEle10_event = HLTR->accept(i);
+	if(hlNames_[i]=="HLT_DoubleMu3")
+	  HLT_DoubleMu3_event   = HLTR->accept(i);
+	
+      }
+  }
+  
+  if(runvertex_){
+    Handle<reco::VertexCollection> recVtxs;
+    iEvent.getByLabel(Vertices_, recVtxs);
+    vector<Vertex> my_vertices;
+    Vertex_n = recVtxs->size();
+    my_vertices.clear();
+    for(reco::VertexCollection::const_iterator v=recVtxs->begin();v!=recVtxs->end(); ++v){
+      my_vertices.push_back(*v);
+    }
+    for (unsigned int y = 0; y <  my_vertices.size();y++)
+      {
+	vx[y]     = my_vertices[y].x();
+	vy[y]     = my_vertices[y].y();
+	vz[y]     = my_vertices[y].z();
+	chi2[y]   = my_vertices[y].chi2();
+	vtracksize[y] = my_vertices[y].tracksSize();
+	vndof[y] = my_vertices[y].ndof();
+	v_isFake[y] = my_vertices[y].isFake();
+	v_d0[y] = my_vertices[y].position().rho();
       }
    }
-   //cout<<"nTracks abv 5 GeV after the loop:"<<myTrack_container.size()<<endl;
-   Track_n = myTrack_container.size();
-   if(myTrack_container.size()>1)
-     std::sort(myTrack_container.begin(),myTrack_container.end(),PtSortCriterium3());
-   for(unsigned int x=0;x < myTrack_container.size();x++)
-     {
-       trk_pt[x]  = myTrack_container[x].pt();
-       trk_px[x]  = myTrack_container[x].px();
-       trk_py[x]  = myTrack_container[x].py();
-       trk_pz[x]  = myTrack_container[x].pz();
-       trk_phi[x] = correct_phi(myTrack_container[x].phi());
-       trk_eta[x] = myTrack_container[x].eta();
-       //cout<<"pt: "<< trk_pt[x] << endl;
-     }//end of for loop
-   }//end of if(runtracks_)
-
-
-   std::vector<pat::Photon> myphoton_container;
-   myphoton_container.clear();
-   if(runphotons_)
-     {
-       /*
-       Handle<reco::PhotonCollection> recphotons;
-       iEvent.getByLabel("photons", recphotons);
-
-       edm::Handle<edm::View<pat::Photon> > allLayer1Photons;
-       iEvent.getByLabel("allLayer1Photons", allLayer1Photons);
-
-       edm::Handle<edm::View<pat::Photon> > selectedlayer1Photons;
-       iEvent.getByLabel("selectedLayer1Photons", selectedlayer1Photons);
-       */
-
-       edm::Handle<edm::View<pat::Photon> > phoHandle;
-       iEvent.getByLabel(phoLabel_,phoHandle);
-       //const edm::View<pat::Photon> & photons = *phoHandle;
-       edm::View<pat::Photon>::const_iterator photon;
-       Photon_n = phoHandle->size();
-       //cout<<"total photons reconstructed at RECO level:"<<recphotons->size()<<endl;
-       //cout<<"Step 1 : number of all layer1 Photons:"<<allLayer1Photons->size()<<endl;
-       //cout<<"Step 2 : number of selected layer1 Photons:"<<selectedlayer1Photons->size()<<endl;
-       //cout<<"Step 3 : number of cleaned layer1 Photons:"<<phoHandle->size()<<endl;
-       //if(allLayer1Photons->size()!=recphotons->size())cout<<"strange! allLayer1Photons!=recphotons "<<endl;
-       //if(allLayer1Photons->size()!=selectedlayer1Photons->size())cout<<"strange! allLayer1Photons!= selectedlayer1Photons "<<endl;
-       //if(selectedlayer1Photons->size()< phoHandle->size())cout<<"strange! selectedlayer1Photons->size() < cleanLayer1Photons"<<endl;
-
-       //cout<<"photon container size:"<<Photon_n<<endl;
-       
-       for(photon = phoHandle->begin();photon!=phoHandle->end();++photon){
-	 myphoton_container.push_back(*photon) ;
-       }
-       if(myphoton_container.size()!=0)
-	 {
-	   for(unsigned int x=0; x < myphoton_container.size();x++)
-	     {
-	       //cout<<"photon pt:"<<myphoton_container[x].pt()<<"  photon eta:"<<myphoton_container[x].eta()<<"  photon phi:"<<correct_phi(myphoton_container[x].phi())<<endl; 
-	       pho_E[x]                     =  myphoton_container[x].energy();
-	       pho_pt[x]                    =  myphoton_container[x].pt();
-	       pho_px[x]                    =  myphoton_container[x].px();
-	       pho_py[x]                    =  myphoton_container[x].py();
-	       pho_pz[x]                    =  myphoton_container[x].pz();
-	       pho_et[x]                    =  myphoton_container[x].et();
-	       pho_eta[x]                   =  myphoton_container[x].eta();
-	       pho_phi[x]                   =  correct_phi(myphoton_container[x].phi());
-	       pho_theta[x]                 =  myphoton_container[x].theta();
-	       pho_r9[x]                    =  myphoton_container[x].r9();
-	       pho_e1x5[x]                  =  myphoton_container[x].e1x5();
-	       pho_e2x5[x]                  =  myphoton_container[x].e2x5();
-	       pho_e3x3[x]                  =  myphoton_container[x].e3x3();
-	       pho_e5x5[x]                  =  myphoton_container[x].e5x5();
-	       pho_maxEnergyXtal[x]         =  myphoton_container[x].maxEnergyXtal();
-	       pho_SigmaEtaEta[x]           =  myphoton_container[x].sigmaEtaEta();        
-	       pho_SigmaIetaIeta[x]         =  myphoton_container[x].sigmaIetaIeta();        
-	       pho_r1x5[x]                  =  myphoton_container[x].r1x5();
-	       pho_r2x5[x]                  =  myphoton_container[x].r2x5();
-	       pho_size[x]                  =  myphoton_container[x].superCluster()->clustersSize();
-	       pho_sc_energy[x]             =  myphoton_container[x].superCluster()->energy();
-	       pho_sc_eta[x]                =  myphoton_container[x].superCluster()->eta();
-	       pho_sc_phi[x]                =  correct_phi(myphoton_container[x].superCluster()->phi());
-	       pho_sc_etaWidth[x]           =  myphoton_container[x].superCluster()->etaWidth();
-	       pho_sc_phiWidth[x]           =  myphoton_container[x].superCluster()->phiWidth();
-	       pho_HoE[x]                   =  myphoton_container[x].hadronicOverEm();              
-	       pho_ecalRecHitSumEtConeDR03[x]      =  myphoton_container[x].ecalRecHitSumEtConeDR03();
-	       pho_hcalTowerSumEtConeDR03[x]       =  myphoton_container[x].hcalTowerSumEtConeDR03();
-	       pho_trkSumPtHollowConeDR03[x]       =  myphoton_container[x].trkSumPtHollowConeDR03();
-	       pho_trkSumPtSolidConeDR03[x]        =  myphoton_container[x].trkSumPtSolidConeDR03();
-	       pho_nTrkSolidConeDR03[x]            = myphoton_container[x].nTrkSolidConeDR03();
-	       pho_nTrkHollowConeDR03[x]           = myphoton_container[x].nTrkHollowConeDR03();
-	       pho_hcalDepth1TowerSumEtConeDR03[x] = myphoton_container[x].hcalDepth1TowerSumEtConeDR03();
-	       pho_hcalDepth2TowerSumEtConeDR03[x] = myphoton_container[x].hcalDepth2TowerSumEtConeDR03();
-	       pho_ecalRecHitSumEtConeDR04[x]      =  myphoton_container[x].ecalRecHitSumEtConeDR04();
-	       pho_hcalTowerSumEtConeDR04[x]       =  myphoton_container[x].hcalTowerSumEtConeDR04();
-	       pho_trkSumPtHollowConeDR04[x]       =  myphoton_container[x].trkSumPtHollowConeDR04();
-	       pho_trkSumPtSolidConeDR04[x]        =  myphoton_container[x].trkSumPtSolidConeDR04();
-	       pho_nTrkSolidConeDR04[x]            = myphoton_container[x].nTrkSolidConeDR04();
-	       pho_nTrkHollowConeDR04[x]           = myphoton_container[x].nTrkHollowConeDR04();
-	       pho_hcalDepth1TowerSumEtConeDR04[x] = myphoton_container[x].hcalDepth1TowerSumEtConeDR04();
-	       pho_hcalDepth2TowerSumEtConeDR04[x] = myphoton_container[x].hcalDepth2TowerSumEtConeDR04();
-	       pho_hasPixelSeed[x]                 = myphoton_container[x].hasPixelSeed(); 
-	       pho_isEB[x]                         = myphoton_container[x].isEB(); 
-	       pho_isEE[x]                         = myphoton_container[x].isEE();
- 	       pho_isEBGap[x]                      = myphoton_container[x].isEBGap(); 
- 	       pho_isEEGap[x]                      = myphoton_container[x].isEEGap(); 
- 	       pho_isEBEEGap[x]                    = myphoton_container[x].isEBEEGap(); 
-
-	       if(myphoton_container[x].genParticleRef().isNonnull())
-		 {
-		   matchpho_E[x]                =  myphoton_container[x].genPhoton()->energy();
-		   matchpho_pt[x]               =  myphoton_container[x].genPhoton()->pt();
-		   matchpho_eta[x]              =  myphoton_container[x].genPhoton()->eta();
-		   matchpho_phi[x]              =  correct_phi(myphoton_container[x].genPhoton()->phi());
-		   matchpho_px[x]               =  myphoton_container[x].genPhoton()->px();
-		   matchpho_py[x]               =  myphoton_container[x].genPhoton()->py();
-		   matchpho_pz[x]               =  myphoton_container[x].genPhoton()->pz();
-		 }
+  
+  if(runtracks_){
+    Handle<reco::TrackCollection> tracks;
+    iEvent.getByLabel(Tracks_,tracks);
+    //cout<<"Track_n - all "<<tracks->size()<<endl;
+    std::vector<reco::Track>  myTrack_container;
+    myTrack_container.clear();
+    for(reco::TrackCollection::const_iterator Track_iter = tracks->begin();
+	Track_iter != tracks->end();++Track_iter) {
+      if(Track_iter->pt()>5.){
+	myTrack_container.push_back(*Track_iter);
+	//cout<<"nTracks abv 5 GeV: "<<myTrack_container.size()<<endl;
+      }
+    }
+    //cout<<"nTracks abv 5 GeV after the loop:"<<myTrack_container.size()<<endl;
+    Track_n = myTrack_container.size();
+    if(myTrack_container.size()>1)
+      std::sort(myTrack_container.begin(),myTrack_container.end(),PtSortCriterium3());
+    for(unsigned int x=0;x < myTrack_container.size();x++)
+      {
+	trk_pt[x]  = myTrack_container[x].pt();
+	trk_px[x]  = myTrack_container[x].px();
+	trk_py[x]  = myTrack_container[x].py();
+	trk_pz[x]  = myTrack_container[x].pz();
+	trk_phi[x] = correct_phi(myTrack_container[x].phi());
+	trk_eta[x] = myTrack_container[x].eta();
+	//cout<<"pt: "<< trk_pt[x] << endl;
+       }//end of for loop
+  }//end of if(runtracks_)
+  
+  
+  std::vector<pat::Photon> myphoton_container;
+  myphoton_container.clear();
+  if(runphotons_)
+    {
+      /*
+	Handle<reco::PhotonCollection> recphotons;
+	iEvent.getByLabel("photons", recphotons);
+	
+	edm::Handle<edm::View<pat::Photon> > allLayer1Photons;
+	iEvent.getByLabel("allLayer1Photons", allLayer1Photons);
+	
+	edm::Handle<edm::View<pat::Photon> > selectedlayer1Photons;
+	iEvent.getByLabel("selectedLayer1Photons", selectedlayer1Photons);
+      */
+      //muon collection 
+      edm::Handle<reco::MuonCollection> pMuons;       
+      iEvent.getByLabel("muons",pMuons);
+      const reco::MuonCollection *theMuons = pMuons.product();
+      if (!(pMuons.isValid())){
+	LogWarning("mytree") << "muons" << "not available";
+	return;
+      }
+      //cosmic muon
+      edm::Handle<reco::MuonCollection>xMuons;
+      iEvent.getByLabel("muonsFromCosmics",xMuons);
+      const reco::MuonCollection *cosMuons =xMuons.product();
+      //Geometry
+      edm::ESHandle<CaloGeometry> pGeometry ;
+      iSetup.get<CaloGeometryRecord> ().get (pGeometry) ;
+      const CaloGeometry * theGeometry = pGeometry.product () ;
+      edm::ESHandle<CaloTopology> pCaloTopology ;
+      iSetup.get<CaloTopologyRecord> ().get (pCaloTopology) ;
+      const CaloTopology * theCaloTopology = pCaloTopology.product () ;
+      //rechit collection      
+      edm::Handle<EcalRecHitCollection>rhcHandle;
+      iEvent.getByLabel("ecalRecHit", "EcalRecHitsEB", rhcHandle);
+      const EcalRecHitCollection *rhcoll = rhcHandle.product();
+      std::map<int,float> XtalMap ;
+      std::map<int, float> muonCrossedXtalMap;
+      //information from reco photoncollection                                                                         
+      Handle<PhotonCollection>photonColl;
+      iEvent.getByLabel("photons",photonColl);
+      const PhotonCollection thePhotons = *(photonColl.product());
+      if(thePhotons.size()==0) return; //photon collection should be atleaset onephoton
+      // loop over  "muon" collection
+      nMuons = 0;
+      for (reco::MuonCollection::const_iterator MUit = theMuons->begin () ;
+	   MUit != theMuons->end () ; ++MUit)
+	{  if(!MUit->isGlobalMuon()) continue;
+	
+	  const reco::TrackRef muonGlobalTrack = MUit -> globalTrack () ;
+	const reco::TrackRef muonInnerTrack = MUit ->innerTrack();
+	const reco::TrackRef muonOuterTrack = MUit ->outerTrack();
+	
+	float muonOutTkInnerHitY  = (float)muonOuterTrack->innerPosition().y();
+	float muonOutTkOuterHitY  = (float)muonOuterTrack->outerPosition().y();
+	float muonInnTkInnerHitX  = (float)muonInnerTrack->innerPosition().x();
+	float muonInnTkInnerHitY  = (float)muonInnerTrack->innerPosition().y(); 
+	float muonInnTkInnerHitZ  = (float)muonInnerTrack->innerPosition().z();
+	float muonInnTkOuterHitX  = (float)muonInnerTrack->outerPosition().x();
+	float muonInnTkOuterHitY  = (float)muonInnerTrack->outerPosition().y();
+	float muonInnTkOuterHitZ  = (float)muonInnerTrack->outerPosition().z();
+	float muonInnTkInnerHitPx = (float)muonInnerTrack->innerMomentum().x();
+	float muonInnTkInnerHitPy = (float)muonInnerTrack->innerMomentum().y(); 
+	float muonInnTkInnerHitPz = (float)muonInnerTrack->innerMomentum().z();
+	float muonInnTkOuterHitPx = (float)muonInnerTrack->outerMomentum().x();
+	float muonInnTkOuterHitPy = (float)muonInnerTrack->outerMomentum().y();
+	float muonInnTkOuterHitPz = (float)muonInnerTrack->outerMomentum().z(); 
+	int muonLeg = 0;
+	// decide whether muon is up or down leg by looking at the outerTrack  
+	if ( muonOutTkInnerHitY > 0. && muonOutTkOuterHitY > 0. ) muonLeg = 1;
+	if ( muonOutTkInnerHitY < 0. && muonOutTkOuterHitY < 0. ) muonLeg = -1;
+	else muonLeg = 0;
+	// define point and direction to look for intersection of muon track with ecal
+	float pointX, pointY, pointZ;
+	float pointX2, pointY2, pointZ2; // the other intersection with the ECAL
+	float directionX, directionY, directionZ;
+	float directionX2, directionY2, directionZ2; // the other intersection with the ECAL
+	if (muonLeg > 0)
+	  {     // muon track is in the top hemisphere
+	    pointX  = muonInnTkInnerHitX ;
+	    pointY  = muonInnTkInnerHitY ;
+	    pointZ  = muonInnTkInnerHitZ ;
+	    
+	    directionX = - muonInnTkInnerHitPx ;
+	    directionY = - muonInnTkInnerHitPy ;
+	    directionZ = - muonInnTkInnerHitPz ;
+	    
+	    pointX2 = muonInnTkOuterHitX ;
+	    pointY2 = muonInnTkOuterHitY ;
+	    pointZ2 = muonInnTkOuterHitZ ;
+	    
+	    directionX2 = muonInnTkOuterHitPx ;
+	    directionY2 = muonInnTkOuterHitPy ;
+	    directionZ2 = muonInnTkOuterHitPz ;
+	  } 
+	else 
+	  {
+	    // muon track is in the bottom hemisphere
+	    pointX = muonInnTkOuterHitX ;
+	    pointY = muonInnTkOuterHitY ;
+	    pointZ = muonInnTkOuterHitZ ;
+	    
+	    directionX = muonInnTkOuterHitPx ;
+	    directionY = muonInnTkOuterHitPy ;
+	    directionZ = muonInnTkOuterHitPz ;
+	    
+	    pointX2 = muonInnTkInnerHitX ;
+	    pointY2 = muonInnTkInnerHitY ;
+	    pointZ2 = muonInnTkInnerHitZ ;
+	    
+	    directionX2 = - muonInnTkInnerHitPx ;
+	    directionY2 = - muonInnTkInnerHitPy ;
+	    directionZ2 = - muonInnTkInnerHitPz ;
+	  }
+	float mupt_muon   = (float)muonGlobalTrack->pt () ;
+	float mueta_muon  = (float)muonGlobalTrack->eta () ;
+	float muphi_muon  = (float)muonGlobalTrack->phi();
+	
+	GlobalPoint point (pointX, pointY, pointZ) ;
+	GlobalVector direction (directionX, directionY, directionZ) ;      
+	
+	GlobalPoint point2 (pointX2, pointY2, pointZ2) ;
+	GlobalVector direction2 (directionX2, directionY2, directionZ2) ;   
+	
+	GlobalPoint internalPoint;
+	GlobalPoint externalPoint;
+	double totalLengthStraight;
+	getMuonMatching (XtalMap,
+			 muonCrossedXtalMap,
+			 totalLengthStraight,
+			 internalPoint,
+			 externalPoint,
+			 & (*theGeometry),
+			 & (*theCaloTopology),
+			 point, direction, 0.01) ;
+	
+	float muonTkInternalPointInEcalX = internalPoint.x () ;
+	float muonTkInternalPointInEcalY = internalPoint.y () ;
+	float muonTkInternalPointInEcalZ = internalPoint.z () ;
+	
+	float muonTkExternalPointInEcalX = externalPoint.x () ;
+	float muonTkExternalPointInEcalY = externalPoint.y () ;
+	float muonTkExternalPointInEcalZ = externalPoint.z () ;
+	
+	float x11 = (muonTkInternalPointInEcalX + muonTkExternalPointInEcalX)/2;
+	float y11 = (muonTkInternalPointInEcalY + muonTkExternalPointInEcalY)/2;
+	float z11 = (muonTkInternalPointInEcalZ + muonTkExternalPointInEcalZ)/2;
+	
+	GlobalPoint internalPoint2;
+	GlobalPoint externalPoint2;
+	
+	getMuonMatching (XtalMap,
+			 muonCrossedXtalMap,
+			 totalLengthStraight,
+			 internalPoint2,
+			 externalPoint2,
+			 & (*theGeometry), 
+			 & (*theCaloTopology), 
+			 point2, direction2, 0.01) ;
+	
+	float muonTkInternalPointInEcalX21 = internalPoint2.x () ;
+	float muonTkInternalPointInEcalY21 = internalPoint2.y () ;
+	float muonTkInternalPointInEcalZ21 = internalPoint2.z () ;
+	
+	float muonTkExternalPointInEcalX21 = externalPoint2.x () ;
+	float muonTkExternalPointInEcalY21 = externalPoint2.y () ;
+	float muonTkExternalPointInEcalZ21 = externalPoint2.z () ;
+	
+	float x21 = (muonTkInternalPointInEcalX21 + muonTkExternalPointInEcalX21)/2;
+	float y21 = (muonTkInternalPointInEcalY21 + muonTkExternalPointInEcalY21)/2;
+	float z21 = (muonTkInternalPointInEcalZ21 + muonTkExternalPointInEcalZ21)/2;
+	
+	muonPt[nMuons]  = mupt_muon;
+	muonEta[nMuons] = mueta_muon;
+	muonPhi[nMuons] = muphi_muon;
+	x1[nMuons]      = x11;
+	y1[nMuons]      = y11;
+	z1[nMuons]      = z11;
+	x2[nMuons]      = x21;
+	y2[nMuons]      = y21;
+	z2[nMuons]      = z21;
+	muonleg[nMuons] = muonLeg;
+	++nMuons; 
+	}//loop over" muons"collection.....
+      
+      // loop over cosmic collection
+      ncosmu = 0;
+      for (reco::MuonCollection::const_iterator it = cosMuons->begin () ;
+	   it != cosMuons->end () ; ++it)
+	{  if(!it->isGlobalMuon()) continue;
+	
+	  const reco::TrackRef muonGlobalTrack = it -> globalTrack () ;
+	  float mupt_cos  = (float)muonGlobalTrack->pt () ;
+	  float mueta_cos = (float)muonGlobalTrack->eta () ;
+	  float muphi_cos = (float)muonGlobalTrack->phi();
+	  
+	  const reco::TrackRef muonInnerTrack = it ->innerTrack();
+	  const reco::TrackRef muonOuterTrack = it ->outerTrack();
+	  
+	  float muonOutTkInnerHitY  = (float)muonOuterTrack->innerPosition().y();
+	  float muonOutTkOuterHitY  = (float)muonOuterTrack->outerPosition().y();
+	  float muonInnTkInnerHitX  = (float)muonInnerTrack->innerPosition().x();
+	  float muonInnTkInnerHitY  = (float)muonInnerTrack->innerPosition().y(); 
+	  float muonInnTkInnerHitZ  = (float)muonInnerTrack->innerPosition().z();
+	  
+	  float muonInnTkOuterHitX  = (float)muonInnerTrack->outerPosition().x();
+	  float muonInnTkOuterHitY  = (float)muonInnerTrack->outerPosition().y();
+	  float muonInnTkOuterHitZ  = (float)muonInnerTrack->outerPosition().z();
+	  
+	  float muonInnTkInnerHitPx = (float)muonInnerTrack->innerMomentum().x();
+	  float muonInnTkInnerHitPy = (float)muonInnerTrack->innerMomentum().y(); 
+	  float muonInnTkInnerHitPz = (float)muonInnerTrack->innerMomentum().z();
+	  
+	  float muonInnTkOuterHitPx = (float)muonInnerTrack->outerMomentum().x();
+	  float muonInnTkOuterHitPy = (float)muonInnerTrack->outerMomentum().y();
+	  float muonInnTkOuterHitPz = (float)muonInnerTrack->outerMomentum().z(); 
+	  int muonLeg = 0;
+	  // decide whether  cosmicmuon is up or down leg by looking at the outerTrack  
+	  if ( muonOutTkInnerHitY > 0. && muonOutTkOuterHitY > 0. ) muonLeg = 1;
+	  if ( muonOutTkInnerHitY < 0. && muonOutTkOuterHitY < 0. ) muonLeg = -1;
+	  else muonLeg = 0;
+	  // define point and direction to look for intersection of muon track with ecal
+	  float pointX, pointY, pointZ;
+	  float pointX2, pointY2, pointZ2; // the other intersection with the ECAL
+	  float directionX, directionY, directionZ;
+	  float directionX2, directionY2, directionZ2; // the other intersection with the ECAL
+	  if (muonLeg > 0)
+	    {
+	      // cosmicmuon track is in the top hemisphere
+	      pointX        = muonInnTkInnerHitX ;
+	      pointY        = muonInnTkInnerHitY ;
+	      pointZ        = muonInnTkInnerHitZ ;	      
+	      directionX    = - muonInnTkInnerHitPx ;
+	      directionY    = - muonInnTkInnerHitPy ;
+	      directionZ    = - muonInnTkInnerHitPz ;
+	      pointX2       = muonInnTkOuterHitX ;
+	      pointY2       = muonInnTkOuterHitY ;
+	      pointZ2       = muonInnTkOuterHitZ ;
+	      directionX2   = muonInnTkOuterHitPx ;
+	      directionY2   = muonInnTkOuterHitPy ;
+	      directionZ2   = muonInnTkOuterHitPz ;
+	    }
+	  
+	  else 
+	    {
+	      // cosmicmuon track is in the bottom hemisphere
+	      pointX       = muonInnTkOuterHitX ;
+	      pointY       = muonInnTkOuterHitY ;
+	      pointZ       = muonInnTkOuterHitZ ; 
+	      directionX   = muonInnTkOuterHitPx ;
+	      directionY   = muonInnTkOuterHitPy ;
+	      directionZ   = muonInnTkOuterHitPz ;
+	      pointX2      = muonInnTkInnerHitX ;
+	      pointY2      = muonInnTkInnerHitY ;
+	      pointZ2      = muonInnTkInnerHitZ ;
+	      directionX2  = - muonInnTkInnerHitPx ;
+	      directionY2  = - muonInnTkInnerHitPy ;
+	      directionZ2  = - muonInnTkInnerHitPz ;
+	    }
+	
+	  GlobalPoint point (pointX, pointY, pointZ) ;
+	  GlobalVector direction (directionX, directionY, directionZ) ;      
+	  
+	  GlobalPoint point2 (pointX2, pointY2, pointZ2) ;
+	  GlobalVector direction2 (directionX2, directionY2, directionZ2) ;   
+	  
+	  GlobalPoint internalPoint;
+	  GlobalPoint externalPoint;
+	  double totalLengthStraight;
+	  getMuonMatching (XtalMap,
+			   muonCrossedXtalMap,
+			   totalLengthStraight,
+			   internalPoint,
+			   externalPoint,
+			   & (*theGeometry),
+			   & (*theCaloTopology),
+			   point, direction, 0.01) ;
+	  
+	  float muonTkInternalPointInEcalX = internalPoint.x () ;
+	  float muonTkInternalPointInEcalY = internalPoint.y () ;
+	  float muonTkInternalPointInEcalZ = internalPoint.z () ;
+	
+	  float muonTkExternalPointInEcalX = externalPoint.x () ;
+	  float muonTkExternalPointInEcalY = externalPoint.y () ;
+	  float muonTkExternalPointInEcalZ = externalPoint.z () ;
+	  
+	  float x11 = (muonTkInternalPointInEcalX + muonTkExternalPointInEcalX)/2;
+	  float y11 = (muonTkInternalPointInEcalY + muonTkExternalPointInEcalY)/2;
+	  float z11 = (muonTkInternalPointInEcalZ + muonTkExternalPointInEcalZ)/2;
+	  
+	  GlobalPoint internalPoint2;
+	  GlobalPoint externalPoint2;
+	  
+	  getMuonMatching (XtalMap,
+			   muonCrossedXtalMap,
+			   totalLengthStraight,
+			   internalPoint2,
+			   externalPoint2,
+			   & (*theGeometry), 
+			   & (*theCaloTopology), 
+			   point2, direction2, 0.01) ;
+	  
+	  float muonTkInternalPointInEcalX21 = internalPoint2.x () ;
+	  float muonTkInternalPointInEcalY21 = internalPoint2.y () ;
+	  float muonTkInternalPointInEcalZ21 = internalPoint2.z () ;
+	  
+	  float muonTkExternalPointInEcalX21 = externalPoint2.x () ;
+	  float muonTkExternalPointInEcalY21 = externalPoint2.y () ;
+	  float muonTkExternalPointInEcalZ21 = externalPoint2.z () ;
+	  
+	  float x21 = (muonTkInternalPointInEcalX21 + muonTkExternalPointInEcalX21)/2;
+	  float y21 = (muonTkInternalPointInEcalY21 + muonTkExternalPointInEcalY21)/2;
+	  float z21 = (muonTkInternalPointInEcalZ21 + muonTkExternalPointInEcalZ21)/2;
+	  
+	  cosmuPt[ncosmu]     = mupt_cos;
+	  cosmuEta[ncosmu]    = mueta_cos;
+	  cosmuPhi[ncosmu]    = muphi_cos;
+	  xcos1[ncosmu]       = x11;
+	  ycos1[ncosmu]       = y11;
+	  zcos1[ncosmu]       = z11;
+	  xcos2[ncosmu]       = x21;
+	  ycos2[ncosmu]       = y21;
+	  zcos2[ncosmu]       = z21;
+	  muonlegcos[ncosmu]  = muonLeg;
+	  ncosmu++;
+	}// end of cosmic collection loop
+      
+      edm::Handle<edm::View<pat::Photon> > phoHandle;
+      iEvent.getByLabel(phoLabel_,phoHandle);
+      //const edm::View<pat::Photon> & photons = *phoHandle;
+      edm::View<pat::Photon>::const_iterator photon;
+      Photon_n = phoHandle->size();
+      //cout<<"total photons reconstructed at RECO level:"<<recphotons->size()<<endl;
+      //cout<<"Step 1 : number of all layer1 Photons:"<<allLayer1Photons->size()<<endl;
+      //cout<<"Step 2 : number of selected layer1 Photons:"<<selectedlayer1Photons->size()<<endl;
+      //cout<<"Step 3 : number of cleaned layer1 Photons:"<<phoHandle->size()<<endl;
+      //if(allLayer1Photons->size()!=recphotons->size())cout<<"strange! allLayer1Photons!=recphotons "<<endl;
+      //if(allLayer1Photons->size()!=selectedlayer1Photons->size())cout<<"strange! allLayer1Photons!= selectedlayer1Photons "<<endl;
+      //if(selectedlayer1Photons->size()< phoHandle->size())cout<<"strange! selectedlayer1Photons->size() < cleanLayer1Photons"<<endl;
+      
+      //cout<<"photon container size:"<<Photon_n<<endl;
+      nPhotons = 0;
+      for(photon = phoHandle->begin();photon!=phoHandle->end();++photon){
+	myphoton_container.push_back(*photon) ;
+      }
+      if(myphoton_container.size()!=0)
+	{
+	  for(unsigned int x=0; x < myphoton_container.size();x++)
+	    {
+	      //cout<<"photon pt:"<<myphoton_container[x].pt()<<"  photon eta:"<<myphoton_container[x].eta()<<"  photon phi:"<<correct_phi(myphoton_container[x].phi())<<endl; 
+	      pho_E[x]                     =  myphoton_container[x].energy();
+	      pho_pt[x]                    =  myphoton_container[x].pt();
+	      pho_px[x]                    =  myphoton_container[x].px();
+	      pho_py[x]                    =  myphoton_container[x].py();
+	      pho_pz[x]                    =  myphoton_container[x].pz();
+	      pho_et[x]                    =  myphoton_container[x].et();
+	      pho_eta[x]                   =  myphoton_container[x].eta();
+	      pho_phi[x]                   =  correct_phi(myphoton_container[x].phi());
+	      pho_theta[x]                 =  myphoton_container[x].theta();
+	      pho_r9[x]                    =  myphoton_container[x].r9();
+	      pho_e1x5[x]                  =  myphoton_container[x].e1x5();
+	      pho_e2x5[x]                  =  myphoton_container[x].e2x5();
+	      pho_e3x3[x]                  =  myphoton_container[x].e3x3();
+	      pho_e5x5[x]                  =  myphoton_container[x].e5x5();
+	      pho_maxEnergyXtal[x]         =  myphoton_container[x].maxEnergyXtal();
+	      pho_SigmaEtaEta[x]           =  myphoton_container[x].sigmaEtaEta();        
+	      pho_SigmaIetaIeta[x]         =  myphoton_container[x].sigmaIetaIeta();        
+	      pho_r1x5[x]                  =  myphoton_container[x].r1x5();
+	      pho_r2x5[x]                  =  myphoton_container[x].r2x5();
+	      pho_size[x]                  =  myphoton_container[x].superCluster()->clustersSize();
+	      pho_sc_energy[x]             =  myphoton_container[x].superCluster()->energy();
+	      pho_sc_eta[x]                =  myphoton_container[x].superCluster()->eta();
+	      pho_x[x]                     =  myphoton_container[x].superCluster()->x();
+	      pho_y[x]                     = myphoton_container[x].superCluster()->y();
+	      pho_z[x]                     = myphoton_container[x].superCluster()->z();
+	      pho_sc_phi[x]                =  correct_phi(myphoton_container[x].superCluster()->phi());
+	      pho_sc_etaWidth[x]           =  myphoton_container[x].superCluster()->etaWidth();
+	      pho_sc_phiWidth[x]           =  myphoton_container[x].superCluster()->phiWidth();
+	      pho_HoE[x]                   =  myphoton_container[x].hadronicOverEm();              
+	      pho_ecalRecHitSumEtConeDR03[x]      =  myphoton_container[x].ecalRecHitSumEtConeDR03();
+	      pho_hcalTowerSumEtConeDR03[x]       =  myphoton_container[x].hcalTowerSumEtConeDR03();
+	      pho_trkSumPtHollowConeDR03[x]       =  myphoton_container[x].trkSumPtHollowConeDR03();
+	      pho_trkSumPtSolidConeDR03[x]        =  myphoton_container[x].trkSumPtSolidConeDR03();
+	      pho_nTrkSolidConeDR03[x]            = myphoton_container[x].nTrkSolidConeDR03();
+	      pho_nTrkHollowConeDR03[x]           = myphoton_container[x].nTrkHollowConeDR03();
+	      pho_hcalDepth1TowerSumEtConeDR03[x] = myphoton_container[x].hcalDepth1TowerSumEtConeDR03();
+	      pho_hcalDepth2TowerSumEtConeDR03[x] = myphoton_container[x].hcalDepth2TowerSumEtConeDR03();
+	      pho_ecalRecHitSumEtConeDR04[x]      =  myphoton_container[x].ecalRecHitSumEtConeDR04();
+	      pho_hcalTowerSumEtConeDR04[x]       =  myphoton_container[x].hcalTowerSumEtConeDR04();
+	      pho_trkSumPtHollowConeDR04[x]       =  myphoton_container[x].trkSumPtHollowConeDR04();
+	      pho_trkSumPtSolidConeDR04[x]        =  myphoton_container[x].trkSumPtSolidConeDR04();
+	      pho_nTrkSolidConeDR04[x]            = myphoton_container[x].nTrkSolidConeDR04();
+	      pho_nTrkHollowConeDR04[x]           = myphoton_container[x].nTrkHollowConeDR04();
+	      pho_hcalDepth1TowerSumEtConeDR04[x] = myphoton_container[x].hcalDepth1TowerSumEtConeDR04();
+	      pho_hcalDepth2TowerSumEtConeDR04[x] = myphoton_container[x].hcalDepth2TowerSumEtConeDR04();
+	      pho_hasPixelSeed[x]                 = myphoton_container[x].hasPixelSeed(); 
+	      pho_isEB[x]                         = myphoton_container[x].isEB(); 
+	      pho_isEE[x]                         = myphoton_container[x].isEE();
+	      pho_isEBGap[x]                      = myphoton_container[x].isEBGap(); 
+	      pho_isEEGap[x]                      = myphoton_container[x].isEEGap(); 
+	      pho_isEBEEGap[x]                    = myphoton_container[x].isEBEEGap(); 
+	      
+	      double photonscX = pho_x[x];
+	      double photonscY = pho_y[x];
+	      double photonscZ = pho_z[x];
+	      //check whether pat photon matches to reco photon
+	      for (PhotonCollection::const_iterator phoIt = thePhotons.begin(); phoIt != thePhotons.end(); phoIt++)
+		{                                                                                                           
+		  if (!phoIt->isEB()) continue;
+		  std::vector< std::pair<DetId, float> > myHitsPair = phoIt->superCluster()->hitsAndFractions();
+		  float  photonEnergy     = phoIt->superCluster()->energy();
+		  double photonEta        = phoIt->superCluster()->eta();
+		  float photonTheta       = 2. * atan(exp((-1.*photonEta)));
+		  //float photonEt          = sin(photonTheta) * photonEnergy;
+		  float photonX           = phoIt ->superCluster() -> x();                                           
+		  float photonY           = phoIt ->superCluster()-> y();           
+		  float photonZ           = phoIt ->superCluster()-> z();                                                     
+		  float timing            = 0;
+		  float energy            = 0;
+		  double phorecoscX       = phoIt ->superCluster() -> x();      
+		  float phorecoscY        = phoIt ->superCluster()-> y();                                           
+		  float phorecoscZ        =  phoIt ->superCluster()-> z();
+		  double dRpatrec = sqrt((phorecoscX-photonscX)*(phorecoscX-photonscX)+
+					 (phorecoscY-photonscY)*(phorecoscY-photonscY)+
+					 (phorecoscZ-photonscZ)*(phorecoscZ-photonscZ));
+		  if (dRpatrec>0.01) continue;
+		  dRpat_rec[nPhotons]= dRpatrec;
+		  //if pat:: photon matches with reco::photon then we do muon matching  
+		  // for timing information
+		  for(reco::CaloCluster_iterator clus = phoIt->superCluster()->clustersBegin();
+		      clus != phoIt->superCluster()->clustersEnd();
+		      ++clus) {
+		    std::vector<std::pair<DetId, float> > clusterDetIds = (*clus)->hitsAndFractions();
+		    for(std::vector<std::pair<DetId, float> >::const_iterator detitr = clusterDetIds.begin();
+			detitr != clusterDetIds.end();
+			++detitr)
+		      {
+			if ( (detitr->first).det() != DetId::Ecal ) {
+			  cout << " det is " << (detitr->first).det() << endl;
+			  continue;
+			}
+			if ( (detitr->first).subdetId() != EcalBarrel) {
+			  cout << " subdet is " << (detitr->first).subdetId() << endl;
+			}
+			EcalRecHitCollection::const_iterator thishit = rhcHandle->find((detitr->first));
+			if (thishit == rhcHandle->end()) continue;
+			
+			EcalRecHit myhit = (*thishit);
+			double thisamp = myhit.energy();
+			if ( energy < thisamp ) {
+			  energy = thisamp;
+			  timing = (float)myhit.time();
+			  if (RunNumber<133950){
+			    timing = timing+0.4;
+			  }
+			  else{timing = timing-1.5;}
+			  
+			   
+			}
+		      }
+		  }
+		  
+		  std:: vector<float> mySCShapes =EcalClusterTools::roundnessBarrelSuperClusters(*(phoIt->superCluster()),*rhcoll,0);
+		  //matching condition check
+		  int iMuon = -1;
+		  int soln  = 0;
+		  float dR1 = 1000.0;
+		  for(int im = 0; im != nMuons; ++im)
+		    {
+		      float xm1  = x1[im];
+		      float ym1  = y1[im];
+		      float zm1  = z1[im];
+		      float xm2  = x2[im];
+		      float ym2  = y2[im];
+		      float zm2  = z2[im];
+		      float dr1  = 
+			(xm1 - photonX)*(xm1-photonX) +
+			(ym1 - photonY)*(ym1-photonY)+
+			(zm1 - photonZ)*(zm1-photonZ);
+		      dr1 = sqrt(dr1);
+		      float dr2 =
+			(xm2 - photonX)*(xm2-photonX) +
+			(ym2 - photonY)*(ym2-photonY)+
+			(zm2 - photonZ)*(zm2-photonZ);
+		      dr2 = sqrt(dr2);
+		      if (dr1 < dR1){
+			iMuon  = im;
+			dR1    = dr1;
+			soln   = 1; 
+		      }
+		      if (dr2 < dR1){
+			iMuon = im;
+			dR1   = dr2;
+			soln  = 2;
+		       }
+		     }	// end of loop 
+		  
+		  if (iMuon != -1 && soln == 1){
+		    dX[nPhotons]      = x1[iMuon] - photonX;
+		    dY[nPhotons]      = y1[iMuon] - photonY;
+		    dZ[nPhotons]      = z1[iMuon] - photonZ; 
+		    MuonPt[nPhotons]  = muonPt[iMuon];
+		    MuonEta[nPhotons] = muonEta[iMuon];
+		    MuonPhi[nPhotons] = muonPhi[iMuon];
+		  }
+		  else  if (iMuon !=-1 && soln == 2){
+		    dX[nPhotons]       = x2[iMuon] -photonX;
+		    dY[nPhotons]       = y2[iMuon] - photonY;
+		    dZ[nPhotons]       = z2[iMuon] - photonZ;
+		    MuonPt[nPhotons]   = muonPt[iMuon];
+		    MuonEta[nPhotons]  = muonEta[iMuon];
+		    MuonPhi[nPhotons]  = muonPhi[iMuon];
+		  }
+		  
+		  else {  
+		    dX[nPhotons]       = -400;
+		    dY[nPhotons]       = -400;
+		    dZ[nPhotons]       = -400;
+		    MuonPt[nPhotons]   = -500;
+		    MuonEta[nPhotons]  = -6; 
+		    MuonPhi[nPhotons]  = -6;
+		  }
+		  //information of photon candidates related to the" muons"
+		  dRpm[nPhotons]                  = dR1;
+		  phRho[nPhotons]                 = mySCShapes[0];
+		  phAng[nPhotons]                 = mySCShapes[1];
+		  phEnergy[nPhotons]              = phoIt->superCluster()->energy();
+		  phEt[nPhotons]                  = sin(photonTheta) * photonEnergy;
+		  phEta[nPhotons]                 = phoIt->superCluster()->eta();
+		  phPhi[nPhotons]                 = phoIt->superCluster()->phi();
+		  phPixelSeed[nPhotons]           = phoIt->hasPixelSeed();
+		  phHasConversionTracks[nPhotons] = phoIt->hasConversionTracks();
+		  phTiming[nPhotons]              = timing;
+		  phSigmaieta[nPhotons]           = phoIt-> sigmaIetaIeta();
+		  phHadoverem[nPhotons]           = phoIt->hadronicOverEm();
+		  phEcalIso[nPhotons]             = phoIt->ecalRecHitSumEtConeDR04();
+		  phHcalIso[nPhotons]             = phoIt->hcalTowerSumEtConeDR04();
+		  phTkIso[nPhotons]               = phoIt->trkSumPtHollowConeDR04();
+		  // cosmic muons matching with photons....
+		  int icosmuon  = -1;
+		  int soln1     = 0;
+		  float dR2     = 1000.0;
+		  for(int j = 0; j != ncosmu; ++j)
+		    {
+		      float xc1 = xcos1[j];
+		      float yc1 = ycos1[j];
+		      float zc1 = zcos1[j];
+		      float xc2 = xcos2[j];
+		      float yc2 = ycos2[j];
+		      float zc2 = zcos2[j];  
+		      float dr11= 
+			(xc1 - photonX)*(xc1-photonX) +
+			(yc1 - photonY)*(yc1-photonY)+
+			(zc1 - photonZ)*(zc1-photonZ);
+		      dr11 = sqrt(dr11);
+		      
+		      float dr21 =
+			(xc2 - photonX)*(xc2-photonX) +
+			(yc2 - photonY)*(yc2-photonY)+
+			(zc2 - photonZ)*(zc2-photonZ);
+		      dr21 = sqrt(dr21);  
+		      if (dr11 < dR2){
+			icosmuon   = j;
+			dR2        = dr11;    
+			soln1      =11;
+		      }
+		      
+		      if (dr21 < dR2){
+			icosmuon = j;
+			dR2      = dr21;
+			soln1    = 21;
+		      }   
+		    }//ncosmu loop
+		  if (icosmuon != -1 && soln1 == 11){
+		    dXcos[nPhotons]    = xcos1[icosmuon] - photonX;
+		    dYcos[nPhotons]    = ycos1[icosmuon] - photonY;
+		    dZcos[nPhotons]    = zcos1[icosmuon] - photonZ; 
+		    CosmuPt[nPhotons]  = cosmuPt[icosmuon];
+		    CosmuEta[nPhotons] = cosmuEta[icosmuon];
+		    CosmuPhi[nPhotons] = cosmuPhi[icosmuon];	      
+		  }  
+		  else  if (icosmuon !=-1 && soln1 == 21){ 
+		    dXcos[nPhotons]    = xcos2[icosmuon] -photonX;
+		    dYcos[nPhotons]    = ycos2[icosmuon] - photonY;
+		    dZcos[nPhotons]    = zcos2[icosmuon] - photonZ;
+		    CosmuPt[nPhotons]  = cosmuPt[icosmuon];
+		    CosmuEta[nPhotons] = cosmuEta[icosmuon];
+		    CosmuPhi[nPhotons] = cosmuPhi[icosmuon];  
+		  }
+		  else {     
+		    dXcos[nPhotons]    = -400;
+		    dYcos[nPhotons]    = -400;
+		    dZcos[nPhotons]    = -400;
+		    CosmuPt[nPhotons]  = -500;
+		    CosmuEta[nPhotons] = -6;
+		    CosmuPhi[nPhotons] = -6;  
+		  }
+		  //information of photon candidates related cosmic-muons
+		  dRpm_cos[nPhotons]                  = dR2;
+		  phRho_cos[nPhotons]                 = mySCShapes[0];
+		  phAng_cos[nPhotons]                 = mySCShapes[1];
+		  phEnergy_cos[nPhotons]              = phoIt->superCluster()->energy();
+		  phEt_cos[nPhotons]                  = sin(photonTheta) * photonEnergy;
+		  phEta_cos[nPhotons]                 = phoIt->superCluster()->eta();
+		  phPixelSeed_cos[nPhotons]           = phoIt->hasPixelSeed();
+		  phHasConversionTracks_cos[nPhotons] = phoIt->hasConversionTracks();
+		  phTiming_cos[nPhotons]              = timing;
+		  phSigmaieta_cos[nPhotons]           = phoIt-> sigmaIetaIeta();
+		  phHadoverem_cos[nPhotons]           = phoIt->hadronicOverEm();
+		  phEcalIso_cos[nPhotons]             = phoIt->ecalRecHitSumEtConeDR04();
+		  phHcalIso_cos[nPhotons]             = phoIt->hcalTowerSumEtConeDR04();
+		  phTkIso_cos[nPhotons]               = phoIt->trkSumPtHollowConeDR04();
+		  //cout << "cosmics dR2" << dR2 << endl;
+		  
+		  sigR_cosmic[nPhotons]     = -1000;
+		  dX_cosmic[nPhotons]       = -1000;
+		  dY_cosmic[nPhotons]       = -1000;
+		  dZ_cosmic[nPhotons]       = -1000;
+		  muonPt_cosmic[nPhotons]   = -1000;
+		  muonEta_cosmic[nPhotons]  = -10;
+		  muonPhi_cosmic[nPhotons]  = -10;
+		  sigR_muon[nPhotons]       = -2000;
+		  dX_muon[nPhotons]         = -2000;
+		  dY_muon[nPhotons]         = -2000;
+		  dZ_muon[nPhotons]         = -2000;
+		  muonPt_muon[nPhotons]     = -2000;
+		  muonEta_muon[nPhotons]    = -10;
+		  muonPhi_muon[nPhotons]    = -10;
+		  //check whether photon matched belongs to muon or cosmics
+		  if(dR2 < dR1) {cosmics[nPhotons]=1;
+		    sigR_cosmic[nPhotons]= sqrt(dXcos[nPhotons]/2.5*dXcos[nPhotons]/2.5+
+						dYcos[nPhotons]/2.5*dYcos[nPhotons]/2.5+
+						dZcos[nPhotons]/5.0*dZcos[nPhotons]/5.0);
+		    dX_cosmic[nPhotons]      = dXcos[nPhotons];
+		    dY_cosmic[nPhotons]      = dYcos[nPhotons];
+		    dZ_cosmic[nPhotons]      = dZcos[nPhotons];
+		    muonPt_cosmic[nPhotons]  = CosmuPt[nPhotons];
+		    muonEta_cosmic[nPhotons] = CosmuEta[nPhotons];
+		    muonPhi_cosmic[nPhotons] = CosmuPhi[nPhotons];                                            
+		  }
+                   else {
+                     cosmics[nPhotons]=0;                                                                           
+                     sigR_muon[nPhotons]= sqrt(dX[nPhotons]/2.5*dX[nPhotons]/2.5+
+                                               dY[nPhotons]/2.5*dY[nPhotons]/2.5+
+                                               dZ[nPhotons]/5.0*dZ[nPhotons]/5.0);
+		    
+                     dX_muon[nPhotons]       = dX[nPhotons];
+                     dY_muon[nPhotons]       = dY[nPhotons];
+                     dZ_muon[nPhotons]       = dZ[nPhotons];
+                     muonPt_muon[nPhotons]   = MuonPt[nPhotons];
+                     muonEta_muon[nPhotons]  = MuonEta[nPhotons];
+                     muonPhi_muon[nPhotons]  = MuonPhi[nPhotons];
+		     
+                   }
+		  
+		  nPhotons++;
+		  
+		 }//photons
+	      if (nPhotons == 0) return;
+	      
+	       
+	      if(myphoton_container[x].genParticleRef().isNonnull())
+		{
+		  matchpho_E[x]                =  myphoton_container[x].genPhoton()->energy();
+		  matchpho_pt[x]               =  myphoton_container[x].genPhoton()->pt();
+		  matchpho_eta[x]              =  myphoton_container[x].genPhoton()->eta();
+		  matchpho_phi[x]              =  correct_phi(myphoton_container[x].genPhoton()->phi());
+		  matchpho_px[x]               =  myphoton_container[x].genPhoton()->px();
+		  matchpho_py[x]               =  myphoton_container[x].genPhoton()->py();
+		  matchpho_pz[x]               =  myphoton_container[x].genPhoton()->pz();
+		}
 	       else
 		 {
 		   matchpho_E[x]                = -99.;
@@ -694,7 +1317,7 @@ Analyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
                    matchpho_py[x]               = -99.;
                    matchpho_pz[x]               = -99.;
 		 }
-	       ismatchedpho[x]                         =  myphoton_container[x].genParticleRef().isNonnull();
+	      ismatchedpho[x]                         =  myphoton_container[x].genParticleRef().isNonnull();
 	       reco::ConversionRefVector conversions   = myphoton_container[x].conversions();
 	       //cout<<"size of conversion vector:"<<conversions.size()<<endl;
 	       for (unsigned int iConv=0; iConv<conversions.size(); iConv++) {
@@ -741,7 +1364,7 @@ Analyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
 		     pho_dEtaTracksAtEcal[x]           = -99.;
 		   }//end of else
 	       }//end of for (unsigned int iConv=0; iConv<conversions.size(); iConv++)
-
+	       
 	       //to get the photon hit information from every crystal of SC
 	       if(runrechit_)
 		 { 
@@ -753,6 +1376,10 @@ Analyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
 		   iEvent.getByLabel(rechitELabel_,Erechit); 
 		   const EcalRecHitCollection* barrelRecHits= Brechit.product();
 		   const EcalRecHitCollection* endcapRecHits= Erechit.product();
+		   
+		   edm::ESHandle<CaloTopology> pTopology;
+		   iSetup.get<CaloTopologyRecord>().get(theCaloTopo_);
+		   const CaloTopology *topology = theCaloTopo_.product();
 		   
 		   std::vector<CrystalInfo> crystalinfo_container;
 		   crystalinfo_container.clear();
@@ -770,7 +1397,7 @@ Analyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
 			   if ( j!= Brechit->end())  thishit = j;
 			   if ( j== Brechit->end())
 			     {
-			       std::cout<<"thishit not matched "<<std::endl;
+			       ///std::cout<<"thishit not matched "<<std::endl;
 			       continue;
 			     }
 			   //std::cout<<"thishit matched "<<std::endl;
@@ -789,13 +1416,13 @@ Analyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
 			     } 
 			 }//end of if ((*detitr).det() == DetId::Ecal && (*detitr).subdetId() == EcalBarrel)
 		       else 
-			   {
+			 {
 			     crystal.rawId  = 999;
 			     crystal.energy = -99;
 			     crystal.time   = -99;
 			     crystal.ieta   = -99;
 			     crystal.iphi   = -99;
-			   }
+			 }
 		       crystalinfo_container.push_back(crystal);  
 		     }
 		   std::sort(crystalinfo_container.begin(),crystalinfo_container.end(),EnergySortCriterium());
@@ -824,29 +1451,34 @@ Analyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
 		     {
 		       std::vector<float> showershapes_barrel = EcalClusterTools::roundnessBarrelSuperClusters(*(myphoton_container[x].superCluster()),*barrelRecHits,0);
 		       //cout<<"roundness for barrel photon:"<<showershapes_barrel[0]<<endl;
-		       //cout<<"angle for barrel photon:"<<showershapes_barrel[1]<<endl;
+		       //cout<d"angle for barrel photon:"<<showershapes_barrel[1]<<endl;
 		       pho_roundness[x]    = (double)showershapes_barrel[0];
 		       pho_angle[x]        = (double)showershapes_barrel[1];
 		       pho_s9[x]           = pho_energy_xtalEB[x][0]/pho_e3x3[x];
+		       // cout << "barrel photonround " << pho_roundness[x]<< "angle " << pho_angle[x]<<endl;
 		       pho_rookFraction[x] = rookFractionBarrelCalculator(*( myphoton_container[x].superCluster() ), *barrelRecHits);
-		     }//end of if(myphoton_container[x].isEB())
-		    else{ 
-		      pho_roundness[x]   = -99.;
-		      pho_angle[x]       = -99.;
-		      pho_s9[x]          = -99.;
-		      pho_rookFraction[x]= -99.;
-		    }//end of else
-		   cout<<"rook fraction:"<<pho_rookFraction[x]<<endl;
-		   cout<<"s9:"<<pho_s9[x]<<endl;
-		   cout<<"pt:"<<pho_pt[x]<<endl;
+		       pho_swissCross[x]   = EcalClusterTools::eTop( *(myphoton_container[x].superCluster()->seed()), &(*barrelRecHits), &(*topology))+ EcalClusterTools::eBottom( *(myphoton_container[x].superCluster()->seed()), &(*barrelRecHits), &(*topology)) + EcalClusterTools::eLeft( *(myphoton_container[x].superCluster()->seed()), &(*barrelRecHits), &(*topology)) + EcalClusterTools::eRight( *(myphoton_container[x].superCluster()->seed()), &(*barrelRecHits), &(*topology));
+		       ///cout<<"etop: "<<EcalClusterTools::eTop( *(myphoton_container[x].superCluster()->seed()), &(*barrelRecHits), &(*topology))<<endl; 
+		       /// cout<<"etop: "<<EcalClusterTools::eTop( *(myphoton_container[x].superCluster()->seed()), &(*barrelRecHits), &(*topology))<<endl; 
+ 		     }//end of if(myphoton_container[x].isEB())
+		   else{ 
+		     pho_roundness[x]   = -99.;
+		     pho_angle[x]       = -99.;
+		     pho_s9[x]          = -99.;
+		     pho_rookFraction[x]= -99.;
+		     pho_swissCross[x]   = EcalClusterTools::eTop( *(myphoton_container[x].superCluster()->seed()), &(*endcapRecHits), &(*topology))+ EcalClusterTools::eBottom( *(myphoton_container[x].superCluster()->seed()), &(*endcapRecHits), &(*topology)) + EcalClusterTools::eLeft( *(myphoton_container[x].superCluster()->seed()), &(*endcapRecHits), &(*topology)) + EcalClusterTools::eRight( *(myphoton_container[x].superCluster()->seed()), &(*endcapRecHits), &(*topology));
+		   }//end of else
+		   ///cout<<"rook fraction:"<<pho_rookFraction[x]<<endl;
+		   ///cout<<"s9:"<<pho_s9[x]<<endl;
+		   ///cout<<"pt:"<<pho_pt[x]<<endl;
 		 }//if(runrechit_)
-	     }//end of for loop over x
-	 }//if(myphoton_container.size!=0) 
+	    }//end of for loop over x
+	}//if(myphoton_container.size!=0) 
        //cout<<"got photon variables"<<endl; 
-     }//if(runphotons_)  
-
-   if(runmet_)
-     {
+    }//if(runphotons_)  
+  
+  if(runmet_)
+    {
        edm::Handle<edm::View<pat::MET> > metHandle;
        iEvent.getByLabel(metLabel_,metHandle);
        //const edm::View<pat::MET> & mets = *metHandle;
@@ -876,41 +1508,41 @@ Analyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
 	     if (myphoton_container.size()!=0)
 	       Delta_phi                         = deltaphi(correct_phi(met->phi()),correct_phi(myphoton_container[0].phi()));
 	   if(rungenmet_){
-	   const reco::GenMET *genMet = met->genMET();
-	   genMetPt     = genMet->et();
-	   /*
-	   genMetPhi    = correct_phi(genMet->phi());
-	   genMetSumEt  = genMet->sumEt();
-	   genMetPx     = genMet->px();
-	   genMetPy     = genMet->py();
-	   if(runphotons_==1)
-	     if (myphoton_container.size()!=0)
-	     Delta_phiGEN                        = deltaphi(correct_phi(genMet->phi()),correct_phi(myphoton_container[0].phi()));*/
+	     const reco::GenMET *genMet = met->genMET();
+	     genMetPt     = genMet->et();
+	     /*
+	       genMetPhi    = correct_phi(genMet->phi());
+	       genMetSumEt  = genMet->sumEt();
+	       genMetPx     = genMet->px();
+	       genMetPy     = genMet->py();
+	       if(runphotons_==1)
+	       if (myphoton_container.size()!=0)
+	       Delta_phiGEN                        = deltaphi(correct_phi(genMet->phi()),correct_phi(myphoton_container[0].phi()));*/
 	   }
 	 }
-     }
-   if(runPFmet_)
-     {
-       edm::Handle<edm::View<pat::MET> > metPFHandle;
-       iEvent.getByLabel(PFmetLabel_,metPFHandle);
-       const edm::View<pat::MET> & metsPF = *metPFHandle;
-       if ( metPFHandle.isValid() )
-	 {
-	   PFMetPt     = metsPF[0].et();
-	   PFMetPhi    = correct_phi(metsPF[0].phi());
-	   PFMetSumEt  = metsPF[0].sumEt();
-	   PFMetPx     = metsPF[0].px();
-	   PFMetPy     = metsPF[0].py();
-	   if(runphotons_==1)
-	     if (myphoton_container.size()!=0)
-	       Delta_phiPF  = deltaphi(PFMetPhi,correct_phi(myphoton_container[0].phi()));
-	 }
-       else
-	 {
-	   LogWarning("METEventSelector") << "No Met results for InputTag " ;
-	   return;
-	 }
-     }
+    }
+  if(runPFmet_)
+    {
+      edm::Handle<edm::View<pat::MET> > metPFHandle;
+      iEvent.getByLabel(PFmetLabel_,metPFHandle);
+      const edm::View<pat::MET> & metsPF = *metPFHandle;
+      if ( metPFHandle.isValid() )
+	{
+	  PFMetPt     = metsPF[0].et();
+	  PFMetPhi    = correct_phi(metsPF[0].phi());
+	  PFMetSumEt  = metsPF[0].sumEt();
+	  PFMetPx     = metsPF[0].px();
+	  PFMetPy     = metsPF[0].py();
+	  if(runphotons_==1)
+	    if (myphoton_container.size()!=0)
+	      Delta_phiPF  = deltaphi(PFMetPhi,correct_phi(myphoton_container[0].phi()));
+	}
+      else
+	{
+	  LogWarning("METEventSelector") << "No Met results for InputTag " ;
+	  return;
+	}
+    }
    if(runTCmet_)
      {
        edm::Handle<edm::View<pat::MET> > metTCHandle;
@@ -986,8 +1618,8 @@ Analyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
 	   muon_charge[x] = mymuon_container[x].charge();
 	 }//end of for loop
      }
-
-  
+   
+   
    if(runelectrons_)
      {
        edm::Handle<edm::View<pat::Electron> > electronHandle;
@@ -1035,6 +1667,8 @@ Analyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
 	   tau_charge[x] = mytau_container[x].charge();
 	 }//end of for loop
      }
+   
+   
    myEvent->Fill();
 }
 
@@ -1042,14 +1676,20 @@ Analyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
 void 
 Analyzer::beginJob()
 {
+  
+  
+  
+  
+  
   f=new TFile(outFile_.c_str(),"RECREATE");
   //defining a tree here
   myEvent = new TTree("myEvent","a tree with histograms");
   myEvent->Branch("nevents",&nevents,"nevents/I");
   myEvent->Branch("run",&RunNumber,"RunNumber/I");
   myEvent->Branch("event",&EventNumber,"EventNumber/I");
-
-
+  myEvent->Branch("Luminosity",&Luminosity,"Luminosity/I");
+ 
+  
   if(runHLT_)
     {
       myEvent->Branch("HLT_MET50_event",&HLT_MET50_event,"HLT_MET50_event/I");
@@ -1059,7 +1699,7 @@ Analyzer::beginJob()
       myEvent->Branch("HLT_DoubleEle10_event",&HLT_DoubleEle10_event,"HLT_DoubleEle10_event/I");
       myEvent->Branch("HLT_DoubleMu3_event",&HLT_DoubleMu3_event,"HLT_DoubleMu3_event/I");
     }
-
+  
   if(runvertex_)
     {
       myEvent->Branch("Vertex_n",&Vertex_n,"Vertex_n/I");
@@ -1069,8 +1709,10 @@ Analyzer::beginJob()
       myEvent->Branch("Vertex_tracksize",vtracksize,"vtracksize[Vertex_n]/D");
       myEvent->Branch("Vertex_ndof",vndof,"vndof[Vertex_n]/D");
       myEvent->Branch("Vertex_chi2",chi2,"chi2[Vertex_n]/D");
+      myEvent->Branch("Vertex_d0",v_d0,"v_d0[Vertex_n]/D");
+      myEvent->Branch("Vertex_isFake",v_isFake,"v_isFake[Vertex_n]/D");
     }
-
+  
   if (runtracks_)
     {
       myEvent->Branch("Track_n",&Track_n,"Track_n/I");
@@ -1085,18 +1727,18 @@ Analyzer::beginJob()
     {
       //for(vector<string>::iterator corr = JET_CORR.begin(); corr!=JET_CORR.end();++corr )
       //{
-	  myEvent->Branch("Jet_n",&Jet_n,"Jet_n/I");
-	  myEvent->Branch("Jet_px",jet_px,"jet_px[Jet_n]/D");
-	  myEvent->Branch("Jet_py",jet_py,"jet_py[Jet_n]/D");
-	  myEvent->Branch("Jet_pz",jet_pz,"jet_pz[Jet_n]/D");
-	  myEvent->Branch("Jet_pt",jet_pt,"jet_pt[Jet_n]/D");
-	  myEvent->Branch("Jet_eta",jet_eta,"jet_eta[Jet_n]/D");
-	  myEvent->Branch("Jet_phi",jet_phi,"jet_phi[Jet_n]/D");
-	  myEvent->Branch("Jet_emEnergyFraction",jet_emEnergyFraction,"jet_emEnergyFraction[Jet_n]/D");
-	  myEvent->Branch("Jet_energyFractionHadronic",jet_energyFractionHadronic,"jet_energyFractionHadronic[Jet_n]/D");
-	  //}
+      myEvent->Branch("Jet_n",&Jet_n,"Jet_n/I");
+      myEvent->Branch("Jet_px",jet_px,"jet_px[Jet_n]/D");
+      myEvent->Branch("Jet_py",jet_py,"jet_py[Jet_n]/D");
+      myEvent->Branch("Jet_pz",jet_pz,"jet_pz[Jet_n]/D");
+      myEvent->Branch("Jet_pt",jet_pt,"jet_pt[Jet_n]/D");
+      myEvent->Branch("Jet_eta",jet_eta,"jet_eta[Jet_n]/D");
+      myEvent->Branch("Jet_phi",jet_phi,"jet_phi[Jet_n]/D");
+      myEvent->Branch("Jet_emEnergyFraction",jet_emEnergyFraction,"jet_emEnergyFraction[Jet_n]/D");
+      myEvent->Branch("Jet_energyFractionHadronic",jet_energyFractionHadronic,"jet_energyFractionHadronic[Jet_n]/D");
+      //}
     }
-
+  
   if (runelectrons_)
     {
       myEvent->Branch("Electron_n",&Electron_n,"Electron_n/I");
@@ -1111,7 +1753,7 @@ Analyzer::beginJob()
       myEvent->Branch("Electron_trkIso",electron_trkIso,"electron_trkIso[Electron_n]/D");
       
     }
-
+  
   if (runmuons_)
     {
       myEvent->Branch("Muon_n",&Muon_n,"Muon_n/I");
@@ -1124,7 +1766,7 @@ Analyzer::beginJob()
       myEvent->Branch("Muon_energy",muon_energy,"muon_energy[Muon_n]/D");
       myEvent->Branch("Muon_charge",muon_charge,"muon_charge[Muon_n]/D");
     }
-
+  
   if (runtaus_)
     {
       myEvent->Branch("Tau_n",&Tau_n,"Tau_n/I");
@@ -1137,7 +1779,7 @@ Analyzer::beginJob()
       myEvent->Branch("Tau_energy",tau_energy,"tau_energy[Tau_n]/D");
       myEvent->Branch("Tau_charge",tau_charge,"tau_charge[Tau_n]/D");
     }
-
+  
   if( rungenParticleCandidates_ )
     {
       //genlevel information from photons
@@ -1153,8 +1795,8 @@ Analyzer::beginJob()
       myEvent->Branch("gen_photonMotherPt",gen_pho_motherPt,"gen_pho_motherPt[ngenphotons]/D");
       myEvent->Branch("gen_photonMotherEta",gen_pho_motherEta,"gen_pho_motherEta[ngenphotons]/D");
       myEvent->Branch("gen_photonMotherPhi",gen_pho_motherPhi,"gen_pho_motherPhi[ngenphotons]/D");
-
-
+      
+      
       myEvent->Branch("nhardphotons",&nhardphotons,"nhardphotons/I");
       myEvent->Branch("gen_hardphotonpt",gen_Hpho_pt,"gen_Hpho_pt[nhardphotons]/D");
       myEvent->Branch("gen_hardphotoneta",gen_Hpho_eta,"gen_Hpho_eta[nhardphotons]/D");
@@ -1163,7 +1805,7 @@ Analyzer::beginJob()
       myEvent->Branch("gen_hardphotonpy",gen_Hpho_py,"gen_Hpho_py[nhardphotons]/D");
       myEvent->Branch("gen_hardphotonpz",gen_Hpho_pz,"gen_Hpho_pz[nhardphotons]/D");
       myEvent->Branch("gen_hardphotonE",gen_Hpho_E,"gen_Hpho_E[nhardphotons]/D");
-
+      
       //gen level graviton info
       myEvent->Branch("gen_gravitonpt",&gen_graviton_pt,"gen_graviton_pt/D");
       myEvent->Branch("gen_gravitoneta",&gen_graviton_eta,"gen_graviton_eta/D");
@@ -1172,7 +1814,7 @@ Analyzer::beginJob()
       myEvent->Branch("gen_gravitonpy",&gen_graviton_py,"gen_graviton_py/D");
       myEvent->Branch("gen_gravitonpz",&gen_graviton_pz,"gen_graviton_pz/D");
       myEvent->Branch("gen_gravitonE",&gen_graviton_E,"gen_graviton_E/D");
-    
+      
       //genlevel tree info of W+/W- 
       //genlevel tree information of Wdaughter
       myEvent->Branch("gen_Wdaughterpt",gen_Wdaughter_pt,"gen_Wdaughter_pt[2]/D");
@@ -1184,7 +1826,7 @@ Analyzer::beginJob()
       myEvent->Branch("gen_WdaughterE",gen_Wdaughter_E,"gen_Wdaughter_E[2]/D");
       myEvent->Branch("gen_Wdaughter_charge",gen_Wdaughter_charge,"gen_Wdaughter_charge[2]/I");
       myEvent->Branch("gen_WdaughterID",gen_Wdaughter_ID,"gen_Wdaughter_ID[2]/I");
-
+      
       //genlevel tree information of W
       myEvent->Branch("gen_Wbosonpt",&gen_Wboson_pt,"gen_Wboson_pt/D");
       myEvent->Branch("gen_Wbosoneta",&gen_Wboson_eta,"gen_Wboson_eta/D");
@@ -1206,7 +1848,7 @@ Analyzer::beginJob()
       myEvent->Branch("gen_ZdaughterE",gen_Zdaughter_E,"gen_Zdaughter_E[2]/D");
       myEvent->Branch("gen_Zdaughter_charge",gen_Zdaughter_charge,"gen_Zdaughter_charge[2]/I");
       myEvent->Branch("gen_ZdaughterID",gen_Zdaughter_ID,"gen_Zdaughter_ID[2]/I");
-
+      
       //genlevel tree information of Z
       myEvent->Branch("gen_Zbosonpt",&gen_Zboson_pt,"gen_Zboson_pt/D");
       myEvent->Branch("gen_Zbosoneta",&gen_Zboson_eta,"gen_Zboson_eta/D");
@@ -1215,7 +1857,7 @@ Analyzer::beginJob()
       myEvent->Branch("gen_Zbosonpy",&gen_Zboson_py,"gen_Zboson_py/D");
       myEvent->Branch("gen_Zbosonpz",&gen_Zboson_pz,"gen_Zboson_pz/D");
       myEvent->Branch("gen_ZbosonE",&gen_Zboson_E,"gen_Zboson_E/D");
-
+      
       myEvent->Branch("is_signal_event",&is_signal_event,"is_signal_event/I");
       myEvent->Branch("is_Z_event",&is_Z_event,"is_Z_event/I");
       myEvent->Branch("is_W_event",&is_W_event,"is_W_event/I");
@@ -1228,7 +1870,7 @@ Analyzer::beginJob()
       myEvent->Branch("is_Wtau_event",&is_Wtau_event,"is_Wtau_event/I");   
       myEvent->Branch("is_SingleHardPhoton_event",&is_SingleHardPhoton_event,"is_SingleHardPhoton_event/I");
       myEvent->Branch("is_diphoton_event",&is_diphoton_event,"is_diphoton_event/I");
-
+      
       myEvent->Branch("n_signal_events",&n_signal_events,"n_signal_events/I");
       myEvent->Branch("n_Z_events",&n_Z_events,"n_Z_events/I");
       myEvent->Branch("n_W_events",&n_W_events,"n_W_events/I");
@@ -1241,7 +1883,7 @@ Analyzer::beginJob()
       myEvent->Branch("n_Wtau_events",&n_Wtau_events,"n_Wtau_events/I");    
       myEvent->Branch("n_SingleHardPhoton_events",&n_SingleHardPhoton_events,"n_SingleHardPhoton_events/I");
       myEvent->Branch("n_diphoton_events",&n_diphoton_events,"n_diphoton_events/I");
-
+      
       //genlevel tree information of mu daughter
       myEvent->Branch("gen_MuonID",gen_Muon_ID,"gen_Muon_ID[3]/D");
       myEvent->Branch("gen_MuonStatus",gen_Muon_Status,"gen_Muon_Status[3]/D");
@@ -1256,7 +1898,7 @@ Analyzer::beginJob()
       myEvent->Branch("gen_MuonDaughterCharge",gen_MuonDaughter_charge,"gen_MuonDaughter_charge[3]/I");
       myEvent->Branch("gen_MuonDaughterStatus",gen_MuonDaughter_status,"gen_MuonDaughter_status[3]/I");
       myEvent->Branch("gen_MuonDaughterID",gen_MuonDaughter_ID,"gen_MuonDaughter_ID[3]/I");
-
+      
       //genlevel tree information of tau daughter
       myEvent->Branch("gen_tauID",gen_tau_ID,"gen_tau_ID[3]/D");
       myEvent->Branch("gen_tauStatus",gen_tau_Status,"gen_tau_Status[3]/D");
@@ -1271,9 +1913,9 @@ Analyzer::beginJob()
       myEvent->Branch("gen_tauDaughterCharge",gen_tauDaughter_charge,"gen_tauDaughter_charge[3]/I");
       myEvent->Branch("gen_tauDaughterStatus",gen_tauDaughter_status,"gen_tauDaughter_status[3]/I");
       myEvent->Branch("gen_tauDaughterID",gen_tauDaughter_ID,"gen_tauDaughter_ID[3]/I");
-
+      
     }//end of if( rungenParticleCandidates_ )
-
+  
   if (runphotons_)
     {
       //uncorrected photon information
@@ -1284,6 +1926,7 @@ Analyzer::beginJob()
       myEvent->Branch("Photon_phi",pho_phi,"pho_phi[Photon_n]/D");
       myEvent->Branch("Photon_theta",pho_theta,"pho_theta[Photon_n]/D");
       myEvent->Branch("Photon_et",pho_et,"pho_et[Photon_n]/D");
+      myEvent->Branch("Photon_swissCross",pho_swissCross,"pho_swissCross[Photon_n]/D");
       myEvent->Branch("Photonr9",pho_r9,"pho_r9[Photon_n]/D");
       myEvent->Branch("Photon_e1x5",pho_e1x5,"pho_e1x5[Photon_n]/D");
       myEvent->Branch("Photon_e2x5",pho_e2x5,"pho_e2x5[Photon_n]/D");
@@ -1318,7 +1961,7 @@ Analyzer::beginJob()
       myEvent->Branch("Photon_isEBGap",pho_isEBGap,"pho_isEBGap[Photon_n]/D");
       myEvent->Branch("Photon_isEEGap",pho_isEEGap,"pho_isEEGap[Photon_n]/D");
       myEvent->Branch("Photon_isEBEEGap",pho_isEBEEGap,"pho_isEBEEGap[Photon_n]/D");
-
+      
       myEvent->Branch("Photon_HoE",pho_HoE,"pho_HoE[Photon_n]/D");
       myEvent->Branch("Photon_px",pho_px,"pho_px[Photon_n]/D");
       myEvent->Branch("Photon_py",pho_py,"pho_py[Photon_n]/D");
@@ -1340,7 +1983,7 @@ Analyzer::beginJob()
       myEvent->Branch("matchphotonpy",matchpho_py,"matchpho_py[Photon_n]/D");
       myEvent->Branch("matchphotonpz",matchpho_pz,"matchpho_pz[Photon_n]/D");
       myEvent->Branch("ismatchedphoton",ismatchedpho,"ismatchedpho[Photon_n]/I");
-            
+      
       myEvent->Branch("Photon_ntracks",pho_nTracks,"pho_nTracks[Photon_n]/I");
       myEvent->Branch("Photon_isconverted",pho_isConverted,"pho_isConverted[Photon_n]/I");
       myEvent->Branch("Photon_pairInvmass",pho_pairInvariantMass,"pho_pairInvariantMass[Photon_n]/D");
@@ -1357,8 +2000,82 @@ Analyzer::beginJob()
       myEvent->Branch("Photon_dPhiTracksAtVtx",pho_dPhiTracksAtVtx,"pho_dPhiTracksAtVtx[Photon_n]/D");
       myEvent->Branch("Photon_dPhiTracksAtEcal",pho_dPhiTracksAtEcal,"pho_dPhiTracksAtEcal[Photon_n]/D");
       myEvent->Branch("Photon_dEtaTracksAtVtx",pho_dEtaTracksAtEcal,"pho_dEtaTracksAtEcal[Photon_n]/D");
+    
+      
+      myEvent ->Branch("nPhotons", &nPhotons, "nPhotons/I");
+      myEvent ->Branch("phRho",phRho, "phRho[nPhotons]/F");
+      myEvent->Branch("phAng" , phAng, "phAng[nPhotons]/F");
+      myEvent-> Branch("phEnergy", phEnergy, "phEnergy[nPhotons]/F");
+      myEvent->Branch("dRpm", dRpm ,"dRpm[nPhotons]/F");
+      myEvent->Branch ("phEt", phEt, "phEt[nPhotons]/F");
+      myEvent->Branch("phEta", phEta, "phEta[nPhotons]/F");
+      myEvent->Branch("phPhi",phPhi, "phPhi[nPhotons]/F");
+      myEvent->Branch("phTiming",phTiming,"phTiming[nPhotons]/F");
+      myEvent->Branch("phPixelSeed", phPixelSeed, "phPixelSeed[nPhotons]/I");
+      myEvent->Branch("phHasConversionTracks",phHasConversionTracks, "phHasConversionTracks[nPhotons]/I");
+      myEvent->Branch("phOverlap",phOverlap,"phOverlap[nPhotons]/I");
+      myEvent->Branch("dRpat_rec", dRpat_rec, "dRpat_rec[nPhotons]/D");
+      myEvent->Branch("dX", dX, "dX[nPhotons]/F");
+      myEvent->Branch("dY", dY, "dY[nPhotons]/F");
+      myEvent->Branch("dZ", dZ, "dZ[nPhotons]/F");
+      myEvent->Branch("nMuons", &nMuons , "nMuons/I");
+      myEvent->Branch("muonPt",muonPt,"muonPt[nMuons]/F");
+      myEvent->Branch("muonEta", muonEta, "muonEta[nMuons]/F");
+      myEvent->Branch("MuonPt", MuonPt, "MuonPt[nPhotons]/F");
+      myEvent->Branch("MuonEta", MuonEta, "MuonEta[nPhotons]/F");
+      myEvent->Branch("ncosmu", &ncosmu,"ncosmu/I");
+      myEvent->Branch("CosmuPt",&CosmuPt, "CosmuPt[nPhotons]/F");
+      myEvent->Branch("CosmuEta", &CosmuEta, "CosmuEta[nPhotons]/F");
+      myEvent->Branch("dXcos", dXcos, "dXcos[nPhotons]/F");
+      myEvent->Branch("dYcos", dYcos, "dYcos[nPhotons]/F");
+      myEvent->Branch("dZcos", dZcos, "dZcos[nPhotons]/F");
+      myEvent ->Branch("phRho_cos",phRho_cos, "phRho_cos[nPhotons]/F");
+      myEvent->Branch("phAng_cos" , phAng_cos, "phAng_cos[nPhotons]/F");
+      myEvent-> Branch("phEnergy_cos", phEnergy_cos, "phEnergy_cos[nPhotons]/F");
+      myEvent->Branch("dRpm_cos", dRpm_cos ,"dRpm_cos[nPhotons]/F");
+      myEvent->Branch ("phEt_cos", phEt_cos, "phEt_cos[nPhotons]/F");
+      myEvent->Branch("phEta_cos", phEta_cos, "phEta_cos[nPhotons]/F");
+      myEvent->Branch("phTiming_cos",phTiming_cos,"phTiming_cos[nPhotons]/F");
+      myEvent->Branch("phPixelSeed_cos", phPixelSeed_cos, "phPixelSeed_cos[nPhotons]/I");
+      myEvent->Branch("phHasConversionTracks_cos",phHasConversionTracks_cos, "phHasConversionTracks_cos[nPhotons]/I");
+      myEvent->Branch("cosmics", cosmics, "cosmics[nPhotons]/I");
+      myEvent->Branch("sigR_cosmic", sigR_cosmic, "sigR_cosmic[nPhotons]/F");
+      myEvent->Branch("dX_cosmic", dX_cosmic, "dX_cosmic[nPhotons]/F");
+      myEvent->Branch("dY_cosmic", dY_cosmic, "dY_cosmic[nPhotons]/F");
+      myEvent->Branch("dZ_cosmic", dZ_cosmic, "dZ_cosmic[nPhotons]/F");
+      myEvent->Branch("muonPt_cosmic",muonPt_cosmic, "muonPt_cosmic[nPhotons]/F");
+      myEvent->Branch("muonEta_cosmic", muonEta_cosmic , "muonEta_cosmic[nPhotons]/F");
+      myEvent->Branch("muonPhi_cosmic", muonEta_cosmic, "muonEta_cosmic[nPhotons]/F");
+      
+      myEvent->Branch("sigR_muon", sigR_muon, "sig_Rmuon[nPhotons]/F");
+      myEvent->Branch("dX_muon", dX_muon, "dX_muon[nPhotons]/F");
+      myEvent->Branch("dY_muon", dY_muon, "dY_muon[nPhotons]/F");
+      myEvent->Branch("dZ_muon", dZ_muon, "dZ_muon[nPhotons]/F");
+      myEvent->Branch("muonPt_muon",muonPt_muon, "muonPt_muon[nPhotons]/F");
+      myEvent->Branch("muonEta_muon", muonEta_muon , "muonEta_muon[nPhotons]/F");
+      myEvent->Branch("muonPhi_muon", muonEta_muon, "muonEta_muon[nPhotons]/F");
+      //study jet and photon
+      myEvent->Branch("phSigmaieta",phSigmaieta, "phSigmaieta[nPhotons]/F");
+      myEvent->Branch("phHadoverem",phHadoverem,"phHadoverem[nPhotons]/F");
+      myEvent->Branch("phEcalIso",phEcalIso,"phEcalIso[nPhotons]/F");
+      myEvent->Branch("phHcalIso",phHcalIso,"phHcalIso[nPhotons]/F");
+      myEvent->Branch("phTkIso",phTkIso,"phTkIso[nPhotons]/F");
+      
+      myEvent->Branch("phSigmaieta_cos",phSigmaieta_cos, "phSigmaieta_cos[nPhotons]/F");
+      myEvent->Branch("phHadoverem_cos",phHadoverem_cos,"phHadoverem_cos[nPhotons]/F");
+      myEvent->Branch("phEcalIso_cos",phEcalIso_cos,"phEcalIso_cos[nPhotons]/F");
+      myEvent->Branch("phHcalIso_cos",phHcalIso_cos,"phHcalIso_cos[nPhotons]/F");
+      myEvent->Branch("phTkIso_cos",phTkIso_cos,"phTkIso_cos[nPhotons]/F");
+      
+      
+      
+
+      
+      
+
+      
       if(runrechit_){
-      myEvent->Branch("Photon_ncrys",ncrysPhoton,"ncrysPhoton[Photon_n]/I");
+	myEvent->Branch("Photon_ncrys",ncrysPhoton,"ncrysPhoton[Photon_n]/I");
       myEvent->Branch("Photon_timing_xtalEB",pho_timing_xtalEB,"pho_timing_xtalEB[Photon_n][100]/D");
       myEvent->Branch("Photon_timingavg_xtalEB",pho_timingavg_xtalEB,"pho_timingavg_xtalEB[Photon_n]/D");
       myEvent->Branch("Photon_energy_xtalEB",pho_energy_xtalEB,"pho_energy_xtalEB[Photon_n][100]/D");
@@ -1417,7 +2134,7 @@ Analyzer::beginJob()
   if(runPFmet_&& runphotons_)
     myEvent->Branch("Delta_phiPF",&Delta_phiPF,"Delta_phiPF/D");
 
-
+  
   if(runTCmet_)
     {
       myEvent->Branch("TCMetPt",&TCMetPt,"TCMetPt/D");
@@ -1440,5 +2157,316 @@ Analyzer::endJob() {
   delete myEvent;
 }
 
+//define this as a plug-in
+
+int Analyzer::getMuonMatching(std::map<int,float>& XtalInfo,
+			      std::map<int,float>& muonCrossedXtalMap,
+			      double& totalLength,
+			      GlobalPoint& internalPoint,
+			      GlobalPoint& externalPoint,
+			      const CaloGeometry* theGeometry,
+			      const CaloTopology * theTopology,
+			      const GlobalPoint& aPosition,
+			      const GlobalVector& aDirection,
+			      const float& step ) {
+  
+  float innerLimit = 127.;
+  float outerLimit = 160.;
+  
+  GlobalPoint origin (0., 0., 0.);
+  internalPoint = origin ;
+  externalPoint = origin ;
+  
+  //XtalInfo.clear();                                                                                                           
+  muonCrossedXtalMap.clear();
+  
+  GlobalPoint innerIntersection;
+  GlobalPoint otherIntersection;
+  GlobalPoint inner1, inner2, outer1, outer2;
+  
+  //check on right direction (see drawing A)                                                                                    
+  if (aPosition.perp()>129. && aDirection.dot(GlobalVector(aPosition.x(),aPosition.y(),aPosition.z()))>=0)
+    {
+      totalLength = -1. ;
+      return -1;
+    }
+  
+  double dx = aDirection.x();
+  double dy = aDirection.y();
+  
+  double rad = aPosition.x() * dx + aPosition.y() * dy ;
+  rad = rad * rad - (dx*dx + dy*dy) * (aPosition.x()*aPosition.x() + aPosition.y()*aPosition.y() - 129*129) ;
+  
+ //if determinante < 0 --> no intersections                                                                                    
+  if (rad < 0)
+    {
+      totalLength = -1. ;
+      return -1;
+    }
+  
+  rad = sqrt (rad);
+ 
+  double alpha1 =  (- aPosition.x()*dx - aPosition.y()*dy + rad) / (dx*dx + dy*dy) ;
+  double alpha2 =  (- aPosition.x()*dx - aPosition.y()*dy - rad) / (dx*dx + dy*dy) ;
+ 
+  inner1 = aPosition + alpha1*aDirection;
+  inner2 = aPosition + alpha2*aDirection;
+ 
+  //SELECTION OF INTERSECTION FOR POINT                                                                                         
+  
+  //if both directions are > 0 (case of ext point wrt calo && direction towards calo) choose closest to point                   
+  if(alpha1*alpha2 > 0)
+    {
+      
+      if(alpha1 <= alpha2)
+	{
+	  innerIntersection = inner1;
+	  otherIntersection = inner2;
+	  //straightMatch ? outerIntersection = outer1: outerIntersection = outer2;                                             
+	}
+      
+      else
+	{
+	  innerIntersection = inner2;
+	  otherIntersection = inner1;
+	  //straightMatch ? outerIntersection = outer2: outerIntersection = outer1;                                               
+	}
+      
+    }
+  
+  if (fabs(innerIntersection.z()) > 300)
+    {
+      totalLength = -1. ;
+      return -1;
+    }
+  
+ bool firstPoint = false;
+ internalPoint = innerIntersection ;
+ 
+ const CaloSubdetectorGeometry *theSubdetGeometry = theGeometry->getSubdetectorGeometry(DetId::Ecal,1);
+ GlobalPoint probe_gp=innerIntersection;
+ std::vector<DetId> surroundingMatrix;
+ 
+ while(1)
+   {
+     probe_gp=probe_gp+step*(aDirection/aDirection.mag());
+     if (probe_gp.perp()>=outerLimit)
+      {
+	break;
+      }
+     if (probe_gp.perp()<innerLimit)
+       {
+	continue;
+       }
+     // find the closest xtal to the probe point                                                                               
+     EBDetId closestDetIdToProbe((theSubdetGeometry -> getClosestCell(probe_gp)).rawId());
+     
+     // check if the probe is inside the xtal                                                                                  
+     if(theGeometry->getSubdetectorGeometry(closestDetIdToProbe)->getGeometry(closestDetIdToProbe)->inside(probe_gp))
+      {
+        addStepToXtal(XtalInfo, muonCrossedXtalMap, closestDetIdToProbe,step);
+        totalLength += step;
+	
+        if (firstPoint == false)
+	  {
+	    internalPoint = probe_gp ;
+	    firstPoint = true ;
+	  }
+	
+        externalPoint = probe_gp ;
+      }
+     else
+       {
+	// 3x3 matrix surrounding the probe                                                                                   
+	 surroundingMatrix = matrixDetId( theTopology, closestDetIdToProbe, -1, 1, -1, 1 );
+	 
+	 for( unsigned int k=0; k<surroundingMatrix.size(); ++k ) {
+	   if(theGeometry->getSubdetectorGeometry(surroundingMatrix.at(k))->getGeometry(surroundingMatrix.at(k))->inside(probe_gp))
+	     {
+	       addStepToXtal(XtalInfo, muonCrossedXtalMap, surroundingMatrix[k],step);
+	       totalLength += step;
+	       
+	       if (firstPoint == false)
+		 {
+		   internalPoint = probe_gp ;
+		   firstPoint = true ;
+		 }
+	       
+	       externalPoint = probe_gp ;
+	     }
+	}
+	 // clear neighborhood matrix                                                                                          
+	surroundingMatrix.clear();
+       }
+   }
+ 
+ 
+ return 0;
+}
+
+int Analyzer::getMuonMatching(std::map<int, float> &XtalInfo,
+			      const CaloGeometry* theGeometry,
+			      const CaloTopology * theTopology,
+			      const GlobalPoint& aPosition,
+			      const GlobalVector& aDirection,
+			      const float& step ) {
+  
+  float innerLimit = 127.;
+  float outerLimit = 160.;
+  
+  //XtalInfo.clear();                                                                                                           
+  //INNER INTERSECTION                                                                                                          
+  GlobalPoint innerIntersection;
+  GlobalPoint otherIntersection;
+  GlobalPoint inner1, inner2, outer1, outer2;
+  
+  //check on right direction (see drawing A)                                                                                    
+  if (aPosition.perp()>129. && aDirection.dot(GlobalVector(aPosition.x(),aPosition.y(),aPosition.z()))>=0) return -1;
+  
+  double dx = aDirection.x();
+  double dy = aDirection.y();
+  
+  double rad = aPosition.x() * dx + aPosition.y() * dy ;
+  rad = rad * rad - (dx*dx + dy*dy) * (aPosition.x()*aPosition.x() + aPosition.y()*aPosition.y() - 129*129) ;
+  //if determinante < 0 --> no intersections                                                                                    
+  if (rad < 0) return -1;
+  
+  rad = sqrt (rad);
+  
+  double alpha1 =  (- aPosition.x()*dx - aPosition.y()*dy + rad) / (dx*dx + dy*dy) ;
+  double alpha2 =  (- aPosition.x()*dx - aPosition.y()*dy - rad) / (dx*dx + dy*dy) ;
+  
+  inner1 = aPosition + alpha1*aDirection;
+  inner2 = aPosition + alpha2*aDirection;
+  
+  //SELECTION OF INTERSECTION FOR POINT                                                                                         
+  
+  //if both directions are > 0 (case of ext point wrt calo && direction towards calo) choose closest to point                   
+  if(alpha1*alpha2 > 0)
+    {
+      
+      if(alpha1 <= alpha2)
+        {
+          innerIntersection = inner1;
+          otherIntersection = inner2;
+          //straightMatch ? outerIntersection = outer1: outerIntersection = outer2;                                             
+        }
+      
+      else
+        {
+          innerIntersection = inner2;
+          otherIntersection = inner1;
+          //straightMatch ? outerIntersection = outer2: outerIntersection = outer1;                                             
+        }
+    }//end if alpha dot 
+  else {
+    if(alpha1 > 0)
+      {
+        innerIntersection = inner1;
+        otherIntersection = inner2;
+        //straightMatch ? outerIntersection = outer1: outerIntersection = outer2;                                               
+      }
+    
+    else
+      {
+        innerIntersection = inner2;
+        otherIntersection = inner1;
+	
+        //straightMatch ? outerIntersection = outer2: outerIntersection = outer1;                                               
+      }
+
+  }
+  
+  if (fabs(innerIntersection.z()) > 300) return -1;
+  
+  const CaloSubdetectorGeometry *theSubdetGeometry = theGeometry->getSubdetectorGeometry(DetId::Ecal,1);
+  GlobalPoint probe_gp=innerIntersection;
+  std::vector<DetId> surroundingMatrix;
+  
+  while(1)
+    {
+      probe_gp=probe_gp+step*(aDirection/aDirection.mag());
+      if (probe_gp.perp()>=outerLimit)
+        {
+	  break;
+        }
+      if (probe_gp.perp()<innerLimit)
+        {
+          continue;
+        }
+      // find the closest xtal to the probe point                                                                               
+      EBDetId closestDetIdToProbe((theSubdetGeometry -> getClosestCell(probe_gp)).rawId());
+      
+      // check if the probe is inside the xtal                                                                                  
+      if(theGeometry->getSubdetectorGeometry(closestDetIdToProbe)->getGeometry(closestDetIdToProbe)->inside(probe_gp))
+	{
+	  addStepToXtal(XtalInfo, closestDetIdToProbe,step);
+	}
+      else
+	{
+          // 3x3 matrix surrounding the probe                                                                                   
+          surroundingMatrix = matrixDetId( theTopology, closestDetIdToProbe, -1, 1, -1, 1 );
+	  
+          for( unsigned int k=0; k<surroundingMatrix.size(); ++k ) {
+	    if(theGeometry->getSubdetectorGeometry(surroundingMatrix.at(k))->getGeometry(surroundingMatrix.at(k))->inside(probe_gp))
+	      {
+		addStepToXtal(XtalInfo, surroundingMatrix[k],step);
+	      }
+          }
+          // clear neighborhood matrix                                                                                          
+          surroundingMatrix.clear();
+	}
+    }
+
+  
+  return 0;
+}
+
+
+void Analyzer::addStepToXtal(std::map<int,float>& xtalsMap, std::map<int,float>& muonCrossedXtalMap,
+			     DetId aDetId,float step)
+{
+  std::map<int,float>::iterator xtal=xtalsMap.find(aDetId.rawId());
+  if (xtal!=xtalsMap.end())
+    ((*xtal).second)+=step;
+  else
+    xtalsMap.insert(std::pair<int,float>(aDetId.rawId(),step));
+  
+  xtal = muonCrossedXtalMap.find(aDetId.rawId());
+  if (xtal!= muonCrossedXtalMap.end())
+    ((*xtal).second)+=step;
+  else
+    muonCrossedXtalMap.insert(std::pair<int,float>(aDetId.rawId(),step));
+  
+}
+
+void Analyzer::addStepToXtal(std::map<int,float>& xtalsMap,DetId aDetId,float step)
+{
+  std::map<int,float>::iterator xtal=xtalsMap.find(aDetId.rawId());
+  if (xtal!=xtalsMap.end())
+    ((*xtal).second)+=step;
+  else
+    xtalsMap.insert(std::pair<int,float>(aDetId.rawId(),step));
+}
+
+std::vector<DetId> Analyzer::matrixDetId( const CaloTopology* topology,
+					  DetId id,
+					  int ixMin,
+					  int ixMax,
+					  int iyMin,
+					  int iyMax )
+{
+  CaloNavigator<DetId> cursor = CaloNavigator<DetId>( id, topology->getSubdetectorTopology( id ) ) ;
+  std::vector<DetId> v;
+  for ( int i = ixMin; i <= ixMax; ++i ) {
+    for ( int j = iyMin; j <= iyMax; ++j ) {
+      //cout << "i = " << i << "; j = " << j << endl;                                                                           
+      cursor.home();
+      cursor.offsetBy( i, j );
+      if ( *cursor != DetId(0) ) v.push_back( *cursor );
+    }
+  }
+  return v;
+}
 //define this as a plug-in
 DEFINE_FWK_MODULE(Analyzer);
