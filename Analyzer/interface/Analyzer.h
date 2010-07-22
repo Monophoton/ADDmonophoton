@@ -6,7 +6,7 @@
 #include "TGraph.h"
 #include "TCanvas.h"
 #include "TTree.h"
-#include "/uscmst1b_scratch/lpc1/old_scratch/lpceg/yurii/af/monophoton/CMSSW_3_6_1_patch2/src/Analysis/Analyzer/interface/CrystalInfo.h"
+#include "/Analysis/Analyzer/interface/CrystalInfo.h"
 #include "DataFormats/EgammaReco/interface/SuperCluster.h"
 #include "DataFormats/EcalRecHit/interface/EcalRecHitCollections.h"
 //#include "FWCore/Framework/interface/TriggerNames.h"
