@@ -94,7 +94,7 @@ Description: <one line class summary>
 #include <string>
 
 //need to include the link of the header file Analyzer.h
-#include "/uscmst1b_scratch/lpc1/old_scratch/lpceg/yurii/af/monophoton/test/spikeclean/CMSSW_3_6_1_patch2/src/Analysis/Analyzer/interface/Analyzer.h"
+#include "/Analysis/Analyzer/interface/Analyzer.h"
 
 using namespace std;
 using namespace ROOT::Math::VectorUtil ;
@@ -2232,8 +2232,24 @@ int Analyzer::getMuonMatching(std::map<int,float>& XtalInfo,
 	  //straightMatch ? outerIntersection = outer2: outerIntersection = outer1;                                               
 	}
       
-    }
-  
+    }//end if alpha dot
+  else{
+    if (alpha1>0)
+      {
+	innerIntersection = inner1;
+	otherIntersection = inner2;
+	//straight match ? outerIntersetion = outer1: outerIntersetion = outer2;      
+}
+
+    else 
+
+      {
+	innerIntersection = inner2;
+	otherIntersection = inner1;
+	//straightMatch ? outerIntersection  = outer2: outerIntersection = outer1;
+      }
+
+  }
   if (fabs(innerIntersection.z()) > 300)
     {
       totalLength = -1. ;
