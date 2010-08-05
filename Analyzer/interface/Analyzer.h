@@ -1,4 +1,3 @@
-
 #include "TFile.h"
 #include "TBrowser.h"
 #include "TH1.h"
@@ -6,7 +5,7 @@
 #include "TGraph.h"
 #include "TCanvas.h"
 #include "TTree.h"
-#include "/Analysis/Analyzer/interface/CrystalInfo.h"
+#include "ADDmonophoton/Analyzer/interface/CrystalInfo.h"
 #include "DataFormats/EgammaReco/interface/SuperCluster.h"
 #include "DataFormats/EcalRecHit/interface/EcalRecHitCollections.h"
 //#include "FWCore/Framework/interface/TriggerNames.h"
@@ -17,41 +16,16 @@ class Analyzer : public edm::EDAnalyzer {
  public:
   explicit Analyzer(const edm::ParameterSet&);
   ~Analyzer();
-  
-  
+
+
  private:
   virtual void beginJob() ;
   virtual void analyze(const edm::Event&, const edm::EventSetup&);
   virtual void endJob() ;
   static double rookFractionBarrelCalculator( const reco::SuperCluster & ,const EcalRecHitCollection &);
-  virtual int getMuonMatching(std::map<int, float> &XtalInfo,
-                              const CaloGeometry* theGeometry,
-                              const CaloTopology * theTopology,
-                              const GlobalPoint& aPosition,
-                              const GlobalVector& aDirection,
-                              const float& step );
-  virtual int getMuonMatching(std::map<int,float>& XtalInfo,
-                              std::map<int,float>& muonCrossedXtalMap,
-                              double& totalLength,
-                              GlobalPoint& internalPoint,
-                              GlobalPoint& externalPoint,
-                              const CaloGeometry* theGeometry,
-                              const CaloTopology * theTopology,
-                              const GlobalPoint& aPosition,
-                              const GlobalVector& aDirection,
-                              const float& step );
   
-  virtual void addStepToXtal(std::map<int,float>& xtalsMap,DetId aDetId,float step);
-  virtual void addStepToXtal(std::map<int,float>& xtalsMap, std::map<int,float>& muonCrossedXtalMap,
-                             DetId aDetId,float step);
-  virtual std::vector<DetId> matrixDetId( const CaloTopology* topology,
-                                          DetId id,
-                                          int ixMin,
-                                          int ixMax,
-                                          int iyMin,
-                                          int iyMax );
-
-  //----------member data ---------------------------
+  
+  // ----------member data ---------------------------
   edm::ESHandle<CaloTopology> theCaloTopo_;
   int nevents;
   int is_signal_event, is_Z_event, is_W_event;
@@ -59,14 +33,13 @@ class Analyzer : public edm::EDAnalyzer {
   int is_Welec_event, is_Wmu_event, is_Wtau_event ;
   int is_SingleHardPhoton_event;
   int is_diphoton_event;
-  
+ 
   int n_signal_events,n_Z_events,n_W_events;
   int n_Zelec_events, n_Zmu_events, n_Ztau_events, n_Znunu_events; 
   int n_Welec_events, n_Wmu_events, n_Wtau_events;
   int n_diphoton_events, n_SingleHardPhoton_events;
 
   int RunNumber,EventNumber;
-  int Luminosity;
   int ngenphotons;
   int nhardphotons;
   int Photon_n;
@@ -76,14 +49,11 @@ class Analyzer : public edm::EDAnalyzer {
   int Electron_n;
   int Track_n;
   int Jet_n;
-  int photon_n;
-  int nPhotons;
-  int nMuons;
   //HLT
-  
+
   edm::TriggerNames triggerNames_;  // TriggerNames class
   std::vector<std::string>  hlNames_;  // name of each HLT algorithm
-  
+ 
   int HLT_MET50_event;
   int HLT_MET75_event;
   int HLT_Photon15_event;
@@ -93,9 +63,9 @@ class Analyzer : public edm::EDAnalyzer {
 
   std::map<std::string,int> HLT_chosen;
   std::map<std::string,int> L1_chosen;
-  
+
   std::vector<std::string> JET_CORR;
-  
+
   edm::InputTag eleLabel_;
   edm::InputTag muoLabel_;
   edm::InputTag jetLabel_;
@@ -125,112 +95,16 @@ class Analyzer : public edm::EDAnalyzer {
   bool runtracks_;
   bool runrechit_;
   bool runvertex_;
-  bool cosmuon_;
   bool init_;
-  
+
   //output root file
   TFile *f;
   
   // output root tree
   TTree* myEvent;
   //variables to be filled in the tree
-  
-  // muon matching...
-  
-  //Int_t nPhotons;
-  Float_t phEt[100];
-  Float_t phEnergy[100];
-  Float_t phEta[100];
-  Float_t phRho[100];
-  Float_t phAng[100];
-  Float_t phPhi[100];
-  Float_t phX[100];
-  Float_t phY[100];
-  Float_t phZ[100];
-  Float_t phTiming[100];
-  Int_t   phPixelSeed[100];
-  Int_t   phHasConversionTracks[100];
-  Int_t phOverlap[100];
-  Float_t dX[100];
-  Float_t dY[100];
-  Float_t dZ[100];
-  Float_t dRpm[100];
-  double dRp_m[100];
-  Float_t muonPt[100];
-  Float_t muonEta[100];
-  Float_t muonPhi[100];
-  Float_t cosmuPt[100];
-  Float_t cosmuEta[100];
-  Float_t cosmuPhi[100];
-  Float_t x1[100];
-  Float_t x2[100];
-  Float_t y1[100];
-  Float_t y2[100];
-  Float_t z1[100];
-  Float_t z2[100];
-  Float_t xcos1[100];
-  Float_t xcos2[100];
-  Float_t ycos1[100];
-  Float_t ycos2[100];
-  Float_t zcos1[100];
-  Float_t zcos2[100];
-  Float_t dXcos[100];
-  Float_t dYcos[100];
-  Float_t dZcos[100];
-  int     muonleg[100];
-  int     muonlegcos[100];
-  double dRpat_rec[100];
-  int ncosmu;
-  Float_t CosmuPt[100];
-  Float_t CosmuEta[100];
-  Float_t CosmuPhi[100];
-  Float_t MuonPt[100];
-  Float_t MuonEta[100];
-  Float_t MuonPhi[100];
-  Float_t dRpm_cos[100];
-  Float_t phRho_cos[100];
-  Float_t phAng_cos[100];
-  Float_t phEnergy_cos[100];
-  Float_t phEt_cos[100];
-  Float_t phEta_cos[100];
-  Int_t phPixelSeed_cos[100];
-  Int_t phHasConversionTracks_cos[100];
-  Float_t phTiming_cos[100];
-  int cosmics[100];
-  Float_t sigR_cosmic[100];
-  Float_t dX_cosmic[100];
-  Float_t dY_cosmic[100];
-  Float_t dZ_cosmic[100];
-  Float_t muonPt_cosmic[100];
-  Float_t muonEta_cosmic[100];
-  Float_t muonPhi_cosmic[100];
-  Float_t sigR_muon[100];
-  Float_t dX_muon[100];
-  Float_t dY_muon[100];
-  Float_t dZ_muon[100];
-  Float_t muonPt_muon[100];
-  Float_t muonEta_muon[100];
-  Float_t muonPhi_muon[100];
-  Float_t phSigmaieta[100];
-  Float_t phHadoverem[100];
-  Float_t phEcalIso[100];
-  Float_t phHcalIso[100];
-  Float_t phTkIso[100];
-  Float_t phSigmaieta_cos[100];
-  Float_t phHadoverem_cos[100];
-  Float_t phEcalIso_cos[100];
-  Float_t phHcalIso_cos[100];
-  Float_t phTkIso_cos[100];
 
-  
-  
-  // float MuonX;
-  // float MuonY;
-  // float MuonZ;
-  // float muonX[100];
-  // float muonY[100];
-  // float muonZ[100];
- //vertex variables
+  //vertex variables
   double vx[10];
   double vy[10];
   double vz[10];
@@ -290,17 +164,24 @@ class Analyzer : public edm::EDAnalyzer {
   double tau_phi[100];
 
   //gen level variables
-  double gen_pho_pt[250];
-  double gen_pho_px[250];
-  double gen_pho_py[250];
-  double gen_pho_pz[250];
-  double gen_pho_phi[250];
-  double gen_pho_eta[250];
-  double gen_pho_E[250];
-  int gen_pho_motherID[250];
-  double gen_pho_motherPt[250];
-  double gen_pho_motherEta[250];
-  double gen_pho_motherPhi[250];
+  double gen_pho_pt[1000];
+  double gen_pho_px[1000];
+  double gen_pho_py[1000];
+  double gen_pho_pz[1000];
+  double gen_pho_phi[1000];
+  double gen_pho_eta[1000];
+  double gen_pho_E[1000];
+  int    gen_pho_status[1000];
+  int gen_pho_motherID[1000];
+  int gen_pho_motherStatus[1000];
+  double gen_pho_motherPt[1000];
+  double gen_pho_motherEta[1000];
+  double gen_pho_motherPhi[1000];
+  int gen_pho_GrandmotherID[1000];
+  int gen_pho_GrandmotherStatus[1000];
+  double gen_pho_GrandmotherPt[1000];
+  double gen_pho_GrandmotherEta[1000];
+  double gen_pho_GrandmotherPhi[1000];
 
   double gen_Hpho_pt[2];
   double gen_Hpho_px[2];
@@ -397,9 +278,6 @@ class Analyzer : public edm::EDAnalyzer {
   double pho_px[100];
   double pho_py[100];
   double pho_pz[100];
-  double pho_x[100];
-  double pho_y[100];
-  double pho_z[100];
   double pho_r9[100];
   double pho_isEB[100];
   double pho_isEE[100];
@@ -480,9 +358,9 @@ class Analyzer : public edm::EDAnalyzer {
   
   //rechit information
   int ncrysPhoton[100];
-  double pho_timing_xtalEB[100][100];
-  double pho_timingavg_xtalEB[100];
-  double pho_energy_xtalEB[100][100];
+  double pho_timing_xtal[100][100];
+  double pho_timingavg_xtal[100];
+  double pho_energy_xtal[100][100];
   int    pho_ieta_xtalEB[100][100];
   int    pho_iphi_xtalEB[100][100];
   double pho_rookFraction[100];
@@ -533,4 +411,6 @@ class Analyzer : public edm::EDAnalyzer {
   double genMetPhi;
   double genMetSumEt;
   double Delta_phiGEN;
-  };
+
+};
+
