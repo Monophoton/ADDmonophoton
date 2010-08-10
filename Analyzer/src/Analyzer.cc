@@ -13,7 +13,7 @@
 //
 // Original Author:  Sandhya Jain
 //         Created:  Fri Apr 17 11:00:06 CEST 2009
-// $Id: Analyzer.cc,v 1.15 2010/08/05 15:59:31 miceli Exp $
+// $Id: Analyzer.cc,v 1.16 2010/08/10 11:41:22 miceli Exp $
 //
 //
 
@@ -537,40 +537,55 @@ Analyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
 		} 
 	}  
 	
-	/*
-	 /////HLT
-	 if(runHLT_==1){
+
+   if(runHLT_==1){
      Handle<TriggerResults> HLTR;
      iEvent.getByLabel(hlTriggerResults_,HLTR);
-     if (!init_) {
-	 init_=true;
-	 triggerNames_.init(*HLTR);
-	 hlNames_=triggerNames_.triggerNames();
+     if (HLTR.isValid()) {
+       const edm::TriggerNames &triggerNames_ = iEvent.triggerNames(*HLTR);
+       Int_t idx1 = triggerNames_.triggerIndex("HLT_MET50");
+       Int_t idx2 = triggerNames_.triggerIndex("HLT_MET75");
+       Int_t idx3 = triggerNames_.triggerIndex("HLT_Photon15_L1R");
+       Int_t idx4 = triggerNames_.triggerIndex("HLT_Photon25_L1R");
+       Int_t idx5 = triggerNames_.triggerIndex("HLT_DoubleEle10_SW_L1R");
+       Int_t idx6 = triggerNames_.triggerIndex("HLC_DoubleMu3");
+       Int_t idx7 = triggerNames_.triggerIndex("HLT_Photon20_L1R");
+       Int_t idx8 = triggerNames_.triggerIndex("HLT_Photon20_Cleaned_L1R");
+       Int_t idx9 = triggerNames_.triggerIndex("HLT_Photon30_L1R");
+
+       Int_t hsize = Int_t(HLTR->size());
+       if (idx1 < hsize)
+	 if (HLTR->accept(idx1))
+	   HLT_MET50_event = 1;
+       if (idx2 < hsize)
+	 if (HLTR->accept(idx2))
+	   HLT_MET75_event = 1;
+       if (idx3 < hsize)
+	 if (HLTR->accept(idx3))
+	   HLT_Photon15_event = 1;
+       if (idx4 < hsize)
+	 if (HLTR->accept(idx4))
+	   HLT_Photon25_event = 1;
+       if (idx5 < hsize)
+	 if (HLTR->accept(idx5))
+	   HLT_DoubleEle10_event = 1;
+       if (idx6 < hsize)
+	 if (HLTR->accept(idx6))
+	   HLT_DoubleMu3_event = 1;
+       if (idx7 < hsize)
+	 if (HLTR->accept(idx7))
+	   HLT_Photon20_event = 1;
+       if (idx8 < hsize)
+	 if (HLTR->accept(idx8))
+	   HLT_Photon20_Cleaned_event = 1;
+       if (idx9 < hsize)
+	 if (HLTR->accept(idx9))
+	   HLT_Photon30_event=1;
+       
      }
-	 
-     // decision for each HL algorithm
-     const unsigned int n(hlNames_.size());
-     
-     for(unsigned int i = 0; i<n ;i++)
-	 {
-	 //cout<<hlNames_[i]<<" :"<<HLTR->accept(i)<<endl;
-	 HLT_chosen[ hlNames_[i]]= HLTR->accept(i);
-	 if(hlNames_[i]=="HLT_MET50")
-	 HLT_MET50_event       = HLTR->accept(i);
-	 if(hlNames_[i]=="HLT_MET75")
-	 HLT_MET75_event       = HLTR->accept(i);
-	 if(hlNames_[i]=="HLT_Photon15_L1R")
-	 HLT_Photon15_event    = HLTR->accept(i);
-	 if(hlNames_[i]=="HLT_Photon25_L1R")
-	 HLT_Photon25_event    = HLTR->accept(i);
-	 if(hlNames_[i]=="HLT_DoubleEle10_SW_L1R")
-	 HLT_DoubleEle10_event = HLTR->accept(i);
-	 if(hlNames_[i]=="HLT_DoubleMu3")
-	 HLT_DoubleMu3_event   = HLTR->accept(i);
-	 
-	 }
-	 }
-	 */
+   }
+
+
 	if(runvertex_){
 		Handle<reco::VertexCollection> recVtxs;
 		iEvent.getByLabel(Vertices_, recVtxs);
@@ -1349,12 +1364,16 @@ Analyzer::beginJob()
 	
 	if(runHLT_)
     {
-		myEvent->Branch("HLT_MET50_event",&HLT_MET50_event,"HLT_MET50_event/I");
-		myEvent->Branch("HLT_MET75_event",&HLT_MET75_event,"HLT_MET75_event/I");
-		myEvent->Branch("HLT_Photon15_event",&HLT_Photon15_event,"HLT_Photon15_event/I");
-		myEvent->Branch("HLT_Photon25_event",&HLT_Photon25_event,"HLT_Photon25_event/I");
-		myEvent->Branch("HLT_DoubleEle10_event",&HLT_DoubleEle10_event,"HLT_DoubleEle10_event/I");
-		myEvent->Branch("HLT_DoubleMu3_event",&HLT_DoubleMu3_event,"HLT_DoubleMu3_event/I");
+      myEvent->Branch("HLT_MET50_event",&HLT_MET50_event,"HLT_MET50_event/I");
+      myEvent->Branch("HLT_MET75_event",&HLT_MET75_event,"HLT_MET75_event/I");
+      myEvent->Branch("HLT_Photon15_event",&HLT_Photon15_event,"HLT_Photon15_event/I");
+      myEvent->Branch("HLT_Photon25_event",&HLT_Photon25_event,"HLT_Photon25_event/I");
+      myEvent->Branch("HLT_DoubleEle10_event",&HLT_DoubleEle10_event,"HLT_DoubleEle10_event/I");
+      myEvent->Branch("HLT_DoubleMu3_event",&HLT_DoubleMu3_event,"HLT_DoubleMu3_event/I");
+      myEvent->Branch("HLT_Photon20_event", &HLT_Photon20_event,"HLT_Photon20_event/I");
+      myEvent->Branch("HLT_Photon20_Cleaned_event",&HLT_Photon20_Cleaned_event,"HLT_Photon20_Cleaned_event/I");
+      myEvent->Branch("HLT_Photon30_event", &HLT_Photon30_event,"HLT_Photon30_event/I");
+
     }
 	
 	if(runvertex_)

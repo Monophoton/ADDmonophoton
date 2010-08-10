@@ -62,6 +62,10 @@ private:
 	int HLT_Photon25_event;
 	int HLT_DoubleEle10_event;
 	int HLT_DoubleMu3_event;
+	int HLT_Photon20_event;
+	int HLT_Photon20_Cleaned_event;
+	int HLT_Photon30_event;
+	
 	
 	std::map<std::string,int> HLT_chosen;
 	std::map<std::string,int> L1_chosen;
