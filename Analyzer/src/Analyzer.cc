@@ -12,7 +12,7 @@
 //
 // Original Author:  Sandhya Jain
 //         Created:  Fri Apr 17 11:00:06 CEST 2009
-// $Id: Analyzer.cc,v 1.17 2010/08/10 16:04:26 askew Exp $
+// $Id: Analyzer.cc,v 1.18 2010/08/11 12:31:32 askew Exp $
 //
 //
 
@@ -77,63 +77,9 @@ using namespace std;
 using namespace ROOT::Math::VectorUtil ;
 
 //utility function prototypes
-double correct_phi(double phi);
-double Theta(double eta);
-double Pl(double P,double Pt);
-
-double Analyzer::rookFractionBarrelCalculator( const reco::SuperCluster &superCluster ,const EcalRecHitCollection &recHits){
-  double rookFraction = 0.; // between 0 and 1
-  
-  // get recHit crystal IDs for this superCluster
-  std::vector< std::pair<DetId, float> > myHitsPair = superCluster.hitsAndFractions();
-  //make sure hits are in barrel ecal!
-  bool isHitEcalBarrel = false;
-  if ((myHitsPair[0].first).det() == DetId::Ecal && (myHitsPair[0].first).subdetId() == EcalBarrel ){ 
-    isHitEcalBarrel = true;
-  }
-  if (isHitEcalBarrel == false){
-    cout << "this superCluster is not in Barrel Ecal! rookFractionBarrelCalculator is returning nonsense value 5.0"<<endl;
-    rookFraction = 5.0;
-    return rookFraction;
-  }
-  std::vector<DetId> usedCrystals;
-  for(unsigned int i=0; i< myHitsPair.size(); i++){
-    usedCrystals.push_back(myHitsPair[i].first);
-  }
-  // get seed energy and position
-  float seedEnergy = -20.;
-  int seedIPhi = 500;
-  int seedIEta = 500;
-  for(unsigned int i=0; i<usedCrystals.size(); i++){
-    //get pointer to recHit object
-    EcalRecHitCollection::const_iterator myRH = recHits.find(usedCrystals[i]);
-    EBDetId EBdetIdi( myRH->detid() );
-    if(myRH->energy() > seedEnergy){ 
-      seedEnergy = myRH->energy();
-      seedIPhi   = EBdetIdi.iphi();
-      seedIEta   = EBdetIdi.ieta();
-    }// if energy is larger than seed E
-  }// loop over clustered crystals
-  if (seedIEta<0) seedIEta++; // account for no ieta = 0
-  // select adjacent crystal with the most E (not diagonal!! hence the name ROOK)
-  float adjacentEnergy = -20.;
-  for(EcalRecHitCollection::const_iterator rh = recHits.begin(); rh != recHits.end(); rh++){
-    EBDetId EBdetIdi( rh->detid() );
-    int stampIPhi = EBdetIdi.iphi();
-    int stampIEta = EBdetIdi.ieta();
-    if (stampIEta<0) stampIEta++; // account for no ieta = 0
-    int deltaIEta = abs(stampIEta - seedIEta);
-    int deltaIPhi = abs(stampIPhi - seedIPhi);
-    if (deltaIPhi > 180) deltaIPhi = 360 - deltaIPhi; // account for phi wrap around
-    if( (deltaIEta==1 && deltaIPhi==0) || (deltaIEta==0 && deltaIPhi==1) ){
-      if( rh->energy() > adjacentEnergy ){
-	adjacentEnergy = rh->energy();
-      }//if energy is greatest adjacent
-    }
-  }// loop over Ecal rec Hit collection
-  rookFraction = adjacentEnergy/seedEnergy;
-  return rookFraction;
-}
+float correct_phi(float phi);
+float Theta(float eta);
+float Pl(float P,float Pt);
 
 //
 // class decleration
@@ -141,7 +87,7 @@ double Analyzer::rookFractionBarrelCalculator( const reco::SuperCluster &superCl
 class genPho{
 public:
   genPho(){};  ~genPho(){};
-  double pt,px,py,pz,eta,phi,E,motherPt,motherEta,motherPhi , GrandmotherPt,GrandmotherEta,GrandmotherPhi;
+  float pt,px,py,pz,eta,phi,E,motherPt,motherEta,motherPhi , GrandmotherPt,GrandmotherEta,GrandmotherPhi;
   int motherID,GrandmotherID, status, motherStatus, GrandmotherStatus;
 };   
 
@@ -270,18 +216,18 @@ void Analyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup){
   if( rungenParticleCandidates_ ){
     ngenphotons  = 0;
     nhardphotons = 0;
-    is_signal_event = 0; 
-    is_Z_event   = 0; 
-    is_W_event    = 0; 
-    is_Zelec_event  = 0; 
-    is_Zmu_event = 0; 
-    is_Ztau_event = 0; 
-    is_Znunu_event =0  ;
-    is_Welec_event  = 0; 
-    is_Wmu_event = 0; 
-    is_Wtau_event = 0;
-    is_SingleHardPhoton_event=0;  
-    is_diphoton_event=0;
+    is_signal_event = false; 
+    is_Z_event   = false; 
+    is_W_event    = false; 
+    is_Zelec_event  = false; 
+    is_Zmu_event = false; 
+    is_Ztau_event = false; 
+    is_Znunu_event =false  ;
+    is_Welec_event  = false; 
+    is_Wmu_event = false; 
+    is_Wtau_event = false;
+    is_SingleHardPhoton_event=false;  
+    is_diphoton_event=false;
     Handle<GenParticleCollection> genParticles;
     iEvent.getByLabel("genParticles", genParticles); 
     std::vector<genPho>            mygenphoton_container;
@@ -291,7 +237,7 @@ void Analyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup){
     for (GenParticleCollection::const_iterator genparticle = genParticles->begin(); genparticle != genParticles->end(); genparticle++) {
       //getting information from hard scattered Graviton 
       if (genparticle->pdgId()==39 && genparticle->status()==3) { 
-	is_signal_event = 1;
+	is_signal_event = true;
 	n_signal_events++;
 	gen_graviton_pt  = genparticle->pt();
 	gen_graviton_px  = genparticle->px();
@@ -303,7 +249,7 @@ void Analyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup){
       }
       //getting information from Z
       if (genparticle->pdgId()==23 && genparticle->status()==3){ 
-	is_Z_event = 1;
+	is_Z_event = true;
 	n_Z_events++;
 	//cout<"getting information from Z now"<<endl;
 	gen_Zboson_pt  = genparticle->pt();
@@ -318,10 +264,10 @@ void Analyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup){
 	for(int i = 0;i<daughters;i++){
 	  const reco::Candidate *daughter   = genparticle->daughter(i);
 	  //cout<<"genparticle->daughter(i)"<<genparticle->daughter(i)<<std::endl;
-	  if(abs(daughter->pdgId())==12||abs(daughter->pdgId())==14||abs(daughter->pdgId())==16){is_Znunu_event=1; n_Znunu_events++;}
-	  if(daughter->pdgId()==11) { is_Zelec_event=1; n_Zelec_events++;}
-	  if(daughter->pdgId()==13) { is_Zmu_event=1  ; n_Zmu_events++  ;}
-	  if(daughter->pdgId()==15) { is_Ztau_event=1 ; n_Ztau_events++  ;}
+	  if(abs(daughter->pdgId())==12||abs(daughter->pdgId())==14||abs(daughter->pdgId())==16){is_Znunu_event=true; n_Znunu_events++;}
+	  if(daughter->pdgId()==11) { is_Zelec_event=true; n_Zelec_events++;}
+	  if(daughter->pdgId()==13) { is_Zmu_event=true  ; n_Zmu_events++  ;}
+	  if(daughter->pdgId()==15) { is_Ztau_event=true ; n_Ztau_events++  ;}
 	  if(daughter->pdgId()!=23) {
 	    gen_Zdaughter_pt[iDaughter]    = daughter->pt();
 	    gen_Zdaughter_px[iDaughter]    = daughter->px();
@@ -338,7 +284,7 @@ void Analyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup){
       }//end for loop of Z information    
       //getting information from W+/W-
       if (abs(genparticle->pdgId())==24 && genparticle->status()==3) { 
-	is_W_event = 1;
+	is_W_event = true;
 	cout<<" W motherID:" << genparticle->mother()->pdgId()<<endl; 
 	n_W_events++;
 	gen_Wboson_pt      = genparticle->pt();
@@ -356,9 +302,9 @@ void Analyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup){
 	//cout<<"W daughters:"<<endl;
 	for(int i = 0;i<daughters;i++){
 	  const reco::Candidate *daughter   = genparticle->daughter(i);
-	  if(abs(daughter->pdgId())==11) {is_Welec_event=1; n_Welec_events++;}
-	  if(abs(daughter->pdgId())==13) {is_Wmu_event=1  ; n_Wmu_events++  ;}
-	  if(abs(daughter->pdgId())==15) {is_Wtau_event=1 ; n_Wtau_events++ ;}  
+	  if(abs(daughter->pdgId())==11) {is_Welec_event=true; n_Welec_events++;}
+	  if(abs(daughter->pdgId())==13) {is_Wmu_event=true  ; n_Wmu_events++  ;}
+	  if(abs(daughter->pdgId())==15) {is_Wtau_event=true ; n_Wtau_events++ ;}  
 	  cout<<"ID, Status,Pt:"<<abs(daughter->pdgId())<<"   "<<daughter->status()<<"   "<<daughter->pt()<<endl;
 	  //getting leptons decaying from W
 	  if(abs(daughter->pdgId())!=24) {
@@ -469,11 +415,11 @@ void Analyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup){
 		
     if (nhardphotons==1) {
       n_SingleHardPhoton_events++;
-      is_SingleHardPhoton_event=1;
+      is_SingleHardPhoton_event=true;
     }
     if (nhardphotons==2){
       n_diphoton_events++; 
-      is_diphoton_event=1;
+      is_diphoton_event=true;
     }
 		
     if(mygenphoton_container.size()!=0){
@@ -526,7 +472,7 @@ void Analyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup){
   }  
 	
 
-   if(runHLT_==1){
+   if(runHLT_){
      //Redone by AA, new interface in 3_6 for trigger information
      Handle<TriggerResults> HLTR;
      iEvent.getByLabel(hlTriggerResults_,HLTR);
@@ -546,33 +492,45 @@ void Analyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup){
        Int_t hsize = Int_t(HLTR->size());
        //There's a double check here: first check that the array index is in range, then check to see if it fired.
        //if it is out of range, then obviously it wasn't found, and didn't pass (typically means name wasn't in the HLT)
+
+       //initialize HLT triggers to false
+       HLT_MET50_event = false;
+       HLT_MET75_event = false;
+       HLT_Photon15_event = false;
+       HLT_Photon25_event = false;
+       HLT_DoubleEle10_event = false;
+       HLT_DoubleMu3_event = false;
+       HLT_Photon20_event = false;
+       HLT_Photon20_Cleaned_event = false;
+       HLT_Photon30_event = false;
+
        if (idx1 < hsize)
 	 if (HLTR->accept(idx1))
-	   HLT_MET50_event = 1;
+	   HLT_MET50_event = true;
        if (idx2 < hsize)
 	 if (HLTR->accept(idx2))
-	   HLT_MET75_event = 1;
+	   HLT_MET75_event = true;
        if (idx3 < hsize)
 	 if (HLTR->accept(idx3))
-	   HLT_Photon15_event = 1;
+	   HLT_Photon15_event = true;
        if (idx4 < hsize)
 	 if (HLTR->accept(idx4))
-	   HLT_Photon25_event = 1;
+	   HLT_Photon25_event = true;
        if (idx5 < hsize)
 	 if (HLTR->accept(idx5))
-	   HLT_DoubleEle10_event = 1;
+	   HLT_DoubleEle10_event = true;
        if (idx6 < hsize)
 	 if (HLTR->accept(idx6))
-	   HLT_DoubleMu3_event = 1;
+	   HLT_DoubleMu3_event = true;
        if (idx7 < hsize)
 	 if (HLTR->accept(idx7))
-	   HLT_Photon20_event = 1;
+	   HLT_Photon20_event = true;
        if (idx8 < hsize)
 	 if (HLTR->accept(idx8))
-	   HLT_Photon20_Cleaned_event = 1;
+	   HLT_Photon20_Cleaned_event = true;
        if (idx9 < hsize)
 	 if (HLTR->accept(idx9))
-	   HLT_Photon30_event=1;
+	   HLT_Photon30_event=true;
        
      }
    }
@@ -645,12 +603,9 @@ void Analyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup){
        muon_charge[x] = mymuon_container[x].charge();
        
        //tia's stuff
-       if(mymuon_container[x].isGlobalMuon()) muon_isGlobalMuon[x] = 1;
-       else muon_isGlobalMuon[x] = 0;
-       if(mymuon_container[x].isTrackerMuon()) muon_isTrackerMuon[x] = 1;
-       else muon_isTrackerMuon[x] = 0;
-       if(mymuon_container[x].isStandAloneMuon()) muon_isStandAloneMuon[x] = 1;
-       else muon_isStandAloneMuon[x] = 0;
+       muon_isGlobalMuon[x] =     mymuon_container[x].isGlobalMuon();
+       muon_isTrackerMuon[x] =    mymuon_container[x].isTrackerMuon();
+       muon_isStandAloneMuon[x] = mymuon_container[x].isStandAloneMuon();
 
        muon_OuterTrack_InnerPoint_x[x] = 0.;
        muon_OuterTrack_InnerPoint_y[x] = 0.;
@@ -677,10 +632,9 @@ void Analyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup){
        muon_InnerTrack_OuterPoint_py[x] = 0.;
        muon_InnerTrack_OuterPoint_pz[x] = 0.;
   		
-       if(mymuon_container[x].innerTrack().isNonnull()) muon_InnerTrack_isNonnull[x] = 1;
-       else muon_InnerTrack_isNonnull[x] = 0;			
-       if(mymuon_container[x].outerTrack().isNonnull()) muon_OuterTrack_isNonnull[x] = 1;
-       else muon_OuterTrack_isNonnull[x] = 0;
+       muon_InnerTrack_isNonnull[x] =   mymuon_container[x].innerTrack().isNonnull();
+       muon_OuterTrack_isNonnull[x] =   mymuon_container[x].outerTrack().isNonnull();
+       
 			
        if(mymuon_container[x].innerTrack().isNonnull()){
 	 muon_InnerTrack_InnerPoint_x[x] = mymuon_container[x].innerTrack()->innerPosition().x();
@@ -736,14 +690,9 @@ void Analyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup){
        cosmicmuon_charge[x] = mycosmicmuon_container[x].charge();
        
        //tia's stuff
-       if(mycosmicmuon_container[x].isGlobalMuon()) cosmicmuon_isGlobalMuon[x] = 1;
-       else cosmicmuon_isGlobalMuon[x] = 0;
-       
-       if(mycosmicmuon_container[x].isTrackerMuon()) cosmicmuon_isTrackerMuon[x] = 1;
-       else cosmicmuon_isTrackerMuon[x] = 0;
-       
-       if(mycosmicmuon_container[x].isStandAloneMuon()) cosmicmuon_isStandAloneMuon[x] = 1;
-       else cosmicmuon_isStandAloneMuon[x] = 0;
+       cosmicmuon_isGlobalMuon[x] =     mycosmicmuon_container[x].isGlobalMuon();
+       cosmicmuon_isTrackerMuon[x] =    mycosmicmuon_container[x].isTrackerMuon();
+       cosmicmuon_isStandAloneMuon[x] = mycosmicmuon_container[x].isStandAloneMuon();
        
        cosmicmuon_OuterTrack_InnerPoint_x[x] = 0.;
        cosmicmuon_OuterTrack_InnerPoint_y[x] = 0.;
@@ -770,11 +719,8 @@ void Analyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup){
        cosmicmuon_InnerTrack_OuterPoint_py[x] = 0.;
        cosmicmuon_InnerTrack_OuterPoint_pz[x] = 0.;
        
-       if(mycosmicmuon_container[x].innerTrack().isNonnull()) cosmicmuon_InnerTrack_isNonnull[x] = 1;
-       else cosmicmuon_InnerTrack_isNonnull[x] = 0;
-       
-       if(mycosmicmuon_container[x].outerTrack().isNonnull()) cosmicmuon_OuterTrack_isNonnull[x] = 1;
-       else cosmicmuon_OuterTrack_isNonnull[x] = 0;
+       cosmicmuon_InnerTrack_isNonnull[x] =   mycosmicmuon_container[x].innerTrack().isNonnull();
+       cosmicmuon_OuterTrack_isNonnull[x] =   mycosmicmuon_container[x].outerTrack().isNonnull();
        
        if(mycosmicmuon_container[x].innerTrack().isNonnull()){
 	 cosmicmuon_InnerTrack_InnerPoint_x[x] = mycosmicmuon_container[x].innerTrack()->innerPosition().x();
@@ -917,7 +863,7 @@ void Analyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup){
 	   }//end of if ( aConv->conversionVertex().isValid() )
 	   else{
 	     pho_nTracks[x]                    = 9999;
-	     pho_isConverted[x]                = -99;
+	     pho_isConverted[x]                = false;
 	     pho_pairInvariantMass[x]          = -99.;
 	     pho_pairCotThetaSeparation[x]     = -99.;
 	     pho_pairMomentum_x[x]             = -99.;
@@ -991,7 +937,7 @@ void Analyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup){
 	   std::vector<CrystalInfo> crystalinfo_container;
 	   crystalinfo_container.clear();
 	   CrystalInfo crystal;
-	   double timing_avg =0.0;
+	   float timing_avg =0.0;
 	   int ncrys   = 0;
 	   ncrysPhoton[x]= 0;
 	   vector< std::pair<DetId, float> >::const_iterator detitr;
@@ -1036,7 +982,7 @@ void Analyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup){
 	   }//End loop over detids
 	   std::sort(crystalinfo_container.begin(),crystalinfo_container.end(),EnergySortCriterium());
 	   //Without taking into account uncertainty, this time makes no sense.
-	   if (ncrys !=0) timing_avg = timing_avg/(double)ncrys;
+	   if (ncrys !=0) timing_avg = timing_avg/(float)ncrys;
 	   else timing_avg = -99.;
 	   ncrysPhoton[x] = crystalinfo_container.size(); 
 	   pho_timingavg_xtal[x]      = timing_avg;
@@ -1054,10 +1000,9 @@ void Analyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup){
 	   }//end of for (unsigned int y =0; y < crystalinfo_container.size();y++
 	   if(myphoton_container[x].isEB()){
 	     std::vector<float> showershapes_barrel = EcalClusterTools::roundnessBarrelSuperClusters(*(myphoton_container[x].superCluster()),*barrelRecHits,0);
-	     pho_roundness[x]    = (double)showershapes_barrel[0];
-	     pho_angle[x]        = (double)showershapes_barrel[1];
+	     pho_roundness[x]    = (float)showershapes_barrel[0];
+	     pho_angle[x]        = (float)showershapes_barrel[1];
 	     pho_s9[x]           = pho_energy_xtal[x][0]/pho_e3x3[x];
-	     pho_rookFraction[x] = rookFractionBarrelCalculator(*( myphoton_container[x].superCluster() ), *barrelRecHits);
 	     pho_swissCross[x]   = EcalClusterTools::eTop( *(myphoton_container[x].superCluster()->seed()), 
 							   &(*barrelRecHits), &(*topology))+ 
 	                           EcalClusterTools::eBottom( *(myphoton_container[x].superCluster()->seed()), 
@@ -1073,7 +1018,6 @@ void Analyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup){
 	     pho_roundness[x]   = -99.;
 	     pho_angle[x]       = -99.;
 	     pho_s9[x]          = pho_energy_xtal[x][0]/pho_e3x3[x];
-	     pho_rookFraction[x]= -99.;
 	     pho_swissCross[x]   = EcalClusterTools::eTop( *(myphoton_container[x].superCluster()->seed()), 
 							   &(*endcapRecHits), &(*topology))+ 
 	                           EcalClusterTools::eBottom( *(myphoton_container[x].superCluster()->seed()), 
@@ -1257,246 +1201,246 @@ void Analyzer::beginJob(){
   myEvent->Branch("beamCrossing",&BXNumber,"BXNumber/I");
   
   if(runHLT_){
-    myEvent->Branch("HLT_MET50_event",&HLT_MET50_event,"HLT_MET50_event/I");
-    myEvent->Branch("HLT_MET75_event",&HLT_MET75_event,"HLT_MET75_event/I");
-    myEvent->Branch("HLT_Photon15_event",&HLT_Photon15_event,"HLT_Photon15_event/I");
-    myEvent->Branch("HLT_Photon25_event",&HLT_Photon25_event,"HLT_Photon25_event/I");
-    myEvent->Branch("HLT_DoubleEle10_event",&HLT_DoubleEle10_event,"HLT_DoubleEle10_event/I");
-    myEvent->Branch("HLT_DoubleMu3_event",&HLT_DoubleMu3_event,"HLT_DoubleMu3_event/I");
-    myEvent->Branch("HLT_Photon20_event", &HLT_Photon20_event,"HLT_Photon20_event/I");
-    myEvent->Branch("HLT_Photon20_Cleaned_event",&HLT_Photon20_Cleaned_event,"HLT_Photon20_Cleaned_event/I");
-    myEvent->Branch("HLT_Photon30_event", &HLT_Photon30_event,"HLT_Photon30_event/I");  
+    myEvent->Branch("HLT_MET50_event",&HLT_MET50_event,"HLT_MET50_event/O");
+    myEvent->Branch("HLT_MET75_event",&HLT_MET75_event,"HLT_MET75_event/O");
+    myEvent->Branch("HLT_Photon15_event",&HLT_Photon15_event,"HLT_Photon15_event/O");
+    myEvent->Branch("HLT_Photon25_event",&HLT_Photon25_event,"HLT_Photon25_event/O");
+    myEvent->Branch("HLT_DoubleEle10_event",&HLT_DoubleEle10_event,"HLT_DoubleEle10_event/O");
+    myEvent->Branch("HLT_DoubleMu3_event",&HLT_DoubleMu3_event,"HLT_DoubleMu3_event/O");
+    myEvent->Branch("HLT_Photon20_event", &HLT_Photon20_event,"HLT_Photon20_event/O");
+    myEvent->Branch("HLT_Photon20_Cleaned_event",&HLT_Photon20_Cleaned_event,"HLT_Photon20_Cleaned_event/O");
+    myEvent->Branch("HLT_Photon30_event", &HLT_Photon30_event,"HLT_Photon30_event/O");  
   }
   
   if(runvertex_){
     myEvent->Branch("Vertex_n",&Vertex_n,"Vertex_n/I");
-    myEvent->Branch("Vertex_x",vx,"vx[Vertex_n]/D");
-    myEvent->Branch("Vertex_y",vy,"vy[Vertex_n]/D");
-    myEvent->Branch("Vertex_z",vz,"vz[Vertex_n]/D");
-    myEvent->Branch("Vertex_tracksize",vtracksize,"vtracksize[Vertex_n]/D");
-    myEvent->Branch("Vertex_ndof",vndof,"vndof[Vertex_n]/D");
-    myEvent->Branch("Vertex_chi2",chi2,"chi2[Vertex_n]/D");
-    myEvent->Branch("Vertex_d0",v_d0,"v_d0[Vertex_n]/D");
-    myEvent->Branch("Vertex_isFake",v_isFake,"v_isFake[Vertex_n]/D");
+    myEvent->Branch("Vertex_x",vx,"vx[Vertex_n]/F");
+    myEvent->Branch("Vertex_y",vy,"vy[Vertex_n]/F");
+    myEvent->Branch("Vertex_z",vz,"vz[Vertex_n]/F");
+    myEvent->Branch("Vertex_tracksize",vtracksize,"vtracksize[Vertex_n]/F");
+    myEvent->Branch("Vertex_ndof",vndof,"vndof[Vertex_n]/F");
+    myEvent->Branch("Vertex_chi2",chi2,"chi2[Vertex_n]/F");
+    myEvent->Branch("Vertex_d0",v_d0,"v_d0[Vertex_n]/F");
+    myEvent->Branch("Vertex_isFake",v_isFake,"v_isFake[Vertex_n]/O");
   }
   
   if (runtracks_){
     myEvent->Branch("Track_n",&Track_n,"Track_n/I");
-    myEvent->Branch("Track_px",trk_px,"trk_px[Track_n]/D");
-    myEvent->Branch("Track_py",trk_py,"trk_py[Track_n]/D");
-    myEvent->Branch("Track_pz",trk_pz,"trk_pz[Track_n]/D");
-    myEvent->Branch("Track_pt",trk_pt,"trk_pt[Track_n]/D");
-    myEvent->Branch("Track_eta",trk_eta,"trk_eta[Track_n]/D");
-    myEvent->Branch("Track_phi",trk_phi,"trk_phi[Track_n]/D");
+    myEvent->Branch("Track_px",trk_px,"trk_px[Track_n]/F");
+    myEvent->Branch("Track_py",trk_py,"trk_py[Track_n]/F");
+    myEvent->Branch("Track_pz",trk_pz,"trk_pz[Track_n]/F");
+    myEvent->Branch("Track_pt",trk_pt,"trk_pt[Track_n]/F");
+    myEvent->Branch("Track_eta",trk_eta,"trk_eta[Track_n]/F");
+    myEvent->Branch("Track_phi",trk_phi,"trk_phi[Track_n]/F");
   }
   if (runjets_){
     myEvent->Branch("Jet_n",&Jet_n,"Jet_n/I");
-    myEvent->Branch("Jet_px",jet_px,"jet_px[Jet_n]/D");
-    myEvent->Branch("Jet_py",jet_py,"jet_py[Jet_n]/D");
-    myEvent->Branch("Jet_pz",jet_pz,"jet_pz[Jet_n]/D");
-    myEvent->Branch("Jet_pt",jet_pt,"jet_pt[Jet_n]/D");
-    myEvent->Branch("Jet_eta",jet_eta,"jet_eta[Jet_n]/D");
-    myEvent->Branch("Jet_phi",jet_phi,"jet_phi[Jet_n]/D");
-    myEvent->Branch("Jet_emEnergyFraction",jet_emEnergyFraction,"jet_emEnergyFraction[Jet_n]/D");
-    myEvent->Branch("Jet_energyFractionHadronic",jet_energyFractionHadronic,"jet_energyFractionHadronic[Jet_n]/D");
+    myEvent->Branch("Jet_px",jet_px,"jet_px[Jet_n]/F");
+    myEvent->Branch("Jet_py",jet_py,"jet_py[Jet_n]/F");
+    myEvent->Branch("Jet_pz",jet_pz,"jet_pz[Jet_n]/F");
+    myEvent->Branch("Jet_pt",jet_pt,"jet_pt[Jet_n]/F");
+    myEvent->Branch("Jet_eta",jet_eta,"jet_eta[Jet_n]/F");
+    myEvent->Branch("Jet_phi",jet_phi,"jet_phi[Jet_n]/F");
+    myEvent->Branch("Jet_emEnergyFraction",jet_emEnergyFraction,"jet_emEnergyFraction[Jet_n]/F");
+    myEvent->Branch("Jet_energyFractionHadronic",jet_energyFractionHadronic,"jet_energyFractionHadronic[Jet_n]/F");
   }
   
   if (runelectrons_){
     myEvent->Branch("Electron_n",&Electron_n,"Electron_n/I");
-    myEvent->Branch("Electron_px",electron_px,"electron_px[Electron_n]/D");
-    myEvent->Branch("Electron_py",electron_py,"electron_py[Electron_n]/D");
-    myEvent->Branch("Electron_pz",electron_pz,"electron_pz[Electron_n]/D");
-    myEvent->Branch("Electron_pt",electron_pt,"electron_pt[Electron_n]/D");
-    myEvent->Branch("Electron_eta",electron_eta,"electron_eta[Electron_n]/D");
-    myEvent->Branch("Electron_phi",electron_phi,"electron_phi[Electron_n]/D");
-    myEvent->Branch("Electron_energy",electron_energy,"electron_energy[Electron_n]/D");
-    myEvent->Branch("Electron_charge",electron_charge,"electron_charge[Electron_n]/D");
-    myEvent->Branch("Electron_trkIso",electron_trkIso,"electron_trkIso[Electron_n]/D");   
+    myEvent->Branch("Electron_px",electron_px,"electron_px[Electron_n]/F");
+    myEvent->Branch("Electron_py",electron_py,"electron_py[Electron_n]/F");
+    myEvent->Branch("Electron_pz",electron_pz,"electron_pz[Electron_n]/F");
+    myEvent->Branch("Electron_pt",electron_pt,"electron_pt[Electron_n]/F");
+    myEvent->Branch("Electron_eta",electron_eta,"electron_eta[Electron_n]/F");
+    myEvent->Branch("Electron_phi",electron_phi,"electron_phi[Electron_n]/F");
+    myEvent->Branch("Electron_energy",electron_energy,"electron_energy[Electron_n]/F");
+    myEvent->Branch("Electron_charge",electron_charge,"electron_charge[Electron_n]/F");
+    myEvent->Branch("Electron_trkIso",electron_trkIso,"electron_trkIso[Electron_n]/F");   
   }
   
   if (runmuons_){
     myEvent->Branch("Muon_n",&Muon_n,"Muon_n/I");
-    myEvent->Branch("Muon_px",muon_px,"muon_px[Muon_n]/D");
-    myEvent->Branch("Muon_py",muon_py,"muon_py[Muon_n]/D");
-    myEvent->Branch("Muon_pz",muon_pz,"muon_pz[Muon_n]/D");
-    myEvent->Branch("Muon_pt",muon_pt,"muon_pt[Muon_n]/D");
-    myEvent->Branch("Muon_eta",muon_eta,"muon_eta[Muon_n]/D");
-    myEvent->Branch("Muon_phi",muon_phi,"muon_phi[Muon_n]/D");
-    myEvent->Branch("Muon_energy",muon_energy,"muon_energy[Muon_n]/D");
-    myEvent->Branch("Muon_charge",muon_charge,"muon_charge[Muon_n]/D");
-    myEvent->Branch("Muon_isGlobalMuon",muon_isGlobalMuon,"muon_isGlobalMuon[Muon_n]/I");
-    myEvent->Branch("Muon_isTrackerMuon",muon_isTrackerMuon,"muon_isTrackerMuon[Muon_n]/I");
-    myEvent->Branch("Muon_isStandAloneMuon",muon_isStandAloneMuon,"muon_isStandAloneMuon[Muon_n]/I");
-    myEvent->Branch("Muon_InnerTrack_isNonnull",muon_InnerTrack_isNonnull,"muon_InnerTrack_isNonnull[Muon_n]/I");
-    myEvent->Branch("Muon_OuterTrack_isNonnull",muon_OuterTrack_isNonnull,"muon_OuterTrack_isNonnull[Muon_n]/I");
-    myEvent->Branch("Muon_OuterTrack_InnerPoint_py",muon_OuterTrack_InnerPoint_py,"muon_OuterTrack_InnerPoint_py[Muon_n]/D");
-    myEvent->Branch("Muon_OuterTrack_InnerPoint_pz",muon_OuterTrack_InnerPoint_pz,"muon_OuterTrack_InnerPoint_pz[Muon_n]/D");
-    myEvent->Branch("Muon_OuterTrack_OuterPoint_x",muon_OuterTrack_OuterPoint_x,"muon_OuterTrack_OuterPoint_x[Muon_n]/D");
-    myEvent->Branch("Muon_OuterTrack_OuterPoint_y",muon_OuterTrack_OuterPoint_y,"muon_OuterTrack_OuterPoint_y[Muon_n]/D");
-    myEvent->Branch("Muon_OuterTrack_OuterPoint_z",muon_OuterTrack_OuterPoint_z,"muon_OuterTrack_OuterPoint_z[Muon_n]/D");
-    myEvent->Branch("Muon_OuterTrack_OuterPoint_px",muon_OuterTrack_OuterPoint_px,"muon_OuterTrack_OuterPoint_px[Muon_n]/D");
-    myEvent->Branch("Muon_OuterTrack_OuterPoint_py",muon_OuterTrack_OuterPoint_py,"muon_OuterTrack_OuterPoint_py[Muon_n]/D");
-    myEvent->Branch("Muon_OuterTrack_OuterPoint_pz",muon_OuterTrack_OuterPoint_pz,"muon_OuterTrack_OuterPoint_pz[Muon_n]/D");
-    myEvent->Branch("Muon_InnerTrack_InnerPoint_x",muon_InnerTrack_InnerPoint_x,"muon_InnerTrack_InnerPoint_x[Muon_n]/D");
-    myEvent->Branch("Muon_InnerTrack_InnerPoint_y",muon_InnerTrack_InnerPoint_y,"muon_InnerTrack_InnerPoint_y[Muon_n]/D");
-    myEvent->Branch("Muon_InnerTrack_InnerPoint_z",muon_InnerTrack_InnerPoint_z,"muon_InnerTrack_InnerPoint_z[Muon_n]/D");
-    myEvent->Branch("Muon_InnerTrack_InnerPoint_px",muon_InnerTrack_InnerPoint_px,"muon_InnerTrack_InnerPoint_px[Muon_n]/D");
-    myEvent->Branch("Muon_InnerTrack_InnerPoint_py",muon_InnerTrack_InnerPoint_py,"muon_InnerTrack_InnerPoint_py[Muon_n]/D");
-    myEvent->Branch("Muon_InnerTrack_InnerPoint_pz",muon_InnerTrack_InnerPoint_pz,"muon_InnerTrack_InnerPoint_pz[Muon_n]/D");
-    myEvent->Branch("Muon_InnerTrack_OuterPoint_x",muon_InnerTrack_OuterPoint_x,"muon_InnerTrack_OuterPoint_x[Muon_n]/D");
-    myEvent->Branch("Muon_InnerTrack_OuterPoint_y",muon_InnerTrack_OuterPoint_y,"muon_InnerTrack_OuterPoint_y[Muon_n]/D");
-    myEvent->Branch("Muon_InnerTrack_OuterPoint_z",muon_InnerTrack_OuterPoint_z,"muon_InnerTrack_OuterPoint_z[Muon_n]/D");
-    myEvent->Branch("Muon_InnerTrack_OuterPoint_px",muon_InnerTrack_OuterPoint_px,"muon_InnerTrack_OuterPoint_px[Muon_n]/D");
-    myEvent->Branch("Muon_InnerTrack_OuterPoint_py",muon_InnerTrack_OuterPoint_py,"muon_InnerTrack_OuterPoint_py[Muon_n]/D");
-    myEvent->Branch("Muon_InnerTrack_OuterPoint_pz",muon_InnerTrack_OuterPoint_pz,"muon_InnerTrack_OuterPoint_pz[Muon_n]/D");  
+    myEvent->Branch("Muon_px",muon_px,"muon_px[Muon_n]/F");
+    myEvent->Branch("Muon_py",muon_py,"muon_py[Muon_n]/F");
+    myEvent->Branch("Muon_pz",muon_pz,"muon_pz[Muon_n]/F");
+    myEvent->Branch("Muon_pt",muon_pt,"muon_pt[Muon_n]/F");
+    myEvent->Branch("Muon_eta",muon_eta,"muon_eta[Muon_n]/F");
+    myEvent->Branch("Muon_phi",muon_phi,"muon_phi[Muon_n]/F");
+    myEvent->Branch("Muon_energy",muon_energy,"muon_energy[Muon_n]/F");
+    myEvent->Branch("Muon_charge",muon_charge,"muon_charge[Muon_n]/F");
+    myEvent->Branch("Muon_isGlobalMuon",muon_isGlobalMuon,"muon_isGlobalMuon[Muon_n]/O");
+    myEvent->Branch("Muon_isTrackerMuon",muon_isTrackerMuon,"muon_isTrackerMuon[Muon_n]/O");
+    myEvent->Branch("Muon_isStandAloneMuon",muon_isStandAloneMuon,"muon_isStandAloneMuon[Muon_n]/O");
+    myEvent->Branch("Muon_InnerTrack_isNonnull",muon_InnerTrack_isNonnull,"muon_InnerTrack_isNonnull[Muon_n]/O");
+    myEvent->Branch("Muon_OuterTrack_isNonnull",muon_OuterTrack_isNonnull,"muon_OuterTrack_isNonnull[Muon_n]/O");
+    myEvent->Branch("Muon_OuterTrack_InnerPoint_py",muon_OuterTrack_InnerPoint_py,"muon_OuterTrack_InnerPoint_py[Muon_n]/F");
+    myEvent->Branch("Muon_OuterTrack_InnerPoint_pz",muon_OuterTrack_InnerPoint_pz,"muon_OuterTrack_InnerPoint_pz[Muon_n]/F");
+    myEvent->Branch("Muon_OuterTrack_OuterPoint_x",muon_OuterTrack_OuterPoint_x,"muon_OuterTrack_OuterPoint_x[Muon_n]/F");
+    myEvent->Branch("Muon_OuterTrack_OuterPoint_y",muon_OuterTrack_OuterPoint_y,"muon_OuterTrack_OuterPoint_y[Muon_n]/F");
+    myEvent->Branch("Muon_OuterTrack_OuterPoint_z",muon_OuterTrack_OuterPoint_z,"muon_OuterTrack_OuterPoint_z[Muon_n]/F");
+    myEvent->Branch("Muon_OuterTrack_OuterPoint_px",muon_OuterTrack_OuterPoint_px,"muon_OuterTrack_OuterPoint_px[Muon_n]/F");
+    myEvent->Branch("Muon_OuterTrack_OuterPoint_py",muon_OuterTrack_OuterPoint_py,"muon_OuterTrack_OuterPoint_py[Muon_n]/F");
+    myEvent->Branch("Muon_OuterTrack_OuterPoint_pz",muon_OuterTrack_OuterPoint_pz,"muon_OuterTrack_OuterPoint_pz[Muon_n]/F");
+    myEvent->Branch("Muon_InnerTrack_InnerPoint_x",muon_InnerTrack_InnerPoint_x,"muon_InnerTrack_InnerPoint_x[Muon_n]/F");
+    myEvent->Branch("Muon_InnerTrack_InnerPoint_y",muon_InnerTrack_InnerPoint_y,"muon_InnerTrack_InnerPoint_y[Muon_n]/F");
+    myEvent->Branch("Muon_InnerTrack_InnerPoint_z",muon_InnerTrack_InnerPoint_z,"muon_InnerTrack_InnerPoint_z[Muon_n]/F");
+    myEvent->Branch("Muon_InnerTrack_InnerPoint_px",muon_InnerTrack_InnerPoint_px,"muon_InnerTrack_InnerPoint_px[Muon_n]/F");
+    myEvent->Branch("Muon_InnerTrack_InnerPoint_py",muon_InnerTrack_InnerPoint_py,"muon_InnerTrack_InnerPoint_py[Muon_n]/F");
+    myEvent->Branch("Muon_InnerTrack_InnerPoint_pz",muon_InnerTrack_InnerPoint_pz,"muon_InnerTrack_InnerPoint_pz[Muon_n]/F");
+    myEvent->Branch("Muon_InnerTrack_OuterPoint_x",muon_InnerTrack_OuterPoint_x,"muon_InnerTrack_OuterPoint_x[Muon_n]/F");
+    myEvent->Branch("Muon_InnerTrack_OuterPoint_y",muon_InnerTrack_OuterPoint_y,"muon_InnerTrack_OuterPoint_y[Muon_n]/F");
+    myEvent->Branch("Muon_InnerTrack_OuterPoint_z",muon_InnerTrack_OuterPoint_z,"muon_InnerTrack_OuterPoint_z[Muon_n]/F");
+    myEvent->Branch("Muon_InnerTrack_OuterPoint_px",muon_InnerTrack_OuterPoint_px,"muon_InnerTrack_OuterPoint_px[Muon_n]/F");
+    myEvent->Branch("Muon_InnerTrack_OuterPoint_py",muon_InnerTrack_OuterPoint_py,"muon_InnerTrack_OuterPoint_py[Muon_n]/F");
+    myEvent->Branch("Muon_InnerTrack_OuterPoint_pz",muon_InnerTrack_OuterPoint_pz,"muon_InnerTrack_OuterPoint_pz[Muon_n]/F");  
   }
   
   if (runcosmicmuons_){
     myEvent->Branch("CosmicMuon_n",&CosmicMuon_n,"CosmicMuon_n/I");
-    myEvent->Branch("CosmicMuon_px",cosmicmuon_px,"cosmicmuon_px[CosmicMuon_n]/D");
-    myEvent->Branch("CosmicMuon_py",cosmicmuon_py,"cosmicmuon_py[CosmicMuon_n]/D");
-    myEvent->Branch("CosmicMuon_pz",cosmicmuon_pz,"cosmicmuon_pz[CosmicMuon_n]/D");
-    myEvent->Branch("CosmicMuon_pt",cosmicmuon_pt,"cosmicmuon_pt[CosmicMuon_n]/D");
-    myEvent->Branch("CosmicMuon_eta",cosmicmuon_eta,"cosmicmuon_eta[CosmicMuon_n]/D");
-    myEvent->Branch("CosmicMuon_phi",cosmicmuon_phi,"cosmicmuon_phi[CosmicMuon_n]/D");
-    myEvent->Branch("CosmicMuon_energy",cosmicmuon_energy,"cosmicmuon_energy[CosmicMuon_n]/D");
-    myEvent->Branch("CosmicMuon_charge",cosmicmuon_charge,"cosmicmuon_charge[CosmicMuon_n]/D");
-    myEvent->Branch("CosmicMuon_isGlobalMuon",cosmicmuon_isGlobalMuon,"cosmicmuon_isGlobalMuon[CosmicMuon_n]/I");
-    myEvent->Branch("CosmicMuon_isTrackerMuon",cosmicmuon_isTrackerMuon,"cosmicmuon_isTrackerMuon[CosmicMuon_n]/I");
-    myEvent->Branch("CosmicMuon_isStandAloneMuon",cosmicmuon_isStandAloneMuon,"cosmicmuon_isStandAloneMuon[CosmicMuon_n]/I");
-    myEvent->Branch("CosmicMuon_InnerTrack_isNonnull",cosmicmuon_InnerTrack_isNonnull,"cosmicmuon_InnerTrack_isNonnull[CosmicMuon_n]/I");
-    myEvent->Branch("CosmicMuon_OuterTrack_isNonnull",cosmicmuon_OuterTrack_isNonnull,"cosmicmuon_OuterTrack_isNonnull[CosmicMuon_n]/I");
-    myEvent->Branch("CosmicMuon_OuterTrack_InnerPoint_py",cosmicmuon_OuterTrack_InnerPoint_py,"cosmicmuon_OuterTrack_InnerPoint_py[CosmicMuon_n]/D");
-    myEvent->Branch("CosmicMuon_OuterTrack_InnerPoint_pz",cosmicmuon_OuterTrack_InnerPoint_pz,"cosmicmuon_OuterTrack_InnerPoint_pz[CosmicMuon_n]/D");
-    myEvent->Branch("CosmicMuon_OuterTrack_OuterPoint_x",cosmicmuon_OuterTrack_OuterPoint_x,"cosmicmuon_OuterTrack_OuterPoint_x[CosmicMuon_n]/D");
-    myEvent->Branch("CosmicMuon_OuterTrack_OuterPoint_y",cosmicmuon_OuterTrack_OuterPoint_y,"cosmicmuon_OuterTrack_OuterPoint_y[CosmicMuon_n]/D");
-    myEvent->Branch("CosmicMuon_OuterTrack_OuterPoint_z",cosmicmuon_OuterTrack_OuterPoint_z,"cosmicmuon_OuterTrack_OuterPoint_z[CosmicMuon_n]/D");
-    myEvent->Branch("CosmicMuon_OuterTrack_OuterPoint_px",cosmicmuon_OuterTrack_OuterPoint_px,"cosmicmuon_OuterTrack_OuterPoint_px[CosmicMuon_n]/D");
-    myEvent->Branch("CosmicMuon_OuterTrack_OuterPoint_py",cosmicmuon_OuterTrack_OuterPoint_py,"cosmicmuon_OuterTrack_OuterPoint_py[CosmicMuon_n]/D");
-    myEvent->Branch("CosmicMuon_OuterTrack_OuterPoint_pz",cosmicmuon_OuterTrack_OuterPoint_pz,"cosmicmuon_OuterTrack_OuterPoint_pz[CosmicMuon_n]/D");
-    myEvent->Branch("CosmicMuon_InnerTrack_InnerPoint_x",cosmicmuon_InnerTrack_InnerPoint_x,"cosmicmuon_InnerTrack_InnerPoint_x[CosmicMuon_n]/D");
-    myEvent->Branch("CosmicMuon_InnerTrack_InnerPoint_y",cosmicmuon_InnerTrack_InnerPoint_y,"cosmicmuon_InnerTrack_InnerPoint_y[CosmicMuon_n]/D");
-    myEvent->Branch("CosmicMuon_InnerTrack_InnerPoint_z",cosmicmuon_InnerTrack_InnerPoint_z,"cosmicmuon_InnerTrack_InnerPoint_z[CosmicMuon_n]/D");
-    myEvent->Branch("CosmicMuon_InnerTrack_InnerPoint_px",cosmicmuon_InnerTrack_InnerPoint_px,"cosmicmuon_InnerTrack_InnerPoint_px[CosmicMuon_n]/D");
-    myEvent->Branch("CosmicMuon_InnerTrack_InnerPoint_py",cosmicmuon_InnerTrack_InnerPoint_py,"cosmicmuon_InnerTrack_InnerPoint_py[CosmicMuon_n]/D");
-    myEvent->Branch("CosmicMuon_InnerTrack_InnerPoint_pz",cosmicmuon_InnerTrack_InnerPoint_pz,"cosmicmuon_InnerTrack_InnerPoint_pz[CosmicMuon_n]/D");
-    myEvent->Branch("CosmicMuon_InnerTrack_OuterPoint_x",cosmicmuon_InnerTrack_OuterPoint_x,"cosmicmuon_InnerTrack_OuterPoint_x[CosmicMuon_n]/D");
-    myEvent->Branch("CosmicMuon_InnerTrack_OuterPoint_y",cosmicmuon_InnerTrack_OuterPoint_y,"cosmicmuon_InnerTrack_OuterPoint_y[CosmicMuon_n]/D");
-    myEvent->Branch("CosmicMuon_InnerTrack_OuterPoint_z",cosmicmuon_InnerTrack_OuterPoint_z,"cosmicmuon_InnerTrack_OuterPoint_z[CosmicMuon_n]/D");
-    myEvent->Branch("CosmicMuon_InnerTrack_OuterPoint_px",cosmicmuon_InnerTrack_OuterPoint_px,"cosmicmuon_InnerTrack_OuterPoint_px[CosmicMuon_n]/D");
-    myEvent->Branch("CosmicMuon_InnerTrack_OuterPoint_py",cosmicmuon_InnerTrack_OuterPoint_py,"cosmicmuon_InnerTrack_OuterPoint_py[CosmicMuon_n]/D");
-    myEvent->Branch("CosmicMuon_InnerTrack_OuterPoint_pz",cosmicmuon_InnerTrack_OuterPoint_pz,"cosmicmuon_InnerTrack_OuterPoint_pz[CosmicMuon_n]/D");
+    myEvent->Branch("CosmicMuon_px",cosmicmuon_px,"cosmicmuon_px[CosmicMuon_n]/F");
+    myEvent->Branch("CosmicMuon_py",cosmicmuon_py,"cosmicmuon_py[CosmicMuon_n]/F");
+    myEvent->Branch("CosmicMuon_pz",cosmicmuon_pz,"cosmicmuon_pz[CosmicMuon_n]/F");
+    myEvent->Branch("CosmicMuon_pt",cosmicmuon_pt,"cosmicmuon_pt[CosmicMuon_n]/F");
+    myEvent->Branch("CosmicMuon_eta",cosmicmuon_eta,"cosmicmuon_eta[CosmicMuon_n]/F");
+    myEvent->Branch("CosmicMuon_phi",cosmicmuon_phi,"cosmicmuon_phi[CosmicMuon_n]/F");
+    myEvent->Branch("CosmicMuon_energy",cosmicmuon_energy,"cosmicmuon_energy[CosmicMuon_n]/F");
+    myEvent->Branch("CosmicMuon_charge",cosmicmuon_charge,"cosmicmuon_charge[CosmicMuon_n]/F");
+    myEvent->Branch("CosmicMuon_isGlobalMuon",cosmicmuon_isGlobalMuon,"cosmicmuon_isGlobalMuon[CosmicMuon_n]/O");
+    myEvent->Branch("CosmicMuon_isTrackerMuon",cosmicmuon_isTrackerMuon,"cosmicmuon_isTrackerMuon[CosmicMuon_n]/O");
+    myEvent->Branch("CosmicMuon_isStandAloneMuon",cosmicmuon_isStandAloneMuon,"cosmicmuon_isStandAloneMuon[CosmicMuon_n]/O");
+    myEvent->Branch("CosmicMuon_InnerTrack_isNonnull",cosmicmuon_InnerTrack_isNonnull,"cosmicmuon_InnerTrack_isNonnull[CosmicMuon_n]/O");
+    myEvent->Branch("CosmicMuon_OuterTrack_isNonnull",cosmicmuon_OuterTrack_isNonnull,"cosmicmuon_OuterTrack_isNonnull[CosmicMuon_n]/O");
+    myEvent->Branch("CosmicMuon_OuterTrack_InnerPoint_py",cosmicmuon_OuterTrack_InnerPoint_py,"cosmicmuon_OuterTrack_InnerPoint_py[CosmicMuon_n]/F");
+    myEvent->Branch("CosmicMuon_OuterTrack_InnerPoint_pz",cosmicmuon_OuterTrack_InnerPoint_pz,"cosmicmuon_OuterTrack_InnerPoint_pz[CosmicMuon_n]/F");
+    myEvent->Branch("CosmicMuon_OuterTrack_OuterPoint_x",cosmicmuon_OuterTrack_OuterPoint_x,"cosmicmuon_OuterTrack_OuterPoint_x[CosmicMuon_n]/F");
+    myEvent->Branch("CosmicMuon_OuterTrack_OuterPoint_y",cosmicmuon_OuterTrack_OuterPoint_y,"cosmicmuon_OuterTrack_OuterPoint_y[CosmicMuon_n]/F");
+    myEvent->Branch("CosmicMuon_OuterTrack_OuterPoint_z",cosmicmuon_OuterTrack_OuterPoint_z,"cosmicmuon_OuterTrack_OuterPoint_z[CosmicMuon_n]/F");
+    myEvent->Branch("CosmicMuon_OuterTrack_OuterPoint_px",cosmicmuon_OuterTrack_OuterPoint_px,"cosmicmuon_OuterTrack_OuterPoint_px[CosmicMuon_n]/F");
+    myEvent->Branch("CosmicMuon_OuterTrack_OuterPoint_py",cosmicmuon_OuterTrack_OuterPoint_py,"cosmicmuon_OuterTrack_OuterPoint_py[CosmicMuon_n]/F");
+    myEvent->Branch("CosmicMuon_OuterTrack_OuterPoint_pz",cosmicmuon_OuterTrack_OuterPoint_pz,"cosmicmuon_OuterTrack_OuterPoint_pz[CosmicMuon_n]/F");
+    myEvent->Branch("CosmicMuon_InnerTrack_InnerPoint_x",cosmicmuon_InnerTrack_InnerPoint_x,"cosmicmuon_InnerTrack_InnerPoint_x[CosmicMuon_n]/F");
+    myEvent->Branch("CosmicMuon_InnerTrack_InnerPoint_y",cosmicmuon_InnerTrack_InnerPoint_y,"cosmicmuon_InnerTrack_InnerPoint_y[CosmicMuon_n]/F");
+    myEvent->Branch("CosmicMuon_InnerTrack_InnerPoint_z",cosmicmuon_InnerTrack_InnerPoint_z,"cosmicmuon_InnerTrack_InnerPoint_z[CosmicMuon_n]/F");
+    myEvent->Branch("CosmicMuon_InnerTrack_InnerPoint_px",cosmicmuon_InnerTrack_InnerPoint_px,"cosmicmuon_InnerTrack_InnerPoint_px[CosmicMuon_n]/F");
+    myEvent->Branch("CosmicMuon_InnerTrack_InnerPoint_py",cosmicmuon_InnerTrack_InnerPoint_py,"cosmicmuon_InnerTrack_InnerPoint_py[CosmicMuon_n]/F");
+    myEvent->Branch("CosmicMuon_InnerTrack_InnerPoint_pz",cosmicmuon_InnerTrack_InnerPoint_pz,"cosmicmuon_InnerTrack_InnerPoint_pz[CosmicMuon_n]/F");
+    myEvent->Branch("CosmicMuon_InnerTrack_OuterPoint_x",cosmicmuon_InnerTrack_OuterPoint_x,"cosmicmuon_InnerTrack_OuterPoint_x[CosmicMuon_n]/F");
+    myEvent->Branch("CosmicMuon_InnerTrack_OuterPoint_y",cosmicmuon_InnerTrack_OuterPoint_y,"cosmicmuon_InnerTrack_OuterPoint_y[CosmicMuon_n]/F");
+    myEvent->Branch("CosmicMuon_InnerTrack_OuterPoint_z",cosmicmuon_InnerTrack_OuterPoint_z,"cosmicmuon_InnerTrack_OuterPoint_z[CosmicMuon_n]/F");
+    myEvent->Branch("CosmicMuon_InnerTrack_OuterPoint_px",cosmicmuon_InnerTrack_OuterPoint_px,"cosmicmuon_InnerTrack_OuterPoint_px[CosmicMuon_n]/F");
+    myEvent->Branch("CosmicMuon_InnerTrack_OuterPoint_py",cosmicmuon_InnerTrack_OuterPoint_py,"cosmicmuon_InnerTrack_OuterPoint_py[CosmicMuon_n]/F");
+    myEvent->Branch("CosmicMuon_InnerTrack_OuterPoint_pz",cosmicmuon_InnerTrack_OuterPoint_pz,"cosmicmuon_InnerTrack_OuterPoint_pz[CosmicMuon_n]/F");
     
   }
   
   if (runtaus_){
     myEvent->Branch("Tau_n",&Tau_n,"Tau_n/I");
-    myEvent->Branch("Tau_px",tau_px,"tau_px[Tau_n]/D");
-    myEvent->Branch("Tau_py",tau_py,"tau_py[Tau_n]/D");
-    myEvent->Branch("Tau_pz",tau_pz,"tau_pz[Tau_n]/D");
-    myEvent->Branch("Tau_pt",tau_pt,"tau_pt[Tau_n]/D");
-    myEvent->Branch("Tau_eta",tau_eta,"tau_eta[Tau_n]/D");
-    myEvent->Branch("Tau_phi",tau_phi,"tau_phi[Tau_n]/D");
-    myEvent->Branch("Tau_energy",tau_energy,"tau_energy[Tau_n]/D");
-    myEvent->Branch("Tau_charge",tau_charge,"tau_charge[Tau_n]/D");
+    myEvent->Branch("Tau_px",tau_px,"tau_px[Tau_n]/F");
+    myEvent->Branch("Tau_py",tau_py,"tau_py[Tau_n]/F");
+    myEvent->Branch("Tau_pz",tau_pz,"tau_pz[Tau_n]/F");
+    myEvent->Branch("Tau_pt",tau_pt,"tau_pt[Tau_n]/F");
+    myEvent->Branch("Tau_eta",tau_eta,"tau_eta[Tau_n]/F");
+    myEvent->Branch("Tau_phi",tau_phi,"tau_phi[Tau_n]/F");
+    myEvent->Branch("Tau_energy",tau_energy,"tau_energy[Tau_n]/F");
+    myEvent->Branch("Tau_charge",tau_charge,"tau_charge[Tau_n]/F");
   }
   
   if( rungenParticleCandidates_ ){
     //genlevel information from photons
     myEvent->Branch("ngenphotons",&ngenphotons,"ngenphotons/I");
-    myEvent->Branch("gen_photonpt",gen_pho_pt,"gen_pho_pt[ngenphotons]/D");
-    myEvent->Branch("gen_photoneta",gen_pho_eta,"gen_pho_eta[ngenphotons]/D");
-    myEvent->Branch("gen_photonphi",gen_pho_phi,"gen_pho_phi[ngenphotons]/D");
-    myEvent->Branch("gen_photonpx",gen_pho_px,"gen_pho_px[ngenphotons]/D");
-    myEvent->Branch("gen_photonpy",gen_pho_py,"gen_pho_py[ngenphotons]/D");
-    myEvent->Branch("gen_photonpz",gen_pho_pz,"gen_pho_pz[ngenphotons]/D");
-    myEvent->Branch("gen_photonE",gen_pho_E,"gen_pho_E[ngenphotons]/D");
+    myEvent->Branch("gen_photonpt",gen_pho_pt,"gen_pho_pt[ngenphotons]/F");
+    myEvent->Branch("gen_photoneta",gen_pho_eta,"gen_pho_eta[ngenphotons]/F");
+    myEvent->Branch("gen_photonphi",gen_pho_phi,"gen_pho_phi[ngenphotons]/F");
+    myEvent->Branch("gen_photonpx",gen_pho_px,"gen_pho_px[ngenphotons]/F");
+    myEvent->Branch("gen_photonpy",gen_pho_py,"gen_pho_py[ngenphotons]/F");
+    myEvent->Branch("gen_photonpz",gen_pho_pz,"gen_pho_pz[ngenphotons]/F");
+    myEvent->Branch("gen_photonE",gen_pho_E,"gen_pho_E[ngenphotons]/F");
     myEvent->Branch("gen_photonstatus",gen_pho_status,"gen_pho_status[ngenphotons]/I");
     myEvent->Branch("gen_photonMotherID",gen_pho_motherID,"gen_pho_motherID[ngenphotons]/I");
-    myEvent->Branch("gen_photonMotherPt",gen_pho_motherPt,"gen_pho_motherPt[ngenphotons]/D");
-    myEvent->Branch("gen_photonMotherEta",gen_pho_motherEta,"gen_pho_motherEta[ngenphotons]/D");
-    myEvent->Branch("gen_photonMotherPhi",gen_pho_motherPhi,"gen_pho_motherPhi[ngenphotons]/D");
+    myEvent->Branch("gen_photonMotherPt",gen_pho_motherPt,"gen_pho_motherPt[ngenphotons]/F");
+    myEvent->Branch("gen_photonMotherEta",gen_pho_motherEta,"gen_pho_motherEta[ngenphotons]/F");
+    myEvent->Branch("gen_photonMotherPhi",gen_pho_motherPhi,"gen_pho_motherPhi[ngenphotons]/F");
     myEvent->Branch("gen_photonMotherStatus",gen_pho_motherStatus,"gen_pho_motherStatus[ngenphotons]/I");
     myEvent->Branch("gen_photonGrandmotherID",gen_pho_GrandmotherID,"gen_pho_GrandmotherID[ngenphotons]/I");
-    myEvent->Branch("gen_photonGrandmotherPt",gen_pho_GrandmotherPt,"gen_pho_GrandmotherPt[ngenphotons]/D");
-    myEvent->Branch("gen_photonGrandmotherEta",gen_pho_GrandmotherEta,"gen_pho_GrandmotherEta[ngenphotons]/D");
-    myEvent->Branch("gen_photonGrandmotherPhi",gen_pho_GrandmotherPhi,"gen_pho_GrandmotherPhi[ngenphotons]/D");
+    myEvent->Branch("gen_photonGrandmotherPt",gen_pho_GrandmotherPt,"gen_pho_GrandmotherPt[ngenphotons]/F");
+    myEvent->Branch("gen_photonGrandmotherEta",gen_pho_GrandmotherEta,"gen_pho_GrandmotherEta[ngenphotons]/F");
+    myEvent->Branch("gen_photonGrandmotherPhi",gen_pho_GrandmotherPhi,"gen_pho_GrandmotherPhi[ngenphotons]/F");
     myEvent->Branch("gen_photonGrandmotherStatus",gen_pho_GrandmotherStatus,"gen_pho_GrandmotherStatus[ngenphotons]/I");
     
     
     myEvent->Branch("nhardphotons",&nhardphotons,"nhardphotons/I");
-    myEvent->Branch("gen_hardphotonpt",gen_Hpho_pt,"gen_Hpho_pt[nhardphotons]/D");
-    myEvent->Branch("gen_hardphotoneta",gen_Hpho_eta,"gen_Hpho_eta[nhardphotons]/D");
-    myEvent->Branch("gen_hardphotonphi",gen_Hpho_phi,"gen_Hpho_phi[nhardphotons]/D");
-    myEvent->Branch("gen_hardphotonpx",gen_Hpho_px,"gen_Hpho_px[nhardphotons]/D");
-    myEvent->Branch("gen_hardphotonpy",gen_Hpho_py,"gen_Hpho_py[nhardphotons]/D");
-    myEvent->Branch("gen_hardphotonpz",gen_Hpho_pz,"gen_Hpho_pz[nhardphotons]/D");
-    myEvent->Branch("gen_hardphotonE",gen_Hpho_E,"gen_Hpho_E[nhardphotons]/D");
+    myEvent->Branch("gen_hardphotonpt",gen_Hpho_pt,"gen_Hpho_pt[nhardphotons]/F");
+    myEvent->Branch("gen_hardphotoneta",gen_Hpho_eta,"gen_Hpho_eta[nhardphotons]/F");
+    myEvent->Branch("gen_hardphotonphi",gen_Hpho_phi,"gen_Hpho_phi[nhardphotons]/F");
+    myEvent->Branch("gen_hardphotonpx",gen_Hpho_px,"gen_Hpho_px[nhardphotons]/F");
+    myEvent->Branch("gen_hardphotonpy",gen_Hpho_py,"gen_Hpho_py[nhardphotons]/F");
+    myEvent->Branch("gen_hardphotonpz",gen_Hpho_pz,"gen_Hpho_pz[nhardphotons]/F");
+    myEvent->Branch("gen_hardphotonE",gen_Hpho_E,"gen_Hpho_E[nhardphotons]/F");
     
     //gen level graviton info
-    myEvent->Branch("gen_gravitonpt",&gen_graviton_pt,"gen_graviton_pt/D");
-    myEvent->Branch("gen_gravitoneta",&gen_graviton_eta,"gen_graviton_eta/D");
-    myEvent->Branch("gen_gravitonphi",&gen_graviton_phi,"gen_graviton_phi/D");
-    myEvent->Branch("gen_gravitonpx",&gen_graviton_px,"gen_graviton_px/D");
-    myEvent->Branch("gen_gravitonpy",&gen_graviton_py,"gen_graviton_py/D");
-    myEvent->Branch("gen_gravitonpz",&gen_graviton_pz,"gen_graviton_pz/D");
-    myEvent->Branch("gen_gravitonE",&gen_graviton_E,"gen_graviton_E/D");
+    myEvent->Branch("gen_gravitonpt",&gen_graviton_pt,"gen_graviton_pt/F");
+    myEvent->Branch("gen_gravitoneta",&gen_graviton_eta,"gen_graviton_eta/F");
+    myEvent->Branch("gen_gravitonphi",&gen_graviton_phi,"gen_graviton_phi/F");
+    myEvent->Branch("gen_gravitonpx",&gen_graviton_px,"gen_graviton_px/F");
+    myEvent->Branch("gen_gravitonpy",&gen_graviton_py,"gen_graviton_py/F");
+    myEvent->Branch("gen_gravitonpz",&gen_graviton_pz,"gen_graviton_pz/F");
+    myEvent->Branch("gen_gravitonE",&gen_graviton_E,"gen_graviton_E/F");
     
     //genlevel tree info of W+/W- 
     //genlevel tree information of Wdaughter
-    myEvent->Branch("gen_Wdaughterpt",gen_Wdaughter_pt,"gen_Wdaughter_pt[2]/D");
-    myEvent->Branch("gen_Wdaughtereta",gen_Wdaughter_eta,"gen_Wdaughter_eta[2]/D");
-    myEvent->Branch("gen_Wdaughterphi",gen_Wdaughter_phi,"gen_Wdaughter_phi[2]/D");
-    myEvent->Branch("gen_Wdaughterpx",gen_Wdaughter_px,"gen_Wdaughter_px[2]/D");
-    myEvent->Branch("gen_Wdaughterpy",gen_Wdaughter_py,"gen_Wdaughter_py[2]/D");
-    myEvent->Branch("gen_Wdaughterpz",gen_Wdaughter_pz,"gen_Wdaughter_pz[2]/D");
-    myEvent->Branch("gen_WdaughterE",gen_Wdaughter_E,"gen_Wdaughter_E[2]/D");
+    myEvent->Branch("gen_Wdaughterpt",gen_Wdaughter_pt,"gen_Wdaughter_pt[2]/F");
+    myEvent->Branch("gen_Wdaughtereta",gen_Wdaughter_eta,"gen_Wdaughter_eta[2]/F");
+    myEvent->Branch("gen_Wdaughterphi",gen_Wdaughter_phi,"gen_Wdaughter_phi[2]/F");
+    myEvent->Branch("gen_Wdaughterpx",gen_Wdaughter_px,"gen_Wdaughter_px[2]/F");
+    myEvent->Branch("gen_Wdaughterpy",gen_Wdaughter_py,"gen_Wdaughter_py[2]/F");
+    myEvent->Branch("gen_Wdaughterpz",gen_Wdaughter_pz,"gen_Wdaughter_pz[2]/F");
+    myEvent->Branch("gen_WdaughterE",gen_Wdaughter_E,"gen_Wdaughter_E[2]/F");
     myEvent->Branch("gen_Wdaughter_charge",gen_Wdaughter_charge,"gen_Wdaughter_charge[2]/I");
     myEvent->Branch("gen_WdaughterID",gen_Wdaughter_ID,"gen_Wdaughter_ID[2]/I");
     
     //genlevel tree information of W
-    myEvent->Branch("gen_Wbosonpt",&gen_Wboson_pt,"gen_Wboson_pt/D");
-    myEvent->Branch("gen_Wbosoneta",&gen_Wboson_eta,"gen_Wboson_eta/D");
-    myEvent->Branch("gen_Wbosonphi",&gen_Wboson_phi,"gen_Wboson_phi/D");
-    myEvent->Branch("gen_Wbosonpx",&gen_Wboson_px,"gen_Wboson_px/D");
-    myEvent->Branch("gen_Wbosonpy",&gen_Wboson_py,"gen_Wboson_py/D");
-    myEvent->Branch("gen_Wbosonpz",&gen_Wboson_pz,"gen_Wboson_pz/D");
-    myEvent->Branch("gen_WbosonE",&gen_Wboson_E,"gen_Wboson_E/D");
+    myEvent->Branch("gen_Wbosonpt",&gen_Wboson_pt,"gen_Wboson_pt/F");
+    myEvent->Branch("gen_Wbosoneta",&gen_Wboson_eta,"gen_Wboson_eta/F");
+    myEvent->Branch("gen_Wbosonphi",&gen_Wboson_phi,"gen_Wboson_phi/F");
+    myEvent->Branch("gen_Wbosonpx",&gen_Wboson_px,"gen_Wboson_px/F");
+    myEvent->Branch("gen_Wbosonpy",&gen_Wboson_py,"gen_Wboson_py/F");
+    myEvent->Branch("gen_Wbosonpz",&gen_Wboson_pz,"gen_Wboson_pz/F");
+    myEvent->Branch("gen_WbosonE",&gen_Wboson_E,"gen_Wboson_E/F");
     myEvent->Branch("gen_Wbosoncharge",&gen_Wboson_charge,"gen_Wboson_charge/I");
     myEvent->Branch("gen_WbosonID",&gen_Wboson_ID,"gen_Wboson_ID/I");
     
     //genlevel tree information of Zdaughter
-    myEvent->Branch("gen_Zdaughterpt",gen_Zdaughter_pt,"gen_Zdaughter_pt[2]/D");
-    myEvent->Branch("gen_Zdaughtereta",gen_Zdaughter_eta,"gen_Zdaughter_eta[2]/D");
-    myEvent->Branch("gen_Zdaughterphi",gen_Zdaughter_phi,"gen_Zdaughter_phi[2]/D");
-    myEvent->Branch("gen_Zdaughterpx",gen_Zdaughter_px,"gen_Zdaughter_px[2]/D");
-    myEvent->Branch("gen_Zdaughterpy",gen_Zdaughter_py,"gen_Zdaughter_py[2]/D");
-    myEvent->Branch("gen_Zdaughterpz",gen_Zdaughter_pz,"gen_Zdaughter_pz[2]/D");
-    myEvent->Branch("gen_ZdaughterE",gen_Zdaughter_E,"gen_Zdaughter_E[2]/D");
+    myEvent->Branch("gen_Zdaughterpt",gen_Zdaughter_pt,"gen_Zdaughter_pt[2]/F");
+    myEvent->Branch("gen_Zdaughtereta",gen_Zdaughter_eta,"gen_Zdaughter_eta[2]/F");
+    myEvent->Branch("gen_Zdaughterphi",gen_Zdaughter_phi,"gen_Zdaughter_phi[2]/F");
+    myEvent->Branch("gen_Zdaughterpx",gen_Zdaughter_px,"gen_Zdaughter_px[2]/F");
+    myEvent->Branch("gen_Zdaughterpy",gen_Zdaughter_py,"gen_Zdaughter_py[2]/F");
+    myEvent->Branch("gen_Zdaughterpz",gen_Zdaughter_pz,"gen_Zdaughter_pz[2]/F");
+    myEvent->Branch("gen_ZdaughterE",gen_Zdaughter_E,"gen_Zdaughter_E[2]/F");
     myEvent->Branch("gen_Zdaughter_charge",gen_Zdaughter_charge,"gen_Zdaughter_charge[2]/I");
     myEvent->Branch("gen_ZdaughterID",gen_Zdaughter_ID,"gen_Zdaughter_ID[2]/I");
     
     //genlevel tree information of Z
-    myEvent->Branch("gen_Zbosonpt",&gen_Zboson_pt,"gen_Zboson_pt/D");
-    myEvent->Branch("gen_Zbosoneta",&gen_Zboson_eta,"gen_Zboson_eta/D");
-    myEvent->Branch("gen_Zbosonphi",&gen_Zboson_phi,"gen_Zboson_phi/D");
-    myEvent->Branch("gen_Zbosonpx",&gen_Zboson_px,"gen_Zboson_px/D");
-    myEvent->Branch("gen_Zbosonpy",&gen_Zboson_py,"gen_Zboson_py/D");
-    myEvent->Branch("gen_Zbosonpz",&gen_Zboson_pz,"gen_Zboson_pz/D");
-    myEvent->Branch("gen_ZbosonE",&gen_Zboson_E,"gen_Zboson_E/D");
+    myEvent->Branch("gen_Zbosonpt",&gen_Zboson_pt,"gen_Zboson_pt/F");
+    myEvent->Branch("gen_Zbosoneta",&gen_Zboson_eta,"gen_Zboson_eta/F");
+    myEvent->Branch("gen_Zbosonphi",&gen_Zboson_phi,"gen_Zboson_phi/F");
+    myEvent->Branch("gen_Zbosonpx",&gen_Zboson_px,"gen_Zboson_px/F");
+    myEvent->Branch("gen_Zbosonpy",&gen_Zboson_py,"gen_Zboson_py/F");
+    myEvent->Branch("gen_Zbosonpz",&gen_Zboson_pz,"gen_Zboson_pz/F");
+    myEvent->Branch("gen_ZbosonE",&gen_Zboson_E,"gen_Zboson_E/F");
     
-    myEvent->Branch("is_signal_event",&is_signal_event,"is_signal_event/I");
-    myEvent->Branch("is_Z_event",&is_Z_event,"is_Z_event/I");
-    myEvent->Branch("is_W_event",&is_W_event,"is_W_event/I");
-    myEvent->Branch("is_Znunu_event",&is_Znunu_event,"is_Znunu_event/I");
-    myEvent->Branch("is_Zelec_event",&is_Zelec_event,"is_Zelec_event/I");
-    myEvent->Branch("is_Zmu_event",&is_Zmu_event,"is_Zmu_event/I");      
-    myEvent->Branch("is_Ztu_event",&is_Ztau_event,"is_Ztau_event/I");   
-    myEvent->Branch("is_Welec_event",&is_Welec_event,"is_Welec_event/I");
-    myEvent->Branch("is_Wmu_event",&is_Wmu_event,"is_Wmu_event/I");      
-    myEvent->Branch("is_Wtau_event",&is_Wtau_event,"is_Wtau_event/I");   
-    myEvent->Branch("is_SingleHardPhoton_event",&is_SingleHardPhoton_event,"is_SingleHardPhoton_event/I");
-    myEvent->Branch("is_diphoton_event",&is_diphoton_event,"is_diphoton_event/I");
+    myEvent->Branch("is_signal_event",&is_signal_event,"is_signal_event/O");
+    myEvent->Branch("is_Z_event",&is_Z_event,"is_Z_event/O");
+    myEvent->Branch("is_W_event",&is_W_event,"is_W_event/O");
+    myEvent->Branch("is_Znunu_event",&is_Znunu_event,"is_Znunu_event/O");
+    myEvent->Branch("is_Zelec_event",&is_Zelec_event,"is_Zelec_event/O");
+    myEvent->Branch("is_Zmu_event",&is_Zmu_event,"is_Zmu_event/O");      
+    myEvent->Branch("is_Ztu_event",&is_Ztau_event,"is_Ztau_event/O");   
+    myEvent->Branch("is_Welec_event",&is_Welec_event,"is_Welec_event/O");
+    myEvent->Branch("is_Wmu_event",&is_Wmu_event,"is_Wmu_event/O");      
+    myEvent->Branch("is_Wtau_event",&is_Wtau_event,"is_Wtau_event/O");   
+    myEvent->Branch("is_SingleHardPhoton_event",&is_SingleHardPhoton_event,"is_SingleHardPhoton_event/O");
+    myEvent->Branch("is_diphoton_event",&is_diphoton_event,"is_diphoton_event/O");
     
     myEvent->Branch("n_signal_events",&n_signal_events,"n_signal_events/I");
     myEvent->Branch("n_Z_events",&n_Z_events,"n_Z_events/I");
@@ -1512,31 +1456,31 @@ void Analyzer::beginJob(){
     myEvent->Branch("n_diphoton_events",&n_diphoton_events,"n_diphoton_events/I");
     
     //genlevel tree information of mu daughter
-    myEvent->Branch("gen_MuonID",gen_Muon_ID,"gen_Muon_ID[3]/D");
-    myEvent->Branch("gen_MuonStatus",gen_Muon_Status,"gen_Muon_Status[3]/D");
-    myEvent->Branch("gen_MuonPt",gen_Muon_Pt,"gen_Muon_Pt[3]/D");
-    myEvent->Branch("gen_MuonDaughterpt",gen_MuonDaughter_pt,"gen_MuonDaughter_pt[3]/D");
-    myEvent->Branch("gen_MuonDaughtereta",gen_MuonDaughter_eta,"gen_MuonDaughter_eta[3]/D");
-    myEvent->Branch("gen_MuonDaughterphi",gen_MuonDaughter_phi,"gen_MuonDaughter_phi[3]/D");
-    myEvent->Branch("gen_MuonDaughterpx",gen_MuonDaughter_px,"gen_MuonDaughter_px[3]/D");
-    myEvent->Branch("gen_MuonDaughterpy",gen_MuonDaughter_py,"gen_MuonDaughter_py[3]/D");
-    myEvent->Branch("gen_MuonDaughterpz",gen_MuonDaughter_pz,"gen_MuonDaughter_pz[3]/D");
-    myEvent->Branch("gen_MuonDaughterE",gen_MuonDaughter_E,"gen_MuonDaughter_E[3]/D");
+    myEvent->Branch("gen_MuonID",gen_Muon_ID,"gen_Muon_ID[3]/F");
+    myEvent->Branch("gen_MuonStatus",gen_Muon_Status,"gen_Muon_Status[3]/F");
+    myEvent->Branch("gen_MuonPt",gen_Muon_Pt,"gen_Muon_Pt[3]/F");
+    myEvent->Branch("gen_MuonDaughterpt",gen_MuonDaughter_pt,"gen_MuonDaughter_pt[3]/F");
+    myEvent->Branch("gen_MuonDaughtereta",gen_MuonDaughter_eta,"gen_MuonDaughter_eta[3]/F");
+    myEvent->Branch("gen_MuonDaughterphi",gen_MuonDaughter_phi,"gen_MuonDaughter_phi[3]/F");
+    myEvent->Branch("gen_MuonDaughterpx",gen_MuonDaughter_px,"gen_MuonDaughter_px[3]/F");
+    myEvent->Branch("gen_MuonDaughterpy",gen_MuonDaughter_py,"gen_MuonDaughter_py[3]/F");
+    myEvent->Branch("gen_MuonDaughterpz",gen_MuonDaughter_pz,"gen_MuonDaughter_pz[3]/F");
+    myEvent->Branch("gen_MuonDaughterE",gen_MuonDaughter_E,"gen_MuonDaughter_E[3]/F");
     myEvent->Branch("gen_MuonDaughterCharge",gen_MuonDaughter_charge,"gen_MuonDaughter_charge[3]/I");
     myEvent->Branch("gen_MuonDaughterStatus",gen_MuonDaughter_status,"gen_MuonDaughter_status[3]/I");
     myEvent->Branch("gen_MuonDaughterID",gen_MuonDaughter_ID,"gen_MuonDaughter_ID[3]/I");
     
     //genlevel tree information of tau daughter
-    myEvent->Branch("gen_tauID",gen_tau_ID,"gen_tau_ID[3]/D");
-    myEvent->Branch("gen_tauStatus",gen_tau_Status,"gen_tau_Status[3]/D");
-    myEvent->Branch("gen_tauPt",gen_tau_Pt,"gen_tau_Pt[3]/D");
-    myEvent->Branch("gen_tauDaughterpt",gen_tauDaughter_pt,"gen_tauDaughter_pt[3]/D");
-    myEvent->Branch("gen_tauDaughtereta",gen_tauDaughter_eta,"gen_tauDaughter_eta[3]/D");
-    myEvent->Branch("gen_tauDaughterphi",gen_tauDaughter_phi,"gen_tauDaughter_phi[3]/D");
-    myEvent->Branch("gen_tauDaughterpx",gen_tauDaughter_px,"gen_tauDaughter_px[3]/D");
-    myEvent->Branch("gen_tauDaughterpy",gen_tauDaughter_py,"gen_tauDaughter_py[3]/D");
-    myEvent->Branch("gen_tauDaughterpz",gen_tauDaughter_pz,"gen_tauDaughter_pz[3]/D");
-    myEvent->Branch("gen_tauDaughterE",gen_tauDaughter_E,"gen_tauDaughter_E[3]/D");
+    myEvent->Branch("gen_tauID",gen_tau_ID,"gen_tau_ID[3]/F");
+    myEvent->Branch("gen_tauStatus",gen_tau_Status,"gen_tau_Status[3]/F");
+    myEvent->Branch("gen_tauPt",gen_tau_Pt,"gen_tau_Pt[3]/F");
+    myEvent->Branch("gen_tauDaughterpt",gen_tauDaughter_pt,"gen_tauDaughter_pt[3]/F");
+    myEvent->Branch("gen_tauDaughtereta",gen_tauDaughter_eta,"gen_tauDaughter_eta[3]/F");
+    myEvent->Branch("gen_tauDaughterphi",gen_tauDaughter_phi,"gen_tauDaughter_phi[3]/F");
+    myEvent->Branch("gen_tauDaughterpx",gen_tauDaughter_px,"gen_tauDaughter_px[3]/F");
+    myEvent->Branch("gen_tauDaughterpy",gen_tauDaughter_py,"gen_tauDaughter_py[3]/F");
+    myEvent->Branch("gen_tauDaughterpz",gen_tauDaughter_pz,"gen_tauDaughter_pz[3]/F");
+    myEvent->Branch("gen_tauDaughterE",gen_tauDaughter_E,"gen_tauDaughter_E[3]/F");
     myEvent->Branch("gen_tauDaughterCharge",gen_tauDaughter_charge,"gen_tauDaughter_charge[3]/I");
     myEvent->Branch("gen_tauDaughterStatus",gen_tauDaughter_status,"gen_tauDaughter_status[3]/I");
     myEvent->Branch("gen_tauDaughterID",gen_tauDaughter_ID,"gen_tauDaughter_ID[3]/I");
@@ -1546,167 +1490,166 @@ void Analyzer::beginJob(){
   if (runphotons_){
     //uncorrected photon information
     myEvent->Branch("Photon_n",&Photon_n,"Photon_n/I");
-    myEvent->Branch("Photon_E",pho_E,"pho_E[Photon_n]/D");
-    myEvent->Branch("Photon_pt",pho_pt,"pho_pt[Photon_n]/D");
-    myEvent->Branch("Photon_eta",pho_eta,"pho_eta[Photon_n]/D");
-    myEvent->Branch("Photon_phi",pho_phi,"pho_phi[Photon_n]/D");
-    myEvent->Branch("Photon_theta",pho_theta,"pho_theta[Photon_n]/D");
-    myEvent->Branch("Photon_et",pho_et,"pho_et[Photon_n]/D");
-    myEvent->Branch("Photon_swissCross",pho_swissCross,"pho_swissCross[Photon_n]/D");
-    myEvent->Branch("Photonr9",pho_r9,"pho_r9[Photon_n]/D");
-    myEvent->Branch("Photon_e1x5",pho_e1x5,"pho_e1x5[Photon_n]/D");
-    myEvent->Branch("Photon_e2x5",pho_e2x5,"pho_e2x5[Photon_n]/D");
-    myEvent->Branch("Photon_e3x3",pho_e3x3,"pho_e3x3[Photon_n]/D");
-    myEvent->Branch("Photon_e5x5",pho_e5x5,"pho_e5x5[Photon_n]/D");
-    myEvent->Branch("Photon_r1x5",pho_r1x5,"pho_erx5[Photon_n]/D");
-    myEvent->Branch("Photon_r2x5",pho_r2x5,"pho_erx5[Photon_n]/D");
-    myEvent->Branch("Photon_maxEnergyXtal",pho_maxEnergyXtal,"pho_maxEnergyXtal[Photon_n]/D");
-    myEvent->Branch("Photon_SigmaEtaEta",pho_SigmaEtaEta,"pho_SigmaEtaEta[Photon_n]/D");
-    myEvent->Branch("Photon_SigmaIetaIeta",pho_SigmaIetaIeta,"pho_SigmaIetaIeta[Photon_n]/D");
-    myEvent->Branch("Photon_Roundness",pho_roundness,"pho_roundness[Photon_n]/D");
-    myEvent->Branch("Photon_Angle",pho_angle,"pho_angle[Photon_n]/D");
-    myEvent->Branch("Photon_ecalRecHitSumEtConeDR03",pho_ecalRecHitSumEtConeDR03,"pho_ecalRecHitSumEtConeDR03[Photon_n]/D");
-    myEvent->Branch("Photon_hcalTowerSumEtConeDR03",pho_hcalTowerSumEtConeDR03,"pho_hcalTowerSumEtConeDR03[Photon_n]/D");
-    myEvent->Branch("Photon_trkSumPtSolidConeDR03",pho_trkSumPtSolidConeDR03,"pho_trkSumPtSolidConeDR03[Photon_n]/D");
-    myEvent->Branch("Photon_trkSumPtHollowConeDR03",pho_trkSumPtHollowConeDR03,"pho_trkSumPtHollowConeDR03[Photon_n]/D");
+    myEvent->Branch("Photon_E",pho_E,"pho_E[Photon_n]/F");
+    myEvent->Branch("Photon_pt",pho_pt,"pho_pt[Photon_n]/F");
+    myEvent->Branch("Photon_eta",pho_eta,"pho_eta[Photon_n]/F");
+    myEvent->Branch("Photon_phi",pho_phi,"pho_phi[Photon_n]/F");
+    myEvent->Branch("Photon_theta",pho_theta,"pho_theta[Photon_n]/F");
+    myEvent->Branch("Photon_et",pho_et,"pho_et[Photon_n]/F");
+    myEvent->Branch("Photon_swissCross",pho_swissCross,"pho_swissCross[Photon_n]/F");
+    myEvent->Branch("Photonr9",pho_r9,"pho_r9[Photon_n]/F");
+    myEvent->Branch("Photon_e1x5",pho_e1x5,"pho_e1x5[Photon_n]/F");
+    myEvent->Branch("Photon_e2x5",pho_e2x5,"pho_e2x5[Photon_n]/F");
+    myEvent->Branch("Photon_e3x3",pho_e3x3,"pho_e3x3[Photon_n]/F");
+    myEvent->Branch("Photon_e5x5",pho_e5x5,"pho_e5x5[Photon_n]/F");
+    myEvent->Branch("Photon_r1x5",pho_r1x5,"pho_erx5[Photon_n]/F");
+    myEvent->Branch("Photon_r2x5",pho_r2x5,"pho_erx5[Photon_n]/F");
+    myEvent->Branch("Photon_maxEnergyXtal",pho_maxEnergyXtal,"pho_maxEnergyXtal[Photon_n]/F");
+    myEvent->Branch("Photon_SigmaEtaEta",pho_SigmaEtaEta,"pho_SigmaEtaEta[Photon_n]/F");
+    myEvent->Branch("Photon_SigmaIetaIeta",pho_SigmaIetaIeta,"pho_SigmaIetaIeta[Photon_n]/F");
+    myEvent->Branch("Photon_Roundness",pho_roundness,"pho_roundness[Photon_n]/F");
+    myEvent->Branch("Photon_Angle",pho_angle,"pho_angle[Photon_n]/F");
+    myEvent->Branch("Photon_ecalRecHitSumEtConeDR03",pho_ecalRecHitSumEtConeDR03,"pho_ecalRecHitSumEtConeDR03[Photon_n]/F");
+    myEvent->Branch("Photon_hcalTowerSumEtConeDR03",pho_hcalTowerSumEtConeDR03,"pho_hcalTowerSumEtConeDR03[Photon_n]/F");
+    myEvent->Branch("Photon_trkSumPtSolidConeDR03",pho_trkSumPtSolidConeDR03,"pho_trkSumPtSolidConeDR03[Photon_n]/F");
+    myEvent->Branch("Photon_trkSumPtHollowConeDR03",pho_trkSumPtHollowConeDR03,"pho_trkSumPtHollowConeDR03[Photon_n]/F");
     myEvent->Branch("Photon_nTrkSolidConeDR03",pho_nTrkSolidConeDR03,"pho_nTrkSolidConeDR03[Photon_n]/I");
     myEvent->Branch("Photon_nTrkHollowConeDR03",pho_nTrkHollowConeDR03,"pho_nTrkHollowConeDR03[Photon_n]/I");
-    myEvent->Branch("Photon_hcalDepth1TowerSumEtConeDR03",pho_hcalDepth1TowerSumEtConeDR03,"pho_hcalDepth1TowerSumEtConeDR03[Photon_n]/D");
-    myEvent->Branch("Photon_hcalDepth2TowerSumEtConeDR03",pho_hcalDepth2TowerSumEtConeDR03,"pho_hcalDepth2TowerSumEtConeDR03[Photon_n]/D");
-    myEvent->Branch("Photon_ecalRecHitSumEtConeDR04",pho_ecalRecHitSumEtConeDR04,"pho_ecalRecHitSumEtConeDR04[Photon_n]/D");
-    myEvent->Branch("Photon_hcalTowerSumEtConeDR04",pho_hcalTowerSumEtConeDR04,"pho_hcalTowerSumEtConeDR04[Photon_n]/D");
-    myEvent->Branch("Photon_trkSumPtSolidConeDR04",pho_trkSumPtSolidConeDR04,"pho_trkSumPtSolidConeDR04[Photon_n]/D");
-    myEvent->Branch("Photon_trkSumPtHollowConeDR04",pho_trkSumPtHollowConeDR04,"pho_trkSumPtHollowConeDR04[Photon_n]/D");
+    myEvent->Branch("Photon_hcalDepth1TowerSumEtConeDR03",pho_hcalDepth1TowerSumEtConeDR03,"pho_hcalDepth1TowerSumEtConeDR03[Photon_n]/F");
+    myEvent->Branch("Photon_hcalDepth2TowerSumEtConeDR03",pho_hcalDepth2TowerSumEtConeDR03,"pho_hcalDepth2TowerSumEtConeDR03[Photon_n]/F");
+    myEvent->Branch("Photon_ecalRecHitSumEtConeDR04",pho_ecalRecHitSumEtConeDR04,"pho_ecalRecHitSumEtConeDR04[Photon_n]/F");
+    myEvent->Branch("Photon_hcalTowerSumEtConeDR04",pho_hcalTowerSumEtConeDR04,"pho_hcalTowerSumEtConeDR04[Photon_n]/F");
+    myEvent->Branch("Photon_trkSumPtSolidConeDR04",pho_trkSumPtSolidConeDR04,"pho_trkSumPtSolidConeDR04[Photon_n]/F");
+    myEvent->Branch("Photon_trkSumPtHollowConeDR04",pho_trkSumPtHollowConeDR04,"pho_trkSumPtHollowConeDR04[Photon_n]/F");
     myEvent->Branch("Photon_nTrkSolidConeDR04",pho_nTrkSolidConeDR04,"pho_nTrkSolidConeDR04[Photon_n]/I");
     myEvent->Branch("Photon_nTrkHollowConeDR04",pho_nTrkHollowConeDR04,"pho_nTrkHollowConeDR04[Photon_n]/I");
-    myEvent->Branch("Photon_hcalDepth1TowerSumEtConeDR04",pho_hcalDepth1TowerSumEtConeDR04,"pho_hcalDepth1TowerSumEtConeDR04[Photon_n]/D");
-    myEvent->Branch("Photon_hcalDepth2TowerSumEtConeDR04",pho_hcalDepth2TowerSumEtConeDR04,"pho_hcalDepth2TowerSumEtConeDR04[Photon_n]/D");
-    myEvent->Branch("Photon_hasPixelSeed",pho_hasPixelSeed,"pho_hasPixelSeed[Photon_n]/I"); 
-    myEvent->Branch("Photon_isEB",pho_isEB,"pho_isEB[Photon_n]/D");
-    myEvent->Branch("Photon_isEE",pho_isEE,"pho_isEE[Photon_n]/D");
-    myEvent->Branch("Photon_isEBGap",pho_isEBGap,"pho_isEBGap[Photon_n]/D");
-    myEvent->Branch("Photon_isEEGap",pho_isEEGap,"pho_isEEGap[Photon_n]/D");
-    myEvent->Branch("Photon_isEBEEGap",pho_isEBEEGap,"pho_isEBEEGap[Photon_n]/D");
+    myEvent->Branch("Photon_hcalDepth1TowerSumEtConeDR04",pho_hcalDepth1TowerSumEtConeDR04,"pho_hcalDepth1TowerSumEtConeDR04[Photon_n]/F");
+    myEvent->Branch("Photon_hcalDepth2TowerSumEtConeDR04",pho_hcalDepth2TowerSumEtConeDR04,"pho_hcalDepth2TowerSumEtConeDR04[Photon_n]/F");
+    myEvent->Branch("Photon_hasPixelSeed",pho_hasPixelSeed,"pho_hasPixelSeed[Photon_n]/O"); 
+    myEvent->Branch("Photon_isEB",pho_isEB,"pho_isEB[Photon_n]/O");
+    myEvent->Branch("Photon_isEE",pho_isEE,"pho_isEE[Photon_n]/O");
+    myEvent->Branch("Photon_isEBGap",pho_isEBGap,"pho_isEBGap[Photon_n]/O");
+    myEvent->Branch("Photon_isEEGap",pho_isEEGap,"pho_isEEGap[Photon_n]/O");
+    myEvent->Branch("Photon_isEBEEGap",pho_isEBEEGap,"pho_isEBEEGap[Photon_n]/O");
     
-    myEvent->Branch("Photon_HoE",pho_HoE,"pho_HoE[Photon_n]/D");
-    myEvent->Branch("Photon_px",pho_px,"pho_px[Photon_n]/D");
-    myEvent->Branch("Photon_py",pho_py,"pho_py[Photon_n]/D");
-    myEvent->Branch("Photon_pz",pho_pz,"pho_pz[Photon_n]/D");
+    myEvent->Branch("Photon_HoE",pho_HoE,"pho_HoE[Photon_n]/F");
+    myEvent->Branch("Photon_px",pho_px,"pho_px[Photon_n]/F");
+    myEvent->Branch("Photon_py",pho_py,"pho_py[Photon_n]/F");
+    myEvent->Branch("Photon_pz",pho_pz,"pho_pz[Photon_n]/F");
     myEvent->Branch("Photon_no_of_basic_clusters",pho_size,"pho_size[Photon_n]/I");
     
-    myEvent->Branch("Photon_sc_energy",pho_sc_energy,"pho_sc_energy[Photon_n]/D");
-    myEvent->Branch("Photon_sc_eta",pho_sc_eta,"pho_sc_eta[Photon_n]/D");
-    myEvent->Branch("Photon_sc_phi",pho_sc_phi,"pho_sc_phi[Photon_n]/D");
-    myEvent->Branch("Photon_etaWidth",pho_sc_etaWidth,"pho_sc_etaWidth[Photon_n]/D");
-    myEvent->Branch("Photon_phiWidth",pho_sc_phiWidth,"pho_sc_phiWidth[Photon_n]/D");
-    myEvent->Branch("Photon_sc_et",pho_sc_et,"pho_sc_et[Photon_n]/D");
+    myEvent->Branch("Photon_sc_energy",pho_sc_energy,"pho_sc_energy[Photon_n]/F");
+    myEvent->Branch("Photon_sc_eta",pho_sc_eta,"pho_sc_eta[Photon_n]/F");
+    myEvent->Branch("Photon_sc_phi",pho_sc_phi,"pho_sc_phi[Photon_n]/F");
+    myEvent->Branch("Photon_etaWidth",pho_sc_etaWidth,"pho_sc_etaWidth[Photon_n]/F");
+    myEvent->Branch("Photon_phiWidth",pho_sc_phiWidth,"pho_sc_phiWidth[Photon_n]/F");
+    myEvent->Branch("Photon_sc_et",pho_sc_et,"pho_sc_et[Photon_n]/F");
 
-    myEvent->Branch("matchphotonE",matchpho_E,"matchpho_E[Photon_n]/D");
-    myEvent->Branch("matchphotonpt",matchpho_pt,"matchpho_pt[Photon_n]/D");
-    myEvent->Branch("matchphotoneta",matchpho_eta,"matchpho_eta[Photon_n]/D");
-    myEvent->Branch("matchphotonphi",matchpho_phi,"matchpho_phi[Photon_n]/D");
-    myEvent->Branch("matchphotonpx",matchpho_px,"matchpho_px[Photon_n]/D");
-    myEvent->Branch("matchphotonpy",matchpho_py,"matchpho_py[Photon_n]/D");
-    myEvent->Branch("matchphotonpz",matchpho_pz,"matchpho_pz[Photon_n]/D");
-    myEvent->Branch("ismatchedphoton",ismatchedpho,"ismatchedpho[Photon_n]/I");
+    myEvent->Branch("matchphotonE",matchpho_E,"matchpho_E[Photon_n]/F");
+    myEvent->Branch("matchphotonpt",matchpho_pt,"matchpho_pt[Photon_n]/F");
+    myEvent->Branch("matchphotoneta",matchpho_eta,"matchpho_eta[Photon_n]/F");
+    myEvent->Branch("matchphotonphi",matchpho_phi,"matchpho_phi[Photon_n]/F");
+    myEvent->Branch("matchphotonpx",matchpho_px,"matchpho_px[Photon_n]/F");
+    myEvent->Branch("matchphotonpy",matchpho_py,"matchpho_py[Photon_n]/F");
+    myEvent->Branch("matchphotonpz",matchpho_pz,"matchpho_pz[Photon_n]/F");
+    myEvent->Branch("ismatchedphoton",ismatchedpho,"ismatchedpho[Photon_n]/O");
     
     myEvent->Branch("Photon_ntracks",pho_nTracks,"pho_nTracks[Photon_n]/I");
-    myEvent->Branch("Photon_isconverted",pho_isConverted,"pho_isConverted[Photon_n]/I");
-    myEvent->Branch("Photon_pairInvmass",pho_pairInvariantMass,"pho_pairInvariantMass[Photon_n]/D");
-    myEvent->Branch("Photon_pairCotThetaSeperation",pho_pairCotThetaSeparation,"pho_pairCotThetaSeparation[Photon_n]/D");
-    myEvent->Branch("Photon_pairmomentumX",pho_pairMomentum_x,"pho_pairMomentum_x[Photon_n]/D");
-    myEvent->Branch("Photon_pairmomentumY",pho_pairMomentum_y,"pho_pairMomentum_y[Photon_n]/D");
-    myEvent->Branch("Photon_pairmomentumZ",pho_pairMomentum_z,"pho_pairMomentum_z[Photon_n]/D");
-    myEvent->Branch("Photon_EoverP",pho_EoverP,"pho_EoverP[Photon_n]/D");
-    myEvent->Branch("Photon_vertexX",pho_vertex_x,"pho_vertex_x[Photon_n]/D");
-    myEvent->Branch("Photon_vertexY",pho_vertex_y,"pho_vertex_y[Photon_n]/D");
-    myEvent->Branch("Photon_vertexZ",pho_vertex_z,"pho_vertex_z[Photon_n]/D");
-    myEvent->Branch("Photon_ZOfPrimaryVertex",pho_zOfPrimaryVertex,"pho_zOfPrimaryVertex[Photon_n]/D");
-    myEvent->Branch("Photon_distOfMinimumApproach",pho_distOfMinimumApproach,"pho_distOfMinimumApproach[Photon_n]/D");
-    myEvent->Branch("Photon_dPhiTracksAtVtx",pho_dPhiTracksAtVtx,"pho_dPhiTracksAtVtx[Photon_n]/D");
-    myEvent->Branch("Photon_dPhiTracksAtEcal",pho_dPhiTracksAtEcal,"pho_dPhiTracksAtEcal[Photon_n]/D");
-    myEvent->Branch("Photon_dEtaTracksAtVtx",pho_dEtaTracksAtEcal,"pho_dEtaTracksAtEcal[Photon_n]/D");
+    myEvent->Branch("Photon_isconverted",pho_isConverted,"pho_isConverted[Photon_n]/O");
+    myEvent->Branch("Photon_pairInvmass",pho_pairInvariantMass,"pho_pairInvariantMass[Photon_n]/F");
+    myEvent->Branch("Photon_pairCotThetaSeperation",pho_pairCotThetaSeparation,"pho_pairCotThetaSeparation[Photon_n]/F");
+    myEvent->Branch("Photon_pairmomentumX",pho_pairMomentum_x,"pho_pairMomentum_x[Photon_n]/F");
+    myEvent->Branch("Photon_pairmomentumY",pho_pairMomentum_y,"pho_pairMomentum_y[Photon_n]/F");
+    myEvent->Branch("Photon_pairmomentumZ",pho_pairMomentum_z,"pho_pairMomentum_z[Photon_n]/F");
+    myEvent->Branch("Photon_EoverP",pho_EoverP,"pho_EoverP[Photon_n]/F");
+    myEvent->Branch("Photon_vertexX",pho_vertex_x,"pho_vertex_x[Photon_n]/F");
+    myEvent->Branch("Photon_vertexY",pho_vertex_y,"pho_vertex_y[Photon_n]/F");
+    myEvent->Branch("Photon_vertexZ",pho_vertex_z,"pho_vertex_z[Photon_n]/F");
+    myEvent->Branch("Photon_ZOfPrimaryVertex",pho_zOfPrimaryVertex,"pho_zOfPrimaryVertex[Photon_n]/F");
+    myEvent->Branch("Photon_distOfMinimumApproach",pho_distOfMinimumApproach,"pho_distOfMinimumApproach[Photon_n]/F");
+    myEvent->Branch("Photon_dPhiTracksAtVtx",pho_dPhiTracksAtVtx,"pho_dPhiTracksAtVtx[Photon_n]/F");
+    myEvent->Branch("Photon_dPhiTracksAtEcal",pho_dPhiTracksAtEcal,"pho_dPhiTracksAtEcal[Photon_n]/F");
+    myEvent->Branch("Photon_dEtaTracksAtVtx",pho_dEtaTracksAtEcal,"pho_dEtaTracksAtEcal[Photon_n]/F");
     if(runrechit_){
       myEvent->Branch("Photon_ncrys",ncrysPhoton,"ncrysPhoton[Photon_n]/I");
-      myEvent->Branch("Photon_timing_xtal",pho_timing_xtal,"pho_timing_xtal[Photon_n][100]/D");
-      myEvent->Branch("Photon_timingavg_xtal",pho_timingavg_xtal,"pho_timingavg_xtal[Photon_n]/D");
-      myEvent->Branch("Photon_energy_xtal",pho_energy_xtal,"pho_energy_xtal[Photon_n][100]/D");
+      myEvent->Branch("Photon_timing_xtal",pho_timing_xtal,"pho_timing_xtal[Photon_n][100]/F");
+      myEvent->Branch("Photon_timingavg_xtal",pho_timingavg_xtal,"pho_timingavg_xtal[Photon_n]/F");
+      myEvent->Branch("Photon_energy_xtal",pho_energy_xtal,"pho_energy_xtal[Photon_n][100]/F");
       myEvent->Branch("Photon_ieta_xtalEB",pho_ieta_xtalEB,"pho_ieta_xtalEB[Photon_n][100]/I");
       myEvent->Branch("Photon_iphi_xtalEB",pho_iphi_xtalEB,"pho_iphi_xtalEB[Photon_n][100]/I");
-      myEvent->Branch("Photon_rookFraction",pho_rookFraction,"pho_rookFraction[Photon_n]/D");
-      myEvent->Branch("Photon_s9",pho_s9,"pho_s9[Photon_n]/D");
+      myEvent->Branch("Photon_s9",pho_s9,"pho_s9[Photon_n]/F");
     }
     
     if(runHErechit_){
       myEvent->Branch("HERecHit_subset_n",&HERecHit_subset_n,"HERecHit_subset_n/I");
       myEvent->Branch("HERecHit_subset_detid",HERecHit_subset_detid,"HERecHit_subset_detid[HERecHit_subset_n]/i");
-      myEvent->Branch("HERecHit_subset_energy",HERecHit_subset_energy,"HERecHit_subset_energy[HERecHit_subset_n]/D");
-      myEvent->Branch("HERecHit_subset_time",HERecHit_subset_time,"HERecHit_subset_time[HERecHit_subset_n]/D");
+      myEvent->Branch("HERecHit_subset_energy",HERecHit_subset_energy,"HERecHit_subset_energy[HERecHit_subset_n]/F");
+      myEvent->Branch("HERecHit_subset_time",HERecHit_subset_time,"HERecHit_subset_time[HERecHit_subset_n]/F");
       myEvent->Branch("HERecHit_subset_depth",HERecHit_subset_depth,"HERecHit_subset_depth[HERecHit_subset_n]/I");
-      myEvent->Branch("HERecHit_subset_phi",HERecHit_subset_phi,"HERecHit_subset_phi[HERecHit_subset_n]/D");
-      myEvent->Branch("HERecHit_subset_eta",HERecHit_subset_eta,"HERecHit_subset_eta[HERecHit_subset_n]/D");
-      myEvent->Branch("HERecHit_subset_x",HERecHit_subset_x,"HERecHit_subset_x[HERecHit_subset_n]/D");
-      myEvent->Branch("HERecHit_subset_y",HERecHit_subset_y,"HERecHit_subset_y[HERecHit_subset_n]/D");
-      myEvent->Branch("HERecHit_subset_z",HERecHit_subset_z,"HERecHit_subset_z[HERecHit_subset_n]/D");
+      myEvent->Branch("HERecHit_subset_phi",HERecHit_subset_phi,"HERecHit_subset_phi[HERecHit_subset_n]/F");
+      myEvent->Branch("HERecHit_subset_eta",HERecHit_subset_eta,"HERecHit_subset_eta[HERecHit_subset_n]/F");
+      myEvent->Branch("HERecHit_subset_x",HERecHit_subset_x,"HERecHit_subset_x[HERecHit_subset_n]/F");
+      myEvent->Branch("HERecHit_subset_y",HERecHit_subset_y,"HERecHit_subset_y[HERecHit_subset_n]/F");
+      myEvent->Branch("HERecHit_subset_z",HERecHit_subset_z,"HERecHit_subset_z[HERecHit_subset_n]/F");
     }
     
   }//end of if (runphotons_)
 	
   if(runmet_){
     //Calomet variables
-    myEvent->Branch("CaloMetSigma",&CaloMetSig,"CaloMetSig/D");
-    //myEvent->Branch("CaloMetCorr",&CaloMetCorr,"CaloMetCorr/D");
-    myEvent->Branch("CaloMetEt",&CaloMetEt,"CaloMetEt/D");
-    myEvent->Branch("CaloMetEx",&CaloMetEx,"CaloMetEx/D");
-    myEvent->Branch("CaloMetEy",&CaloMetEy,"CaloMetEy/D");
-    myEvent->Branch("CaloMetEz",&CaloMetEz,"CaloMetEz/D");
-    myEvent->Branch("CaloMetPhi",&CaloMetPhi,"CaloMetPhi/D");
-    myEvent->Branch("CaloMetSumEt",&CaloSumEt,"CaloMetSumEt/D");
-    myEvent->Branch("CaloEtFractionHadronic",&CaloEtFractionHadronic,"CaloEtFractionHadronic/D");
-    myEvent->Branch("CaloEmEtFraction",&CaloEmEtFraction,"CaloEmEtFraction/D");
-    myEvent->Branch("CaloHadEtInHB",&CaloHadEtInHB,"CaloHadEtInHB/D");
-    myEvent->Branch("CaloHadEtInHE",&CaloHadEtInHE,"CaloHadEtInHE/D");
-    myEvent->Branch("CaloHadEtInHO",&CaloHadEtInHO,"CaloHadEtInHO/D");
-    myEvent->Branch("CaloHadEtInHF",&CaloHadEtInHF,"CaloHadEtInHF/D");
-    myEvent->Branch("CaloEmEtInEB",&CaloEmEtInEB,"CaloEmEtInEB/D");
-    myEvent->Branch("CaloEmEtInEE",&CaloEmEtInEE,"CaloEmEtInEE/D");
-    myEvent->Branch("CaloEmEtInHF",&CaloEmEtInHF,"CaloEmEtInHF/D");
-    myEvent->Branch("CaloMaxEtInEmTowers",&CaloMaxEtInEmTowers,"CaloMaxEtInEmTowers/D");
-    myEvent->Branch("CaloMaxEtInHadTowers",&CaloMaxEtInHadTowers,"CaloMaxEtInHadTowers/D");
+    myEvent->Branch("CaloMetSigma",&CaloMetSig,"CaloMetSig/F");
+    //myEvent->Branch("CaloMetCorr",&CaloMetCorr,"CaloMetCorr/F");
+    myEvent->Branch("CaloMetEt",&CaloMetEt,"CaloMetEt/F");
+    myEvent->Branch("CaloMetEx",&CaloMetEx,"CaloMetEx/F");
+    myEvent->Branch("CaloMetEy",&CaloMetEy,"CaloMetEy/F");
+    myEvent->Branch("CaloMetEz",&CaloMetEz,"CaloMetEz/F");
+    myEvent->Branch("CaloMetPhi",&CaloMetPhi,"CaloMetPhi/F");
+    myEvent->Branch("CaloMetSumEt",&CaloSumEt,"CaloMetSumEt/F");
+    myEvent->Branch("CaloEtFractionHadronic",&CaloEtFractionHadronic,"CaloEtFractionHadronic/F");
+    myEvent->Branch("CaloEmEtFraction",&CaloEmEtFraction,"CaloEmEtFraction/F");
+    myEvent->Branch("CaloHadEtInHB",&CaloHadEtInHB,"CaloHadEtInHB/F");
+    myEvent->Branch("CaloHadEtInHE",&CaloHadEtInHE,"CaloHadEtInHE/F");
+    myEvent->Branch("CaloHadEtInHO",&CaloHadEtInHO,"CaloHadEtInHO/F");
+    myEvent->Branch("CaloHadEtInHF",&CaloHadEtInHF,"CaloHadEtInHF/F");
+    myEvent->Branch("CaloEmEtInEB",&CaloEmEtInEB,"CaloEmEtInEB/F");
+    myEvent->Branch("CaloEmEtInEE",&CaloEmEtInEE,"CaloEmEtInEE/F");
+    myEvent->Branch("CaloEmEtInHF",&CaloEmEtInHF,"CaloEmEtInHF/F");
+    myEvent->Branch("CaloMaxEtInEmTowers",&CaloMaxEtInEmTowers,"CaloMaxEtInEmTowers/F");
+    myEvent->Branch("CaloMaxEtInHadTowers",&CaloMaxEtInHadTowers,"CaloMaxEtInHadTowers/F");
     
     if(rungenmet_){
-      myEvent->Branch("genMetPt",&genMetPt,"genMetPt/D");
-      myEvent->Branch("genMetPx",&genMetPx,"genMetPx/D");
-      myEvent->Branch("genMetPy",&genMetPy,"genMetPy/D");
-      myEvent->Branch("genMetPhi",&genMetPhi,"genMetPhi/D");
-      myEvent->Branch("genMetSumEt",&genMetSumEt,"genMetSumEt/D");
+      myEvent->Branch("genMetPt",&genMetPt,"genMetPt/F");
+      myEvent->Branch("genMetPx",&genMetPx,"genMetPx/F");
+      myEvent->Branch("genMetPy",&genMetPy,"genMetPy/F");
+      myEvent->Branch("genMetPhi",&genMetPhi,"genMetPhi/F");
+      myEvent->Branch("genMetSumEt",&genMetSumEt,"genMetSumEt/F");
     }
   }//end of if(runmet)
   if(runmet_&& runphotons_)
-    myEvent->Branch("Delta_phi",&Delta_phi,"Delta_phi/D");
+    myEvent->Branch("Delta_phi",&Delta_phi,"Delta_phi/F");
   if(runmet_ && runphotons_ && rungenmet_)
-    myEvent->Branch("Delta_phiGEN",&Delta_phiGEN,"Delta_phiGEN/D");
+    myEvent->Branch("Delta_phiGEN",&Delta_phiGEN,"Delta_phiGEN/F");
   
   if(runPFmet_){
-    myEvent->Branch("PFMetPt",&PFMetPt,"PFMetPt/D");
-    myEvent->Branch("PFMetPx",&PFMetPx,"PFMetPx/D");
-    myEvent->Branch("PFMetPy",&PFMetPy,"PFMetPy/D");
-    myEvent->Branch("PFMetPhi",&PFMetPhi,"PFMetPhi/D");
-    myEvent->Branch("PFMetSumEt",&PFMetSumEt,"PFMetSumEt/D");
+    myEvent->Branch("PFMetPt",&PFMetPt,"PFMetPt/F");
+    myEvent->Branch("PFMetPx",&PFMetPx,"PFMetPx/F");
+    myEvent->Branch("PFMetPy",&PFMetPy,"PFMetPy/F");
+    myEvent->Branch("PFMetPhi",&PFMetPhi,"PFMetPhi/F");
+    myEvent->Branch("PFMetSumEt",&PFMetSumEt,"PFMetSumEt/F");
   }//end of if(runmet)
   if(runPFmet_&& runphotons_)
-    myEvent->Branch("Delta_phiPF",&Delta_phiPF,"Delta_phiPF/D");
+    myEvent->Branch("Delta_phiPF",&Delta_phiPF,"Delta_phiPF/F");
   
   
   if(runTCmet_){
-    myEvent->Branch("TCMetPt",&TCMetPt,"TCMetPt/D");
-    myEvent->Branch("TCMetPx",&TCMetPx,"TCMetPx/D");
-    myEvent->Branch("TCMetPy",&TCMetPy,"TCMetPy/D");
-    myEvent->Branch("TCMetPhi",&TCMetPhi,"TCMetPhi/D");
-    myEvent->Branch("TCMetSumEt",&TCMetSumEt,"TCMetSumEt/D");
+    myEvent->Branch("TCMetPt",&TCMetPt,"TCMetPt/F");
+    myEvent->Branch("TCMetPx",&TCMetPx,"TCMetPx/F");
+    myEvent->Branch("TCMetPy",&TCMetPy,"TCMetPy/F");
+    myEvent->Branch("TCMetPhi",&TCMetPhi,"TCMetPhi/F");
+    myEvent->Branch("TCMetSumEt",&TCMetSumEt,"TCMetSumEt/F");
   }//end of if(runmet)
   if(runTCmet_&& runphotons_)
-    myEvent->Branch("Delta_phiTC",&Delta_phiTC,"Delta_phiTC/D");
+    myEvent->Branch("Delta_phiTC",&Delta_phiTC,"Delta_phiTC/F");
   
 }
 
