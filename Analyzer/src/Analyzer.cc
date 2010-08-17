@@ -12,7 +12,7 @@
 //
 // Original Author:  Sandhya Jain
 //         Created:  Fri Apr 17 11:00:06 CEST 2009
-// $Id: Analyzer.cc,v 1.18 2010/08/11 12:31:32 askew Exp $
+// $Id: Analyzer.cc,v 1.19 2010/08/14 16:09:55 miceli Exp $
 //
 //
 
@@ -1273,6 +1273,11 @@ void Analyzer::beginJob(){
     myEvent->Branch("Muon_isStandAloneMuon",muon_isStandAloneMuon,"muon_isStandAloneMuon[Muon_n]/O");
     myEvent->Branch("Muon_InnerTrack_isNonnull",muon_InnerTrack_isNonnull,"muon_InnerTrack_isNonnull[Muon_n]/O");
     myEvent->Branch("Muon_OuterTrack_isNonnull",muon_OuterTrack_isNonnull,"muon_OuterTrack_isNonnull[Muon_n]/O");
+
+    myEvent->Branch("Muon_OuterTrack_InnerPoint_x",muon_OuterTrack_InnerPoint_x,"muon_OuterTrack_InnerPoint_x[Muon_n]/F");
+    myEvent->Branch("Muon_OuterTrack_InnerPoint_y",muon_OuterTrack_InnerPoint_y,"muon_OuterTrack_InnerPoint_y[Muon_n]/F");
+    myEvent->Branch("Muon_OuterTrack_InnerPoint_z",muon_OuterTrack_InnerPoint_z,"muon_OuterTrack_InnerPoint_z[Muon_n]/F");
+    myEvent->Branch("Muon_OuterTrack_InnerPoint_px",muon_OuterTrack_InnerPoint_px,"muon_OuterTrack_InnerPoint_px[Muon_n]/F");
     myEvent->Branch("Muon_OuterTrack_InnerPoint_py",muon_OuterTrack_InnerPoint_py,"muon_OuterTrack_InnerPoint_py[Muon_n]/F");
     myEvent->Branch("Muon_OuterTrack_InnerPoint_pz",muon_OuterTrack_InnerPoint_pz,"muon_OuterTrack_InnerPoint_pz[Muon_n]/F");
     myEvent->Branch("Muon_OuterTrack_OuterPoint_x",muon_OuterTrack_OuterPoint_x,"muon_OuterTrack_OuterPoint_x[Muon_n]/F");
@@ -1310,6 +1315,11 @@ void Analyzer::beginJob(){
     myEvent->Branch("CosmicMuon_isStandAloneMuon",cosmicmuon_isStandAloneMuon,"cosmicmuon_isStandAloneMuon[CosmicMuon_n]/O");
     myEvent->Branch("CosmicMuon_InnerTrack_isNonnull",cosmicmuon_InnerTrack_isNonnull,"cosmicmuon_InnerTrack_isNonnull[CosmicMuon_n]/O");
     myEvent->Branch("CosmicMuon_OuterTrack_isNonnull",cosmicmuon_OuterTrack_isNonnull,"cosmicmuon_OuterTrack_isNonnull[CosmicMuon_n]/O");
+    
+    myEvent->Branch("CosmicMuon_OuterTrack_InnerPoint_x",cosmicmuon_OuterTrack_InnerPoint_x,"cosmicmuon_OuterTrack_InnerPoint_x[Muon_n]/F");
+    myEvent->Branch("CosmicMuon_OuterTrack_InnerPoint_y",cosmicmuon_OuterTrack_InnerPoint_y,"cosmicmuon_OuterTrack_InnerPoint_y[Muon_n]/F");
+    myEvent->Branch("CosmicMuon_OuterTrack_InnerPoint_z",cosmicmuon_OuterTrack_InnerPoint_z,"cosmicmuon_OuterTrack_InnerPoint_z[Muon_n]/F");
+    myEvent->Branch("CosmicMuon_OuterTrack_InnerPoint_px",cosmicmuon_OuterTrack_InnerPoint_px,"cosmicmuon_OuterTrack_InnerPoint_px[Muon_n]/F");
     myEvent->Branch("CosmicMuon_OuterTrack_InnerPoint_py",cosmicmuon_OuterTrack_InnerPoint_py,"cosmicmuon_OuterTrack_InnerPoint_py[CosmicMuon_n]/F");
     myEvent->Branch("CosmicMuon_OuterTrack_InnerPoint_pz",cosmicmuon_OuterTrack_InnerPoint_pz,"cosmicmuon_OuterTrack_InnerPoint_pz[CosmicMuon_n]/F");
     myEvent->Branch("CosmicMuon_OuterTrack_OuterPoint_x",cosmicmuon_OuterTrack_OuterPoint_x,"cosmicmuon_OuterTrack_OuterPoint_x[CosmicMuon_n]/F");
