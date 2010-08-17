@@ -12,7 +12,7 @@
 //
 // Original Author:  Sandhya Jain
 //         Created:  Fri Apr 17 11:00:06 CEST 2009
-// $Id: Analyzer.cc,v 1.19 2010/08/14 16:09:55 miceli Exp $
+// $Id: Analyzer.cc,v 1.20 2010/08/17 15:40:17 miceli Exp $
 //
 //
 
@@ -1103,7 +1103,7 @@ void Analyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup){
      const edm::View<pat::MET> & metsTC = *metTCHandle;
      if ( metTCHandle.isValid() ){
        TCMetPt     = metsTC[0].et();
-       TCMetPhi    = metsTC[0].phi();
+       TCMetPhi    = correct_phi(metsTC[0].phi());
        TCMetSumEt  = metsTC[0].sumEt();
        TCMetPx     = metsTC[0].px();
        TCMetPy     = metsTC[0].py();
