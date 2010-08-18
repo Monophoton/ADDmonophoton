@@ -12,7 +12,7 @@
 //
 // Original Author:  Sandhya Jain
 //         Created:  Fri Apr 17 11:00:06 CEST 2009
-// $Id: Analyzer.cc,v 1.20 2010/08/17 15:40:17 miceli Exp $
+// $Id: Analyzer.cc,v 1.21 2010/08/17 16:32:03 miceli Exp $
 //
 //
 
@@ -178,7 +178,7 @@ Analyzer::Analyzer(const edm::ParameterSet& iConfig):
   Vertex_n         = 0;
   Track_n          = 0;
   Photon_n         = 0;
-  HERecHit_subset_n = 0;// also set to 0 in analyze!
+  HERecHit_subset_n = 0;
   Jet_n            = 0;
   Electron_n       = 0; 
   Muon_n           = 0;
@@ -540,11 +540,12 @@ void Analyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup){
      Handle<reco::VertexCollection> recVtxs;
      iEvent.getByLabel(Vertices_, recVtxs);
      vector<Vertex> my_vertices;
-     Vertex_n = recVtxs->size();
+	   
      my_vertices.clear();
      for(reco::VertexCollection::const_iterator v=recVtxs->begin();v!=recVtxs->end(); ++v){
        my_vertices.push_back(*v);
      }
+     Vertex_n = 0;  
      for (unsigned int y = 0; y <  my_vertices.size();y++){
        vx[y]     = my_vertices[y].x();
        vy[y]     = my_vertices[y].y();
@@ -554,6 +555,7 @@ void Analyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup){
        vndof[y] = my_vertices[y].ndof();
        v_isFake[y] = my_vertices[y].isFake();
        v_d0[y] = my_vertices[y].position().rho();
+       Vertex_n++;
      }
    }
    
@@ -569,9 +571,10 @@ void Analyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup){
        }
      }
      
-     Track_n = tracks->size();
+     
      if(myTrack_container.size()>1)
        std::sort(myTrack_container.begin(),myTrack_container.end(),PtSortCriterium3());
+	   Track_n = 0;
      for(unsigned int x=0;x < myTrack_container.size();x++){
        trk_pt[x]  = myTrack_container[x].pt();
        trk_px[x]  = myTrack_container[x].px();
@@ -579,6 +582,7 @@ void Analyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup){
        trk_pz[x]  = myTrack_container[x].pz();
        trk_phi[x] = correct_phi(myTrack_container[x].phi());
        trk_eta[x] = myTrack_container[x].eta();
+       Track_n++;
      }//end of for loop
    }//end of if(runtracks_)
 
@@ -586,12 +590,13 @@ void Analyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup){
      edm::Handle<edm::View<pat::Muon> > muonHandle;
      iEvent.getByLabel(muoLabel_,muonHandle);
      vector <pat::Muon> mymuon_container;
-     Muon_n = muonHandle->size();
+     
      const edm::View<pat::Muon> & muons = *muonHandle;   // const ... &, we don't make a copy of it!
      for(edm::View<pat::Muon>::const_iterator muon = muons.begin(); muon!=muons.end(); ++muon){
        //if(muon->isGlobalMuon())
        mymuon_container.push_back(*muon);
      }
+     Muon_n = 0;
      for(unsigned int x=0;x < mymuon_container.size();x++){
        muon_pt[x]  = mymuon_container[x].pt();
        muon_energy[x]  = mymuon_container[x].energy();
@@ -664,7 +669,7 @@ void Analyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup){
 	 muon_OuterTrack_OuterPoint_py[x] = mymuon_container[x].outerTrack()->outerMomentum().y();
 	 muon_OuterTrack_OuterPoint_pz[x] = mymuon_container[x].outerTrack()->outerMomentum().z();
        }
-       
+       Muon_n++;
      }//end of for loop
    }// if runmuons_
    
@@ -674,11 +679,12 @@ void Analyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup){
      iEvent.getByLabel("muonsFromCosmics",cosmicMuonHandle);
      const reco::MuonCollection & cosmicmuons = *cosmicMuonHandle;
      vector <reco::Muon> mycosmicmuon_container;
-     CosmicMuon_n = cosmicMuonHandle->size();
+     
      for(reco::MuonCollection::const_iterator cosmuon = cosmicmuons.begin(); cosmuon!=cosmicmuons.end(); ++cosmuon){
        //if(muon->isGlobalMuon())
        mycosmicmuon_container.push_back(*cosmuon);
      }
+     CosmicMuon_n = 0;
      for(unsigned int x=0;x < mycosmicmuon_container.size();x++){
        cosmicmuon_pt[x]  = mycosmicmuon_container[x].pt();
        cosmicmuon_energy[x]  = mycosmicmuon_container[x].energy();
@@ -750,7 +756,7 @@ void Analyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup){
 	 cosmicmuon_OuterTrack_OuterPoint_py[x] = mycosmicmuon_container[x].outerTrack()->outerMomentum().y();
 	 cosmicmuon_OuterTrack_OuterPoint_pz[x] = mycosmicmuon_container[x].outerTrack()->outerMomentum().z();
        }
-       
+       CosmicMuon_n++;
      }//end of for loop
    }//if runcosmicmuons_
 	
@@ -761,7 +767,7 @@ void Analyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup){
      edm::Handle<edm::View<pat::Photon> > phoHandle;
      iEvent.getByLabel(phoLabel_,phoHandle);
      edm::View<pat::Photon>::const_iterator photon;
-     Photon_n = phoHandle->size();
+     
      set<DetId> HERecHitSet;
      HERecHit_subset_n = 0;
      
@@ -769,6 +775,7 @@ void Analyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup){
        myphoton_container.push_back(*photon) ;
      }
      if(myphoton_container.size()!=0){
+       Photon_n = 0;
        for(unsigned int x=0; x < myphoton_container.size();x++){
 	 pho_E[x]                     =  myphoton_container[x].energy();
 	 pho_pt[x]                    =  myphoton_container[x].pt();
@@ -918,6 +925,7 @@ void Analyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup){
 	     }
 	   }
 	 }
+	 Photon_n++;
        }//end of for loop over x
      }//if(myphoton_container.size!=0) 
      //to get the photon hit information from every crystal of SC
@@ -1034,6 +1042,7 @@ void Analyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup){
 	 }//end of for loop over x
        }//if(myphoton_container.size!=0) 
      }//if(runrechit_)
+     
    }//if(runphotons_)  
    
    if(runmet_){
@@ -1122,7 +1131,7 @@ void Analyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup){
      edm::Handle<edm::View<pat::Jet> > jetHandle;
      iEvent.getByLabel(jetLabel_,jetHandle);
      const edm::View<pat::Jet> & jets = *jetHandle;
-     Jet_n=jetHandle->size();
+     
      size_t njetscounter=0;
      std::vector<pat::Jet>  myjet_container;
      myjet_container.clear();
@@ -1131,6 +1140,7 @@ void Analyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup){
        myjet_container.push_back(*jet_iter);
      }
      if(myjet_container.size()!=0){
+       Jet_n = 0;
        for(unsigned int x=0;x < myjet_container.size();x++){
 	 jet_pt[x]  = myjet_container[x].pt();
 	 jet_px[x]  = myjet_container[x].px();
@@ -1140,6 +1150,7 @@ void Analyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup){
 	 jet_eta[x] = myjet_container[x].eta();
 	 jet_emEnergyFraction[x]= myjet_container[x].emEnergyFraction();
 	 jet_energyFractionHadronic[x] = myjet_container[x].energyFractionHadronic();
+	 Jet_n++;
        }//end of for loop
      }
    }
@@ -1148,11 +1159,12 @@ void Analyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup){
      edm::Handle<edm::View<pat::Electron> > electronHandle;
      iEvent.getByLabel(eleLabel_,electronHandle);
      vector<pat::Electron> myelectron_container;
-     Electron_n = electronHandle->size();
+     
      const edm::View<pat::Electron> & electrons = *electronHandle;   // const ... &, we don't make a copy of it!
      for(edm::View<pat::Electron>::const_iterator electron = electrons.begin(); electron!=electrons.end(); ++electron){
        myelectron_container.push_back(*electron);
      }
+     Electron_n = 0;
      for(unsigned int x=0;x < myelectron_container.size();x++){
        electron_pt[x]  = myelectron_container[x].pt();
        electron_energy[x]  = myelectron_container[x].energy();
@@ -1162,7 +1174,8 @@ void Analyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup){
        electron_phi[x] = correct_phi(myelectron_container[x].phi());
        electron_eta[x] = myelectron_container[x].eta();
        electron_charge[x] = myelectron_container[x].charge();
-       electron_trkIso[x] = myelectron_container[x].trackIso();  
+       electron_trkIso[x] = myelectron_container[x].trackIso();
+       Electron_n++;
      }//end of for loop
    }
 	
@@ -1170,11 +1183,12 @@ void Analyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup){
      edm::Handle<edm::View<pat::Tau> > tauHandle;
      iEvent.getByLabel(tauLabel_,tauHandle);
      vector <pat::Tau> mytau_container;
-     Tau_n = tauHandle->size();
+     
      const edm::View<pat::Tau> & taus = *tauHandle;   // const ... &, we don't make a copy of it!
      for(edm::View<pat::Tau>::const_iterator tau = taus.begin(); tau!=taus.end(); ++tau){
        mytau_container.push_back(*tau);
      }
+     Tau_n = 0;
      for(unsigned int x=0;x < mytau_container.size();x++){
        tau_pt[x]  = mytau_container[x].pt();
        tau_energy[x]  = mytau_container[x].energy();
@@ -1184,6 +1198,7 @@ void Analyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup){
        tau_phi[x] = correct_phi(mytau_container[x].phi());
        tau_eta[x] = mytau_container[x].eta();
        tau_charge[x] = mytau_container[x].charge();
+       Tau_n++;
      }//end of for loop
    }
    if (Photon_n>0)
@@ -1316,10 +1331,10 @@ void Analyzer::beginJob(){
     myEvent->Branch("CosmicMuon_InnerTrack_isNonnull",cosmicmuon_InnerTrack_isNonnull,"cosmicmuon_InnerTrack_isNonnull[CosmicMuon_n]/O");
     myEvent->Branch("CosmicMuon_OuterTrack_isNonnull",cosmicmuon_OuterTrack_isNonnull,"cosmicmuon_OuterTrack_isNonnull[CosmicMuon_n]/O");
     
-    myEvent->Branch("CosmicMuon_OuterTrack_InnerPoint_x",cosmicmuon_OuterTrack_InnerPoint_x,"cosmicmuon_OuterTrack_InnerPoint_x[Muon_n]/F");
-    myEvent->Branch("CosmicMuon_OuterTrack_InnerPoint_y",cosmicmuon_OuterTrack_InnerPoint_y,"cosmicmuon_OuterTrack_InnerPoint_y[Muon_n]/F");
-    myEvent->Branch("CosmicMuon_OuterTrack_InnerPoint_z",cosmicmuon_OuterTrack_InnerPoint_z,"cosmicmuon_OuterTrack_InnerPoint_z[Muon_n]/F");
-    myEvent->Branch("CosmicMuon_OuterTrack_InnerPoint_px",cosmicmuon_OuterTrack_InnerPoint_px,"cosmicmuon_OuterTrack_InnerPoint_px[Muon_n]/F");
+    myEvent->Branch("CosmicMuon_OuterTrack_InnerPoint_x",cosmicmuon_OuterTrack_InnerPoint_x,"cosmicmuon_OuterTrack_InnerPoint_x[CosmicMuon_n]/F");
+    myEvent->Branch("CosmicMuon_OuterTrack_InnerPoint_y",cosmicmuon_OuterTrack_InnerPoint_y,"cosmicmuon_OuterTrack_InnerPoint_y[CosmicMuon_n]/F");
+    myEvent->Branch("CosmicMuon_OuterTrack_InnerPoint_z",cosmicmuon_OuterTrack_InnerPoint_z,"cosmicmuon_OuterTrack_InnerPoint_z[CosmicMuon_n]/F");
+    myEvent->Branch("CosmicMuon_OuterTrack_InnerPoint_px",cosmicmuon_OuterTrack_InnerPoint_px,"cosmicmuon_OuterTrack_InnerPoint_px[CosmicMuon_n]/F");
     myEvent->Branch("CosmicMuon_OuterTrack_InnerPoint_py",cosmicmuon_OuterTrack_InnerPoint_py,"cosmicmuon_OuterTrack_InnerPoint_py[CosmicMuon_n]/F");
     myEvent->Branch("CosmicMuon_OuterTrack_InnerPoint_pz",cosmicmuon_OuterTrack_InnerPoint_pz,"cosmicmuon_OuterTrack_InnerPoint_pz[CosmicMuon_n]/F");
     myEvent->Branch("CosmicMuon_OuterTrack_OuterPoint_x",cosmicmuon_OuterTrack_OuterPoint_x,"cosmicmuon_OuterTrack_OuterPoint_x[CosmicMuon_n]/F");
