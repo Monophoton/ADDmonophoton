@@ -12,7 +12,7 @@
 //
 // Original Author:  Sandhya Jain
 //         Created:  Fri Apr 17 11:00:06 CEST 2009
-// $Id: Analyzer.cc,v 1.21 2010/08/17 16:32:03 miceli Exp $
+// $Id: Analyzer.cc,v 1.22 2010/08/18 15:44:56 miceli Exp $
 //
 //
 
@@ -1150,6 +1150,12 @@ void Analyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup){
 	 jet_eta[x] = myjet_container[x].eta();
 	 jet_emEnergyFraction[x]= myjet_container[x].emEnergyFraction();
 	 jet_energyFractionHadronic[x] = myjet_container[x].energyFractionHadronic();
+	 jet_hitsInN90[x]= myjet_container[x].jetID().hitsInN90;
+	 jet_n90Hits[x] = myjet_container[x].jetID().n90Hits;
+	 jet_fHPD[x] = (float) myjet_container[x].jetID().fHPD;
+	 jet_fRBX[x] = (float) myjet_container[x].jetID().fRBX;
+	 jet_RHF[x] = (float)(myjet_container[x].jetID().fLong - myjet_container[x].jetID().fShort)/(myjet_container[x].jetID().fLong + myjet_container[x].jetID().fShort);
+	 jet_nTowers[x] = myjet_container[x].jetID().nECALTowers + myjet_container[x].jetID().nHCALTowers ;
 	 Jet_n++;
        }//end of for loop
      }
@@ -1258,6 +1264,12 @@ void Analyzer::beginJob(){
     myEvent->Branch("Jet_phi",jet_phi,"jet_phi[Jet_n]/F");
     myEvent->Branch("Jet_emEnergyFraction",jet_emEnergyFraction,"jet_emEnergyFraction[Jet_n]/F");
     myEvent->Branch("Jet_energyFractionHadronic",jet_energyFractionHadronic,"jet_energyFractionHadronic[Jet_n]/F");
+    myEvent->Branch("Jet_hitsInN90",jet_hitsInN90,"jet_hitsInN90[Jet_n]/I");
+    myEvent->Branch("Jet_n90Hits",jet_n90Hits,"jet_n90Hits[Jet_n]/I");
+    myEvent->Branch("Jet_nTowers",jet_nTowers,"jet_nTowers[Jet_n]/I");
+    myEvent->Branch("Jet_fHPD",jet_fHPD,"jet_fHPD[Jet_n]/F");
+    myEvent->Branch("Jet_fRBX",jet_fRBX,"jet_fRBX[Jet_n]/F");
+    myEvent->Branch("Jet_RHF",jet_RHF,"jet_RHF[Jet_n]/F");
   }
   
   if (runelectrons_){

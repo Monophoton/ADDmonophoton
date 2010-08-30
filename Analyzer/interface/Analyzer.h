@@ -138,6 +138,12 @@ class Analyzer : public edm::EDAnalyzer {
   float jet_phi[100];
   float jet_emEnergyFraction[100];
   float jet_energyFractionHadronic[100];
+  int jet_hitsInN90[100];
+  int jet_n90Hits[100];
+  float jet_fHPD[100];
+  float jet_fRBX[100];
+  float jet_RHF[100];
+  int jet_nTowers[100];
   
   //electron variables
   float electron_pt[100];
