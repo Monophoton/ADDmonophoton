@@ -1,6 +1,9 @@
 #include "ADDmonophoton/Skimmer/interface/MonoPhotonSkimmer.h"
+#include "DataFormats/EgammaCandidates/interface/PhotonFwd.h"
 #include <vector>
 #include <TMath.h>
+#include <iostream>
+using namespace std;
 
 MonoPhotonSkimmer::MonoPhotonSkimmer(const edm::ParameterSet& iConfig){
 
@@ -56,48 +59,47 @@ bool MonoPhotonSkimmer::filter(edm::Event& iEvent, const edm::EventSetup& iSetup
   std::vector<reco::Photon> PreselPhotons;
   reco::PhotonCollection::const_iterator pho;
   for (pho = (*photons).begin(); pho!= (*photons).end(); pho++){  
-    if (!pho_iter->isEB() && !_selectEE) continue;
+    if (!pho->isEB() && !_selectEE) continue;
     
     double ecalisocut = 0;
     double hcalisocut = 0;
     double hadoverem  = 0;
     double minphoet   = 0;
     double hiEtThresh = 0;
-    if (pho_iter->isEB()){
-      ecalisocut = _ecalisoOffsetEB + _ecalisoSlopeEB * pho_iter->pt();
-      hcalisocut = _hcalisoOffsetEB + _hcalisoSlopeEB * pho_iter->pt();
+    if (pho->isEB()){
+      ecalisocut = _ecalisoOffsetEB + _ecalisoSlopeEB * pho->pt();
+      hcalisocut = _hcalisoOffsetEB + _hcalisoSlopeEB * pho->pt();
       hadoverem  = _hadoveremEB;
       minphoet   = _minPhoEtEB;
       hiEtThresh = _scHighEtThreshEB;
     }
     else{
-      ecalisocut = _ecalisoOffsetEE + _ecalisoSlopeEE * pho_iter->pt();
-      hcalisocut = _hcalisoOffsetEE + _hcalisoSlopeEE * pho_iter->pt();
+      ecalisocut = _ecalisoOffsetEE + _ecalisoSlopeEE * pho->pt();
+      hcalisocut = _hcalisoOffsetEE + _hcalisoSlopeEE * pho->pt();
       hadoverem  = _hadoveremEE;
       minphoet   = _minPhoEtEE;
       hiEtThresh = _scHighEtThreshEE;
     }
     
-    if (pho_iter->pt() > hiEtThresh){ 
-      PreselPhotons.push_back(*pho_iter);
+    if (pho->pt() > hiEtThresh){ 
+      PreselPhotons.push_back(*pho);
     }
     else{
-      if (pho_iter->ecalRecHitSumEtConeDR04() < ecalisocut
-	  && pho_iter->hcalTowerSumEtConeDR04() < hcalisocut
-	  && pho_iter->hadronicOverEm() < hadoverem
-	  && pho_iter->pt() > minphoet
+      if (pho->ecalRecHitSumEtConeDR04() < ecalisocut
+	  && pho->hcalTowerSumEtConeDR04() < hcalisocut
+	  && pho->hadronicOverEm() < hadoverem
+	  && pho->pt() > minphoet
 	  )
-	PreselPhotons.push_back(*pho_iter);
+	PreselPhotons.push_back(*pho);
     }
   }//Loop over pat::Photons 
-
   if (PreselPhotons.size() > 0 ) return true;
 
   return false;
 }
 
 // ------------ method called once each job just before starting event loop  ------------
-void MonoPhotonSkimmer::beginJob(const edm::EventSetup&)
+void MonoPhotonSkimmer::beginJob()
 {
 }
 

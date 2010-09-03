@@ -11,7 +11,7 @@ Description: EDFilter used to preselect monophoton events
          Implementation:
 // Original Author:  Andrew Askew
 //         Created:  Fri Sep 3 07:51:10 EST 2010
-// $Id: MonoPhotonSkimmer.h,v $
+// $Id: MonoPhotonSkimmer.h,v 1.1 2010/09/03 15:30:09 askew Exp $
 //
 //
 */
@@ -44,7 +44,7 @@ class MonoPhotonSkimmer : public edm::EDFilter {
   ~MonoPhotonSkimmer();
  
  private:
-  virtual void beginJob(const edm::EventSetup&) ;
+  virtual void beginJob() ;
   virtual bool filter(edm::Event&, const edm::EventSetup&);
   virtual void endJob() ;
  
