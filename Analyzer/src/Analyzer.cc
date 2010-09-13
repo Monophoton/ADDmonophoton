@@ -12,7 +12,7 @@
 //
 // Original Author:  Sandhya Jain
 //         Created:  Fri Apr 17 11:00:06 CEST 2009
-// $Id: Analyzer.cc,v 1.22 2010/08/18 15:44:56 miceli Exp $
+// $Id: Analyzer.cc,v 1.23 2010/08/30 14:27:14 sandhya Exp $
 //
 //
 
@@ -774,8 +774,8 @@ void Analyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup){
      for(photon = phoHandle->begin();photon!=phoHandle->end();++photon){
        myphoton_container.push_back(*photon) ;
      }
+     Photon_n = 0;
      if(myphoton_container.size()!=0){
-       Photon_n = 0;
        for(unsigned int x=0; x < myphoton_container.size();x++){
 	 pho_E[x]                     =  myphoton_container[x].energy();
 	 pho_pt[x]                    =  myphoton_container[x].pt();
@@ -1139,8 +1139,8 @@ void Analyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup){
        if(jet_iter->pt()>30)  njetscounter++;
        myjet_container.push_back(*jet_iter);
      }
+     Jet_n = 0;  
      if(myjet_container.size()!=0){
-       Jet_n = 0;
        for(unsigned int x=0;x < myjet_container.size();x++){
 	 jet_pt[x]  = myjet_container[x].pt();
 	 jet_px[x]  = myjet_container[x].px();
