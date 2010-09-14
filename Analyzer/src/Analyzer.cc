@@ -12,7 +12,7 @@
 //
 // Original Author:  Sandhya Jain
 //         Created:  Fri Apr 17 11:00:06 CEST 2009
-// $Id: Analyzer.cc,v 1.24 2010/09/13 18:16:22 miceli Exp $
+// $Id: Analyzer.cc,v 1.25 2010/09/14 12:00:52 miceli Exp $
 //
 //
 
@@ -1215,10 +1215,10 @@ void Analyzer::beginJob(){
   f=new TFile(outFile_.c_str(),"RECREATE");
   myEvent = new TTree("myEvent","a tree with histograms");
   myEvent->Branch("nevents",&nevents,"nevents/I");
-  myEvent->Branch("run",&RunNumber,"RunNumber/I");
-  myEvent->Branch("event",&EventNumber,"EventNumber/I");
-  myEvent->Branch("luminosityBlock",&LumiNumber,"LumiNumber/I");
-  myEvent->Branch("beamCrossing",&BXNumber,"BXNumber/I");
+  myEvent->Branch("run",&RunNumber,"RunNumber/i");
+  myEvent->Branch("event",&EventNumber,"EventNumber/i");
+  myEvent->Branch("luminosityBlock",&LumiNumber,"LumiNumber/i");
+  myEvent->Branch("beamCrossing",&BXNumber,"BXNumber/i");
   
   if(runHLT_){
     myEvent->Branch("HLT_MET50_event",&HLT_MET50_event,"HLT_MET50_event/O");
