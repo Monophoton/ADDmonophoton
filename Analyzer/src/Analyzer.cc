@@ -12,7 +12,7 @@
 //
 // Original Author:  Sandhya Jain
 //         Created:  Fri Apr 17 11:00:06 CEST 2009
-// $Id: Analyzer.cc,v 1.23 2010/08/30 14:27:14 sandhya Exp $
+// $Id: Analyzer.cc,v 1.24 2010/09/13 18:16:22 miceli Exp $
 //
 //
 
@@ -1076,14 +1076,13 @@ void Analyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup){
        if(rungenmet_){
 	 const reco::GenMET *genMet = met->genMET();
 	 genMetPt     = genMet->et();
-	 /*
-	   genMetPhi    = correct_phi(genMet->phi());
-	   genMetSumEt  = genMet->sumEt();
-	   genMetPx     = genMet->px();
-	   genMetPy     = genMet->py();
-	   if(runphotons_==1)
+	 genMetPhi    = correct_phi(genMet->phi());
+	 genMetSumEt  = genMet->sumEt();
+	 genMetPx     = genMet->px();
+	 genMetPy     = genMet->py();
+	 if(runphotons_==1)
 	   if (myphoton_container.size()!=0)
-	   Delta_phiGEN                        = fabs(reco::deltaPhi(correct_phi(genMet->phi()),correct_phi(myphoton_container[0].phi())));*/
+	     Delta_phiGEN                        = fabs(reco::deltaPhi(correct_phi(genMet->phi()),correct_phi(myphoton_container[0].phi())));
        }
      }
    }
