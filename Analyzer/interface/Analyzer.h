@@ -64,6 +64,14 @@ class Analyzer : public edm::EDAnalyzer {
   bool HLT_Photon20_event;
   bool HLT_Photon20_Cleaned_event;
   bool HLT_Photon30_event;
+  bool HLT_Photon30_L1R_8E29_event;
+  bool HLT_Photon30_L1R_1E31_event;
+  bool HLT_Photon30_Cleaned_event;
+  bool HLT_Photon30_Isol_EBOnly_Cleaned_event;
+  bool HLT_Photon35_Isol_Cleaned_event;
+  bool HLT_Photon50_Cleaned_event;
+  bool HLT_Photon70_NoHE_Cleaned_event;
+  bool HLT_Photon100_NoHE_Cleaned_event;
   
   
   std::map<std::string,int> HLT_chosen;

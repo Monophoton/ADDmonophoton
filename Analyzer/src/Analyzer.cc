@@ -12,7 +12,7 @@
 //
 // Original Author:  Sandhya Jain
 //         Created:  Fri Apr 17 11:00:06 CEST 2009
-// $Id: Analyzer.cc,v 1.25 2010/09/14 12:00:52 miceli Exp $
+// $Id: Analyzer.cc,v 1.26 2010/09/14 12:49:47 sandhya Exp $
 //
 //
 
@@ -27,7 +27,7 @@
 #include "FWCore/Framework/interface/MakerMacros.h"
 #include "FWCore/ParameterSet/interface/ParameterSet.h"
 #include "FWCore/ServiceRegistry/interface/Service.h"
-#include "FWCore/ParameterSet/interface/InputTag.h"
+#include "FWCore/Utilities/interface/InputTag.h"
 #include "DataFormats/TrackReco/interface/TrackFwd.h"
 #include "DataFormats/Common/interface/View.h"
 #include "DataFormats/PatCandidates/interface/Muon.h"
@@ -488,7 +488,16 @@ void Analyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup){
        Int_t idx7 = triggerNames_.triggerIndex("HLT_Photon20_L1R");
        Int_t idx8 = triggerNames_.triggerIndex("HLT_Photon20_Cleaned_L1R");
        Int_t idx9 = triggerNames_.triggerIndex("HLT_Photon30_L1R");
+       Int_t idx9_1 = triggerNames_.triggerIndex("HLT_Photon30_L1R_8E29");
+       Int_t idx9_2 = triggerNames_.triggerIndex("HLT_Photon30_L1R_1E31");
+       Int_t idx10 = triggerNames_.triggerIndex("HLT_Photon30_Cleaned_L1R");
+       Int_t idx11 = triggerNames_.triggerIndex("HLT_Photon30_Isol_EBOnly_Cleaned_L1R");
+       Int_t idx12 = triggerNames_.triggerIndex("HLT_Photon35_Isol_Cleaned_L1R");
+       Int_t idx13 = triggerNames_.triggerIndex("HLT_Photon50_Cleaned_L1R");
+       Int_t idx14 = triggerNames_.triggerIndex("HLT_Photon70_NoHE_Cleaned_L1R");
+       Int_t idx15 = triggerNames_.triggerIndex("HLT_Photon100_NoHE_Cleaned_L1R");
        
+
        Int_t hsize = Int_t(HLTR->size());
        //There's a double check here: first check that the array index is in range, then check to see if it fired.
        //if it is out of range, then obviously it wasn't found, and didn't pass (typically means name wasn't in the HLT)
@@ -503,7 +512,14 @@ void Analyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup){
        HLT_Photon20_event = false;
        HLT_Photon20_Cleaned_event = false;
        HLT_Photon30_event = false;
-
+       HLT_Photon30_Cleaned_event =false;//idx10
+       HLT_Photon30_Isol_EBOnly_Cleaned_event=false;//idx11
+       HLT_Photon35_Isol_Cleaned_event=false;//idx12
+       HLT_Photon50_Cleaned_event=false;//idx13
+       HLT_Photon70_NoHE_Cleaned_event=false;//idx14
+       HLT_Photon100_NoHE_Cleaned_event=false;//idx15
+       HLT_Photon30_L1R_8E29_event=false;
+       HLT_Photon30_L1R_1E31_event=false;
        if (idx1 < hsize)
 	 if (HLTR->accept(idx1))
 	   HLT_MET50_event = true;
@@ -531,7 +547,31 @@ void Analyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup){
        if (idx9 < hsize)
 	 if (HLTR->accept(idx9))
 	   HLT_Photon30_event=true;
-       
+       if (idx9_1 < hsize)
+	 if (HLTR->accept(idx9_1))
+	   HLT_Photon30_L1R_8E29_event=true;
+       if (idx9_2 < hsize)
+	 if (HLTR->accept(idx9_2))
+	   HLT_Photon30_L1R_1E31_event=true;
+       if (idx10 < hsize)
+	 if (HLTR->accept(idx10))
+	   HLT_Photon30_Cleaned_event=true;
+       if (idx11 < hsize)
+	 if (HLTR->accept(idx11))
+	   HLT_Photon30_Isol_EBOnly_Cleaned_event=true;
+       if (idx12 < hsize)
+	 if (HLTR->accept(idx12))
+	   HLT_Photon35_Isol_Cleaned_event=true;
+       if (idx13 < hsize)
+	 if (HLTR->accept(idx13))
+	   HLT_Photon50_Cleaned_event=true;
+       if (idx14 < hsize)
+	 if (HLTR->accept(idx14))
+	   HLT_Photon70_NoHE_Cleaned_event=true;
+       if (idx15 < hsize)
+	 if (HLTR->accept(idx15))
+	   HLT_Photon100_NoHE_Cleaned_event=true;
+
      }
    }
    
@@ -1230,6 +1270,15 @@ void Analyzer::beginJob(){
     myEvent->Branch("HLT_Photon20_event", &HLT_Photon20_event,"HLT_Photon20_event/O");
     myEvent->Branch("HLT_Photon20_Cleaned_event",&HLT_Photon20_Cleaned_event,"HLT_Photon20_Cleaned_event/O");
     myEvent->Branch("HLT_Photon30_event", &HLT_Photon30_event,"HLT_Photon30_event/O");  
+    myEvent->Branch("HLT_Photon30_L1R_8E29_event", &HLT_Photon30_L1R_8E29_event, "HLT_Photon30_L1R_8E29/O");
+    myEvent->Branch("HLT_Photon30_L1R_1E31_event", &HLT_Photon30_L1R_1E31_event, "HLT_Photon30_L1R_1E31/O");
+    myEvent->Branch("HLT_Photon30_Cleaned_event", &HLT_Photon30_Cleaned_event,"HLT_Photon30_Cleaned_event/O");
+    myEvent->Branch("HLT_Photon30_Isol_EBOnly_Cleaned", &HLT_Photon30_Isol_EBOnly_Cleaned_event,"HLT_Photon30_Isol_EBOnly_event/O");
+    myEvent->Branch("HLT_Photon35_Isol_Cleaned", &HLT_Photon35_Isol_Cleaned_event,"HLT_Photon35_Isol_Cleaned_event/O");
+    myEvent->Branch("HLT_Photon50_Cleaned_event", &HLT_Photon50_Cleaned_event, "HLT_Photon50_Cleaned_event/O");
+    myEvent->Branch("HLT_Photon70_NoHE_Cleaned_event",&HLT_Photon70_NoHE_Cleaned_event, "HLT_Photon70_NoHE_Cleaned_event/O");
+    myEvent->Branch("HLT_Photon100_NoHE_Cleaned_event", &HLT_Photon100_NoHE_Cleaned_event,"HLT_Photon100_NoHE_Cleaned_event/O");
+       HLT_Photon100_NoHE_Cleaned_event=false;//idx15
   }
   
   if(runvertex_){
