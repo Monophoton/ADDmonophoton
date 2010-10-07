@@ -12,7 +12,7 @@
 //
 // Original Author:  Sandhya Jain
 //         Created:  Fri Apr 17 11:00:06 CEST 2009
-// $Id: Analyzer.cc,v 1.26 2010/09/14 12:49:47 sandhya Exp $
+// $Id: Analyzer.cc,v 1.27 2010/10/04 21:00:01 askew Exp $
 //
 //
 
@@ -20,6 +20,10 @@
 #include <memory>
 
 // user include files
+#include "FWCore/Framework/interface/LuminosityBlock.h"
+#include "DataFormats/Common/interface/ConditionsInEdm.h"
+#include "DataFormats/Luminosity/interface/LumiSummary.h"
+#include "DataFormats/PatCandidates/interface/TriggerEvent.h"
 #include "FWCore/Framework/interface/Frameworkfwd.h"
 #include "FWCore/Framework/interface/EDAnalyzer.h"
 #include "FWCore/Framework/interface/Event.h"
@@ -211,6 +215,19 @@ void Analyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup){
   EventNumber = iEvent.id().event();
   LumiNumber  = iEvent.id().luminosityBlock();
   BXNumber = iEvent.bunchCrossing();
+
+  // get ConditionsInLumiBlock
+  const edm::LuminosityBlock& iLumi = iEvent.getLuminosityBlock();
+  edm::Handle<edm::ConditionsInLumiBlock> condInLumiBlock;
+  iLumi.getByLabel("conditionsInEdm", condInLumiBlock);
+  totalIntensityBeam1 =condInLumiBlock->totalIntensityBeam1;
+  totalIntensityBeam2 =condInLumiBlock->totalIntensityBeam2;
+
+  // get LumiSummary
+  edm::Handle<LumiSummary> lumiSummary;
+  iLumi.getByLabel("lumiProducer", lumiSummary);
+  avgInsDelLumi=lumiSummary->avgInsDelLumi();
+	
   nevents++;
   //getting handle to generator level information
   if( rungenParticleCandidates_ ){
@@ -1259,7 +1276,9 @@ void Analyzer::beginJob(){
   myEvent->Branch("event",&EventNumber,"EventNumber/i");
   myEvent->Branch("luminosityBlock",&LumiNumber,"LumiNumber/i");
   myEvent->Branch("beamCrossing",&BXNumber,"BXNumber/i");
-  
+  myEvent->Branch("totalIntensityBeam1",&totalIntensityBeam1,"totalIntensityBeam1/i");  
+  myEvent->Branch("totalIntensityBeam2",&totalIntensityBeam2,"totalIntensityBeam2/i");
+  myEvent->Branch("avgInsDelLumi",&avgInsDelLumi,"avgInsDelLumi/i");
   if(runHLT_){
     myEvent->Branch("HLT_MET50_event",&HLT_MET50_event,"HLT_MET50_event/O");
     myEvent->Branch("HLT_MET75_event",&HLT_MET75_event,"HLT_MET75_event/O");

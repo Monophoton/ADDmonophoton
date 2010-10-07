@@ -15,7 +15,7 @@
 <use name=CondFormats/DataRecord>
 <use name=Geometry/CaloGeometry>
 <use name=PhysicsTools/UtilAlgos>   
-
+<use name=DataFormats/Luminosity>
 <flags EDM_PLUGIN=1>
 <export>
    <use name=root>
@@ -33,4 +33,5 @@
    <use name=CondFormats/L1TObjects>
    <use name=CondFormats/DataRecord>
    <use name=Geometry/CaloGeometry>
+   <use name=DataFormats/Luminosity>
 </export>

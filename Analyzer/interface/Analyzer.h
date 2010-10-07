@@ -39,6 +39,7 @@ class Analyzer : public edm::EDAnalyzer {
   int n_diphoton_events, n_SingleHardPhoton_events;
   
   unsigned int RunNumber, EventNumber, LumiNumber, BXNumber;
+  unsigned int totalIntensityBeam1, totalIntensityBeam2, avgInsDelLumi;
   int ngenphotons;
   int nhardphotons;
   int Photon_n;
