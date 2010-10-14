@@ -12,7 +12,7 @@
 //
 // Original Author:  Sandhya Jain
 //         Created:  Fri Apr 17 11:00:06 CEST 2009
-// $Id: Analyzer.cc,v 1.27 2010/10/04 21:00:01 askew Exp $
+// $Id: Analyzer.cc,v 1.28 2010/10/07 17:14:59 miceli Exp $
 //
 //
 
@@ -60,7 +60,7 @@
 #include "Geometry/CaloTopology/interface/CaloTopology.h"
 #include "Geometry/CaloEventSetup/interface/CaloTopologyRecord.h"
 #include "Geometry/CaloGeometry/interface/CaloSubdetectorGeometry.h"
-
+#include "SimDataFormats/GeneratorProducts/interface/GenEventInfoProduct.h"
 #include "Geometry/Records/interface/IdealGeometryRecord.h"
 #include "Geometry/CaloTopology/interface/EcalBarrelTopology.h"
 #include "Geometry/CaloTopology/interface/EcalEndcapTopology.h"
@@ -157,6 +157,7 @@ Analyzer::Analyzer(const edm::ParameterSet& iConfig):
   runtaus_(iConfig.getUntrackedParameter<bool>("runtaus")),
   runHLT_(iConfig.getUntrackedParameter<bool>("runHLT")),
   runL1_(iConfig.getUntrackedParameter<bool>("runL1")),
+  runscraping_(iConfig.getUntrackedParameter<bool>("runscraping")),
   runtracks_(iConfig.getUntrackedParameter<bool>("runtracks")),
   runrechit_(iConfig.getUntrackedParameter<bool>("runrechit")),
   runHErechit_(iConfig.getUntrackedParameter<bool>("runHErechit")),
@@ -207,7 +208,8 @@ Analyzer::~Analyzer()
 
 // ------------ method called to for each event  ------------
 void Analyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup){
-
+  bool debug_on = false;
+  if(debug_on) cout<<"DEBUG: new event"<<endl;
   using namespace edm;
   using namespace reco;
 	
@@ -220,17 +222,41 @@ void Analyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup){
   const edm::LuminosityBlock& iLumi = iEvent.getLuminosityBlock();
   edm::Handle<edm::ConditionsInLumiBlock> condInLumiBlock;
   iLumi.getByLabel("conditionsInEdm", condInLumiBlock);
-  totalIntensityBeam1 =condInLumiBlock->totalIntensityBeam1;
-  totalIntensityBeam2 =condInLumiBlock->totalIntensityBeam2;
 
+  //initialize to -1 in case isValid fails
+  totalIntensityBeam1 = -1;
+  totalIntensityBeam2 = -1;
+  if(condInLumiBlock.isValid()){//check pointer condInLumiBlock is not null
+    totalIntensityBeam1 = condInLumiBlock->totalIntensityBeam1;
+    totalIntensityBeam2 = condInLumiBlock->totalIntensityBeam2;
+  }
+	
   // get LumiSummary
   edm::Handle<LumiSummary> lumiSummary;
   iLumi.getByLabel("lumiProducer", lumiSummary);
-  avgInsDelLumi=lumiSummary->avgInsDelLumi();
 	
+	//initialize to -1 in case isValid fails
+  avgInsDelLumi = -1.;
+  avgInsDelLumiErr = -1.;
+  avgInsRecLumi = -1.;
+  avgInsRecLumiErr = -1.;
+  if(lumiSummary.isValid()){//check pointer lumiSummary is not null
+    if(lumiSummary->isValid()){//data are valid only if run exists from all sources lumi,trg ,hlt
+      avgInsDelLumi = lumiSummary->avgInsDelLumi();
+      avgInsDelLumiErr = lumiSummary->avgInsDelLumiErr();
+      avgInsRecLumi = lumiSummary->avgInsRecLumi();
+      avgInsRecLumiErr = lumiSummary->avgInsRecLumiErr();
+    }
+  }
+	if(debug_on) cout<<"DEBUG: start saving stuff"<<endl;
   nevents++;
   //getting handle to generator level information
   if( rungenParticleCandidates_ ){
+	  
+    Handle<GenEventInfoProduct > genEvent;
+    iEvent.getByLabel( "generator", genEvent );
+    gen_pthat = (genEvent->hasBinningValues() ? (genEvent->binningValues())[0] : 0.0); 
+	  
     ngenphotons  = 0;
     nhardphotons = 0;
     is_signal_event = false; 
@@ -245,6 +271,7 @@ void Analyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup){
     is_Wtau_event = false;
     is_SingleHardPhoton_event=false;  
     is_diphoton_event=false;
+    is_isr_photon_event = false;
     Handle<GenParticleCollection> genParticles;
     iEvent.getByLabel("genParticles", genParticles); 
     std::vector<genPho>            mygenphoton_container;
@@ -253,6 +280,7 @@ void Analyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup){
     int ii =0;
     for (GenParticleCollection::const_iterator genparticle = genParticles->begin(); genparticle != genParticles->end(); genparticle++) {
       //getting information from hard scattered Graviton 
+      if(debug_on) cout<<"start gen particle collection event:"<<nevents<<" particle:"<<ii<<endl;
       if (genparticle->pdgId()==39 && genparticle->status()==3) { 
 	is_signal_event = true;
 	n_signal_events++;
@@ -268,7 +296,7 @@ void Analyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup){
       if (genparticle->pdgId()==23 && genparticle->status()==3){ 
 	is_Z_event = true;
 	n_Z_events++;
-	//cout<"getting information from Z now"<<endl;
+	//if(debug_on) cout<<" getting information from Z now"<<endl;
 	gen_Zboson_pt  = genparticle->pt();
 	gen_Zboson_px  = genparticle->px();
 	gen_Zboson_py  = genparticle->py();
@@ -300,9 +328,10 @@ void Analyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup){
 	}//end of for loop for daughters
       }//end for loop of Z information    
       //getting information from W+/W-
+
       if (abs(genparticle->pdgId())==24 && genparticle->status()==3) { 
 	is_W_event = true;
-	cout<<" W motherID:" << genparticle->mother()->pdgId()<<endl; 
+	if(debug_on) cout<<" W motherID:" << genparticle->mother()->pdgId()<<endl; 
 	n_W_events++;
 	gen_Wboson_pt      = genparticle->pt();
 	gen_Wboson_px      = genparticle->px();
@@ -315,14 +344,14 @@ void Analyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup){
 	gen_Wboson_ID      = genparticle->pdgId();
 	int daughters      = genparticle->numberOfDaughters();
 	int iDaughter =0;
-	//cout<<"W pt:"<<genparticle->pt()<<endl;
-	//cout<<"W daughters:"<<endl;
+	if(debug_on) cout<<"W pt:"<<genparticle->pt()<<endl;
+	if(debug_on) cout<<"W daughters:"<<endl;
 	for(int i = 0;i<daughters;i++){
 	  const reco::Candidate *daughter   = genparticle->daughter(i);
 	  if(abs(daughter->pdgId())==11) {is_Welec_event=true; n_Welec_events++;}
 	  if(abs(daughter->pdgId())==13) {is_Wmu_event=true  ; n_Wmu_events++  ;}
 	  if(abs(daughter->pdgId())==15) {is_Wtau_event=true ; n_Wtau_events++ ;}  
-	  cout<<"ID, Status,Pt:"<<abs(daughter->pdgId())<<"   "<<daughter->status()<<"   "<<daughter->pt()<<endl;
+	  if(debug_on) cout<<"ID, Status,Pt:"<<abs(daughter->pdgId())<<"   "<<daughter->status()<<"   "<<daughter->pt()<<endl;
 	  //getting leptons decaying from W
 	  if(abs(daughter->pdgId())!=24) {
 	    gen_Wdaughter_pt[iDaughter]     = daughter->pt();
@@ -338,15 +367,15 @@ void Analyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup){
 	  }//if(abs(daughter->pdgId())!=24)
 	}//end of for loop for daughters
       }//end for loop of W information
-      
-      //getting info from decay of muons 
+
+		//getting info from decay of muons 
       if( abs(genparticle->pdgId())==13 ){
-	//cout<<"parent ID, Status, Pt:"<<abs(genparticle->pdgId())<<"   "<<genparticle->status()<<"  "<< genparticle->pt()<<endl;
+	if(debug_on) cout<<"parent ID, Status, Pt:"<<abs(genparticle->pdgId())<<"   "<<genparticle->status()<<"  "<< genparticle->pt()<<endl;
 	int daughters   = genparticle->numberOfDaughters();
 	int iDaughter=0;
 	for(int i = 0;i<daughters;i++){
 	  const reco::Candidate *daughter   = genparticle->daughter(i);
-	  //cout<<"daughterID, status,Pt:"<<abs(daughter->pdgId())<<"   " <<daughter->status()<<"  "<< daughter->pt()<<endl;
+	  if(debug_on) cout<<"daughterID, status,Pt:"<<abs(daughter->pdgId())<<"   " <<daughter->status()<<"  "<< daughter->pt()<<endl;
 	  gen_Muon_ID[iDaughter]     = genparticle->pdgId();
 	  gen_Muon_Status[iDaughter] = genparticle->status();
 	  gen_Muon_Pt[iDaughter]     = genparticle->pt();
@@ -363,15 +392,15 @@ void Analyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup){
 	  iDaughter++;
 	}//for(int i = 0;i<daughters;i++)
       }//if((abs(genparticle->pdgId())==13)
-      
-      //getting info from decay of taus 
+
+		//getting info from decay of taus 
       if( abs(genparticle->pdgId())==15 ){
-	//cout<<"parent ID, Status, Pt:"<<abs(genparticle->pdgId())<<"   "<<genparticle->status()<<"  "<< genparticle->pt()<<endl;
+	if(debug_on) cout<<"parent ID, Status, Pt:"<<abs(genparticle->pdgId())<<"   "<<genparticle->status()<<"  "<< genparticle->pt()<<endl;
 	int daughters   = genparticle->numberOfDaughters();
 	int iDaughter=0;
 	for(int i = 0;i<daughters;i++){
 	  const reco::Candidate *daughter   = genparticle->daughter(i);
-	  //cout<<"daughterID, status,Pt:"<<abs(daughter->pdgId())<<"   " <<daughter->status()<<"  "<< daughter->pt()<<endl;
+	  //if(debug_on) cout<<"daughterID, status,Pt:"<<abs(daughter->pdgId())<<"   " <<daughter->status()<<"  "<< daughter->pt()<<endl;
 	  gen_tau_ID[iDaughter]           = genparticle->pdgId();
 	  gen_tau_Status[iDaughter]       = genparticle->status();
 	  gen_tau_Pt[iDaughter]           = genparticle->pt();
@@ -388,23 +417,50 @@ void Analyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup){
 	  iDaughter++;
 	}//for(int i = 0;i<daughters;i++)
       }//if((abs(genparticle->pdgId())==15)
-      
-      //cout<<"getting gen photon information now"<<endl;
+      if(debug_on) cout<<"DEBUG 6"<<endl;
+      if(debug_on) cout<<"getting gen photon information now"<<endl;
       //getting information from all photons
       //if (genparticle->pdgId()==22 && genparticle->status()==1 && genparticle->pt()>5.)
       if (genparticle->pdgId()==22){ 
 	//doing it this way, as I want to sort it in pt after filling everything in the container
-	const reco::Candidate *mom = genparticle->mother();
-	genphoton.motherID = mom->pdgId();
-	genphoton.motherStatus = mom->status();
-	genphoton.motherPt = mom->pt();
-	genphoton.motherEta = mom->eta();
-	genphoton.motherPhi = correct_phi(mom->phi());
-	genphoton.GrandmotherID = mom->mother()->pdgId();
-	genphoton.GrandmotherStatus = mom->mother()->status();
-	genphoton.GrandmotherPt = mom->mother()->pt();
-	genphoton.GrandmotherEta = mom->mother()->eta();
-	genphoton.GrandmotherPhi = correct_phi(mom->mother()->phi());
+        if(genparticle->mother()!=NULL){
+	  const reco::Candidate *mom = genparticle->mother();
+	  genphoton.motherID = mom->pdgId();
+	  genphoton.motherStatus = mom->status();
+	  if(debug_on) cout<<"DEBUG mom pdgid is "<<mom->pdgId()<<" status is "<<mom->status()<<" pt "<<mom->pt()<< " e "<<mom->energy() <<endl;
+	  genphoton.motherPt = mom->pt();
+	  genphoton.motherEta = mom->eta();
+	  genphoton.motherPhi = correct_phi(mom->phi());
+	  if(genparticle->status()==1 && mom->pdgId()==2212 && mom->mother()==NULL)
+	    is_isr_photon_event = true;
+	  if(mom->mother()!=NULL){	  
+	    if(debug_on) cout<<"DEBUG gramma is "<<mom->mother()->pdgId()<<endl;
+	    genphoton.GrandmotherID = mom->mother()->pdgId();
+	    genphoton.GrandmotherStatus = mom->mother()->status();
+	    genphoton.GrandmotherPt = mom->mother()->pt();
+	    genphoton.GrandmotherEta = mom->mother()->eta();
+	    genphoton.GrandmotherPhi = correct_phi(mom->mother()->phi());
+            if(genparticle->status()==1 && genparticle->mother()->mother()->pdgId()==2212)
+              is_isr_photon_event = true;
+          } else{//if grandma is null but mom ok, initialize grandma stuff
+	    genphoton.GrandmotherID = 0;
+	    genphoton.GrandmotherStatus = -99;
+	    genphoton.GrandmotherPt = -99.;
+	    genphoton.GrandmotherEta = -99.;
+	    genphoton.GrandmotherPhi = -99.;
+	  }//end grandma else
+        } else {//if mother is null, initialize mom and grandma stuff
+	  genphoton.motherID = 0;
+	  genphoton.motherStatus = -99;
+	  genphoton.motherPt = -99.;
+	  genphoton.motherEta = -99.;
+	  genphoton.motherPhi = -99.;
+	  genphoton.GrandmotherID = 0;
+	  genphoton.GrandmotherStatus = -99;
+	  genphoton.GrandmotherPt = -99.;
+	  genphoton.GrandmotherEta = -99.;
+	  genphoton.GrandmotherPhi = -99.;
+	}
 	genphoton.pt  = genparticle->pt();
 	genphoton.px  = genparticle->px();
 	genphoton.py  = genparticle->py();
@@ -414,8 +470,12 @@ void Analyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup){
 	genphoton.E   = genparticle->energy();
 	genphoton.status = genparticle->status();
 	mygenphoton_container.push_back(genphoton); ngenphotons++;
+	if(debug_on) cout<<"DEBUG done with pho"<<endl;
       }//end of if (genparticle->pdgId()==22 && genparticle->status()==1)
-      
+      if(debug_on) cout<<"DEBUG before checking mothers event:"<< nevents<<" particle:"<<ii<<endl;  
+      if(genparticle->mother()!=NULL && genparticle->mother()->mother()!=NULL)
+        if(genparticle->pdgId()==22 && genparticle->status()==1 && genparticle->mother()->mother()->pdgId()==2212)
+          is_isr_photon_event = true;
       if (genparticle->pdgId()==22 && genparticle->status()==3) {
 	gen_Hpho_pt[nhardphotons]  = genparticle->pt();
 	gen_Hpho_px[nhardphotons]  = genparticle->px();
@@ -426,10 +486,10 @@ void Analyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup){
 	gen_Hpho_E[nhardphotons]   = genparticle->energy();
 	nhardphotons++;
       }//end of if (genparticle->pdgId()==22 && genparticle->status()==3)
-      
+      if(debug_on) cout<<"DEBUG end loop over gen particles"<<endl;
       ii++;
     }//end of for (GenParticleCollection::const_iterator genparticle = genParticles->begin(); genparticle != genParticles->end(); genparticle++)
-		
+    if(debug_on) cout<<"DEBUG: finish gen"<<endl;	
     if (nhardphotons==1) {
       n_SingleHardPhoton_events++;
       is_SingleHardPhoton_event=true;
@@ -442,7 +502,7 @@ void Analyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup){
     if(mygenphoton_container.size()!=0){
       std::sort(mygenphoton_container.begin(),mygenphoton_container.end(),PtSortCriterium());
       for(unsigned int x=0;x < mygenphoton_container.size(); x++){
-	//std::cout<<"genphoton motherID:"<<mygenphoton_container[x].motherID<<endl;
+	//std::if(debug_on) cout<<"genphoton motherID:"<<mygenphoton_container[x].motherID<<endl;
 	gen_pho_motherPt[x]   = mygenphoton_container[x].motherPt;
 	gen_pho_motherEta[x]  = mygenphoton_container[x].motherEta;
 	gen_pho_motherPhi[x]  = mygenphoton_container[x].motherPhi;
@@ -461,14 +521,15 @@ void Analyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup){
 	gen_pho_eta[x]        = mygenphoton_container[x].eta;
 	gen_pho_E[x]          = mygenphoton_container[x].E;
 	gen_pho_status[x]          = mygenphoton_container[x].status;
-	if( gen_pho_pt[x] > 100. && (abs(gen_pho_motherID[x])<=6||abs(gen_pho_motherID[x])==11||abs(gen_pho_motherID[x])==9|| abs(gen_pho_motherID[x])==21 )) 
-	  cout<<"[x]:"<<x<< "pho_pt:" << gen_pho_pt[x]<<" pho_status:"<< gen_pho_status[x]<<" motherID:" << gen_pho_motherID[x]<<" motherStatus: "<< gen_pho_motherStatus[x]<< " GrandmotherID: "<< gen_pho_GrandmotherID[x]<< " GrandmotherStatus:"<< gen_pho_GrandmotherStatus[x]<< endl;
-	// cout<<"got the photon info right"<<endl;
+	/*if( gen_pho_pt[x] > 100. && (abs(gen_pho_motherID[x])<=6||abs(gen_pho_motherID[x])==11||abs(gen_pho_motherID[x])==9|| abs(gen_pho_motherID[x])==21 )) 
+	  if(debug_on) cout<<"[x]:"<<x<< "pho_pt:" << gen_pho_pt[x]<<" pho_status:"<< gen_pho_status[x]<<" motherID:" << gen_pho_motherID[x]<<" motherStatus: "<< gen_pho_motherStatus[x]<< " GrandmotherID: "<< gen_pho_GrandmotherID[x]<< " GrandmotherStatus:"<< gen_pho_GrandmotherStatus[x]<< endl;
+        */
+	// if(debug_on) cout<<"got the photon info right"<<endl;
       }//end of for loop
     }//end of if((mygenphoton_container.size()!=0)
-    //std::cout<<"mygenphoton_container loop ended"<<std::endl; 
+    //if(debug_on) cout<<"mygenphoton_container loop ended"<<std::endl; 
   }//end of if(rungenParticleCandidates_)
-  
+  if(debug_on) cout<<"DEBUG: finish saving gen"<<endl;
   ///// L1
   if(runL1_){
     edm::ESHandle<L1GtTriggerMenu> menuRcd;
@@ -513,7 +574,18 @@ void Analyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup){
        Int_t idx13 = triggerNames_.triggerIndex("HLT_Photon50_Cleaned_L1R");
        Int_t idx14 = triggerNames_.triggerIndex("HLT_Photon70_NoHE_Cleaned_L1R");
        Int_t idx15 = triggerNames_.triggerIndex("HLT_Photon100_NoHE_Cleaned_L1R");
-       
+       Int_t idx16 = triggerNames_.triggerIndex("HLT_DoublePhoton17_L1R");//new
+       Int_t idx17 = triggerNames_.triggerIndex("HLT_DoublePhoton5_CEP_L1R");
+       Int_t idx18 = triggerNames_.triggerIndex("HLT_Photon100_NoHE_Cleaned_L1R_v1");
+       Int_t idx19 = triggerNames_.triggerIndex("HLT_Photon10_Cleaned_L1R");
+       Int_t idx20 = triggerNames_.triggerIndex("HLT_Photon15_Cleaned_L1R");
+       Int_t idx21 = triggerNames_.triggerIndex("HLT_Photon17_SC17HE_L1R_v1");
+       Int_t idx22 = triggerNames_.triggerIndex("HLT_Photon20_NoHE_L1R");
+       Int_t idx23 = triggerNames_.triggerIndex("HLT_Photon30_Isol_EBOnly_Cleaned_L1R_v1");
+       Int_t idx24 = triggerNames_.triggerIndex("HLT_Photon35_Isol_Cleaned_L1R_v1");
+       Int_t idx25 = triggerNames_.triggerIndex("HLT_Photon50_Cleaned_L1R_v1");
+       Int_t idx26 = triggerNames_.triggerIndex("HLT_Photon50_NoHE_L1R");
+       Int_t idx27 = triggerNames_.triggerIndex("HLT_Photon70_NoHE_Cleaned_L1R_v1");
 
        Int_t hsize = Int_t(HLTR->size());
        //There's a double check here: first check that the array index is in range, then check to see if it fired.
@@ -537,6 +609,19 @@ void Analyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup){
        HLT_Photon100_NoHE_Cleaned_event=false;//idx15
        HLT_Photon30_L1R_8E29_event=false;
        HLT_Photon30_L1R_1E31_event=false;
+       HLT_DoublePhoton17_L1R_event = false;//idx16
+       HLT_DoublePhoton5_CEP_L1R_event = false;//idx17
+       HLT_Photon100_NoHE_Cleaned_L1R_v1_event = false;//idx18
+       HLT_Photon10_Cleaned_L1R_event = false;//idx19
+       HLT_Photon15_Cleaned_L1R_event = false;//idx20
+       HLT_Photon17_SC17HE_L1R_v1_event = false;//idx21
+       HLT_Photon20_NoHE_L1R_event = false;//idx22
+       HLT_Photon30_Isol_EBOnly_Cleaned_L1R_v1_event = false;//idx23
+       HLT_Photon35_Isol_Cleaned_L1R_v1_event = false;//idx24
+       HLT_Photon50_Cleaned_L1R_v1_event = false;//idx25
+       HLT_Photon50_NoHE_L1R_event = false;//idx26
+       HLT_Photon70_NoHE_Cleaned_L1R_v1_event = false;//idx27       
+
        if (idx1 < hsize)
 	 if (HLTR->accept(idx1))
 	   HLT_MET50_event = true;
@@ -588,6 +673,42 @@ void Analyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup){
        if (idx15 < hsize)
 	 if (HLTR->accept(idx15))
 	   HLT_Photon100_NoHE_Cleaned_event=true;
+       if (idx16 < hsize)
+         if (HLTR->accept(idx16))
+           HLT_DoublePhoton17_L1R_event=true;
+       if (idx17 < hsize)
+         if (HLTR->accept(idx17))
+           HLT_DoublePhoton5_CEP_L1R_event=true;
+       if (idx18 < hsize)
+         if (HLTR->accept(idx18))
+           HLT_Photon100_NoHE_Cleaned_L1R_v1_event=true;
+       if (idx19 < hsize)
+         if (HLTR->accept(idx19))
+           HLT_Photon10_Cleaned_L1R_event=true;
+       if (idx20 < hsize)
+         if (HLTR->accept(idx20))
+           HLT_Photon15_Cleaned_L1R_event=true;
+       if (idx21 < hsize)
+         if (HLTR->accept(idx21))
+           HLT_Photon17_SC17HE_L1R_v1_event=true;
+       if (idx22 < hsize)
+         if (HLTR->accept(idx22))
+           HLT_Photon20_NoHE_L1R_event=true;
+       if (idx23 < hsize)
+         if (HLTR->accept(idx23))
+           HLT_Photon30_Isol_EBOnly_Cleaned_L1R_v1_event=true;
+       if (idx24 < hsize)
+         if (HLTR->accept(idx24))
+           HLT_Photon35_Isol_Cleaned_L1R_v1_event=true;
+       if (idx25 < hsize)
+         if (HLTR->accept(idx25))
+           HLT_Photon50_Cleaned_L1R_v1_event=true;
+       if (idx26 < hsize)
+         if (HLTR->accept(idx26))
+           HLT_Photon50_NoHE_L1R_event=true;
+       if (idx27 < hsize)
+         if (HLTR->accept(idx27))
+           HLT_Photon70_NoHE_Cleaned_L1R_v1_event=true;
 
      }
    }
@@ -616,6 +737,35 @@ void Analyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup){
      }
    }
    
+  if(runscraping_){ // taken from DPGAnalysis/Skims/src/FilterOutScraping.cc (CMSSW_3_8_3)
+    Scraping_isScrapingEvent = true;
+    Scraping_fractionOfGoodTracks = 0;
+    Scraping_numOfTracks=0;
+ 
+    // get GeneralTracks collection
+    edm::Handle<reco::TrackCollection> tkRef;
+    iEvent.getByLabel("generalTracks",tkRef);    
+    const reco::TrackCollection* tkColl = tkRef.product();
+
+    int numhighpurity=0;
+    reco::TrackBase::TrackQuality _trackQuality = reco::TrackBase::qualityByName("highPurity");
+    Scraping_numOfTracks = tkColl->size();
+
+    if(tkColl->size()>10){
+      reco::TrackCollection::const_iterator itk = tkColl->begin();
+      reco::TrackCollection::const_iterator itk_e = tkColl->end();
+      for(;itk!=itk_e;++itk){
+        if(itk->quality(_trackQuality)) numhighpurity++;
+      }
+      Scraping_fractionOfGoodTracks = (float)numhighpurity/(float)tkColl->size();
+		
+      if(Scraping_fractionOfGoodTracks>0.25) Scraping_isScrapingEvent = false;
+    }else{
+      //if less than 10 Tracks, mark as not Scraping    
+      Scraping_isScrapingEvent = false;
+    }
+  }	
+	
    if(runtracks_){
      Handle<reco::TrackCollection> tracks;
      iEvent.getByLabel(Tracks_,tracks);
@@ -631,7 +781,7 @@ void Analyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup){
      
      if(myTrack_container.size()>1)
        std::sort(myTrack_container.begin(),myTrack_container.end(),PtSortCriterium3());
-	   Track_n = 0;
+     Track_n = 0;
      for(unsigned int x=0;x < myTrack_container.size();x++){
        trk_pt[x]  = myTrack_container[x].pt();
        trk_px[x]  = myTrack_container[x].px();
@@ -1076,7 +1226,7 @@ void Analyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup){
 							   &(*barrelRecHits), &(*topology)) + 
 	                           EcalClusterTools::eRight( *(myphoton_container[x].superCluster()->seed()), 
 							   &(*barrelRecHits), &(*topology));
-	     if(1-pho_swissCross[x]/pho_maxEnergyXtal[x] > 0.95) 
+	     if(debug_on && 1-pho_swissCross[x]/pho_maxEnergyXtal[x] > 0.95) 
 	       cout<<"This photon candidate is an ECAL spike identified by Swiss Cross algorithm."<<endl; 
 	   }//end of if(myphoton_container[x].isEB())
 	   else{ 
@@ -1091,7 +1241,7 @@ void Analyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup){
 							   &(*endcapRecHits), &(*topology)) + 
 	                           EcalClusterTools::eRight( *(myphoton_container[x].superCluster()->seed()), 
 							   &(*endcapRecHits), &(*topology));
-	     if(1-pho_swissCross[x]/pho_maxEnergyXtal[x] > 0.95) {
+	     if(debug_on && 1-pho_swissCross[x]/pho_maxEnergyXtal[x] > 0.95) {
 	       cout<<"This photon candidate is an ECAL spike identified by Swiss Cross algorithm." << endl;
 	       cout<<"This would be weird since there aren't spikes in the endcap of ECAL"<<endl; 
 	     }
@@ -1101,7 +1251,6 @@ void Analyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup){
      }//if(runrechit_)
      
    }//if(runphotons_)  
-   
    if(runmet_){
      edm::Handle<edm::View<pat::MET> > metHandle;
      iEvent.getByLabel(metLabel_,metHandle);
@@ -1182,7 +1331,6 @@ void Analyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup){
      } 
      
    }//end of if(runTCmet_)
-   
    if(runjets_){
      edm::Handle<edm::View<pat::Jet> > jetHandle;
      iEvent.getByLabel(jetLabel_,jetHandle);
@@ -1216,7 +1364,6 @@ void Analyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup){
        }//end of for loop
      }
    }
-	
    if(runelectrons_){
      edm::Handle<edm::View<pat::Electron> > electronHandle;
      iEvent.getByLabel(eleLabel_,electronHandle);
@@ -1265,6 +1412,7 @@ void Analyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup){
    }
    if (Photon_n>0)
      myEvent->Fill();
+   if(debug_on) cout<<"DEBUG: analyze loop done"<<endl;
 }
 
 // ------------ method called once each job just before starting event loop  ------------
@@ -1278,7 +1426,10 @@ void Analyzer::beginJob(){
   myEvent->Branch("beamCrossing",&BXNumber,"BXNumber/i");
   myEvent->Branch("totalIntensityBeam1",&totalIntensityBeam1,"totalIntensityBeam1/i");  
   myEvent->Branch("totalIntensityBeam2",&totalIntensityBeam2,"totalIntensityBeam2/i");
-  myEvent->Branch("avgInsDelLumi",&avgInsDelLumi,"avgInsDelLumi/i");
+  myEvent->Branch("avgInsDelLumi",&avgInsDelLumi,"avgInsDelLumi/F");
+  myEvent->Branch("avgInsDelLumiErr",&avgInsDelLumiErr,"avgInsDelLumiErr/F");
+  myEvent->Branch("avgInsRecLumi",&avgInsRecLumi,"avgInsRecLumi/F");
+  myEvent->Branch("avgInsRecLumiErr",&avgInsRecLumiErr,"avgInsRecLumiErr/F");
   if(runHLT_){
     myEvent->Branch("HLT_MET50_event",&HLT_MET50_event,"HLT_MET50_event/O");
     myEvent->Branch("HLT_MET75_event",&HLT_MET75_event,"HLT_MET75_event/O");
@@ -1289,15 +1440,26 @@ void Analyzer::beginJob(){
     myEvent->Branch("HLT_Photon20_event", &HLT_Photon20_event,"HLT_Photon20_event/O");
     myEvent->Branch("HLT_Photon20_Cleaned_event",&HLT_Photon20_Cleaned_event,"HLT_Photon20_Cleaned_event/O");
     myEvent->Branch("HLT_Photon30_event", &HLT_Photon30_event,"HLT_Photon30_event/O");  
-    myEvent->Branch("HLT_Photon30_L1R_8E29_event", &HLT_Photon30_L1R_8E29_event, "HLT_Photon30_L1R_8E29/O");
-    myEvent->Branch("HLT_Photon30_L1R_1E31_event", &HLT_Photon30_L1R_1E31_event, "HLT_Photon30_L1R_1E31/O");
+    myEvent->Branch("HLT_Photon30_L1R_8E29_event", &HLT_Photon30_L1R_8E29_event, "HLT_Photon30_L1R_8E29_event/O");
+    myEvent->Branch("HLT_Photon30_L1R_1E31_event", &HLT_Photon30_L1R_1E31_event, "HLT_Photon30_L1R_1E31_event/O");
     myEvent->Branch("HLT_Photon30_Cleaned_event", &HLT_Photon30_Cleaned_event,"HLT_Photon30_Cleaned_event/O");
     myEvent->Branch("HLT_Photon30_Isol_EBOnly_Cleaned", &HLT_Photon30_Isol_EBOnly_Cleaned_event,"HLT_Photon30_Isol_EBOnly_event/O");
     myEvent->Branch("HLT_Photon35_Isol_Cleaned", &HLT_Photon35_Isol_Cleaned_event,"HLT_Photon35_Isol_Cleaned_event/O");
     myEvent->Branch("HLT_Photon50_Cleaned_event", &HLT_Photon50_Cleaned_event, "HLT_Photon50_Cleaned_event/O");
     myEvent->Branch("HLT_Photon70_NoHE_Cleaned_event",&HLT_Photon70_NoHE_Cleaned_event, "HLT_Photon70_NoHE_Cleaned_event/O");
     myEvent->Branch("HLT_Photon100_NoHE_Cleaned_event", &HLT_Photon100_NoHE_Cleaned_event,"HLT_Photon100_NoHE_Cleaned_event/O");
-       HLT_Photon100_NoHE_Cleaned_event=false;//idx15
+    myEvent->Branch("HLT_DoublePhoton17_L1R_event", & HLT_DoublePhoton17_L1R_event,"HLT_DoublePhoton17_L1R_event/O");
+    myEvent->Branch("HLT_DoublePhoton5_CEP_L1R_event", & HLT_DoublePhoton5_CEP_L1R_event,"HLT_DoublePhoton5_CEP_L1R_event/O");
+    myEvent->Branch("HLT_Photon100_NoHE_Cleaned_L1R_v1_event", & HLT_Photon100_NoHE_Cleaned_L1R_v1_event,"HLT_Photon100_NoHE_Cleaned_L1R_v1_event/O");
+    myEvent->Branch("HLT_Photon10_Cleaned_L1R_event", & HLT_Photon10_Cleaned_L1R_event,"HLT_Photon10_Cleaned_L1R_event/O");
+    myEvent->Branch("HLT_Photon15_Cleaned_L1R_event", & HLT_Photon15_Cleaned_L1R_event,"HLT_Photon15_Cleaned_L1R_event/O");
+    myEvent->Branch("HLT_Photon17_SC17HE_L1R_v1_event", & HLT_Photon17_SC17HE_L1R_v1_event,"HLT_Photon17_SC17HE_L1R_v1_event/O");
+    myEvent->Branch("HLT_Photon20_NoHE_L1R_event", & HLT_Photon20_NoHE_L1R_event,"HLT_Photon20_NoHE_L1R_event/O");
+    myEvent->Branch("HLT_Photon30_Isol_EBOnly_Cleaned_L1R_v1_event", & HLT_Photon30_Isol_EBOnly_Cleaned_L1R_v1_event,"HLT_Photon30_Isol_EBOnly_Cleaned_L1R_v1_event/O");
+    myEvent->Branch("HLT_Photon35_Isol_Cleaned_L1R_v1_event", & HLT_Photon35_Isol_Cleaned_L1R_v1_event,"HLT_Photon35_Isol_Cleaned_L1R_v1_event/O");
+    myEvent->Branch("HLT_Photon50_Cleaned_L1R_v1_event", & HLT_Photon50_Cleaned_L1R_v1_event,"HLT_Photon50_Cleaned_L1R_v1_event/O");
+    myEvent->Branch("HLT_Photon50_NoHE_L1R_event", & HLT_Photon50_NoHE_L1R_event,"HLT_Photon50_NoHE_L1R_event/O");
+    myEvent->Branch("HLT_Photon70_NoHE_Cleaned_L1R_v1_event", & HLT_Photon70_NoHE_Cleaned_L1R_v1_event,"HLT_Photon70_NoHE_Cleaned_L1R_v1_event/O");
   }
   
   if(runvertex_){
@@ -1312,6 +1474,12 @@ void Analyzer::beginJob(){
     myEvent->Branch("Vertex_isFake",v_isFake,"v_isFake[Vertex_n]/O");
   }
   
+  if(runscraping_){
+    myEvent->Branch("Scraping_isScrapingEvent",&Scraping_isScrapingEvent,"Scraping_isScrapingEvent/O");
+    myEvent->Branch("Scraping_numOfTracks",&Scraping_numOfTracks,"Scraping_numOfTracks/I");
+    myEvent->Branch("Scraping_fractionOfGoodTracks",&Scraping_fractionOfGoodTracks,"Scraping_fractionOfGoodTracks/F");
+  }
+	
   if (runtracks_){
     myEvent->Branch("Track_n",&Track_n,"Track_n/I");
     myEvent->Branch("Track_px",trk_px,"trk_px[Track_n]/F");
@@ -1450,6 +1618,8 @@ void Analyzer::beginJob(){
   }
   
   if( rungenParticleCandidates_ ){
+    myEvent->Branch("gen_pthat",&gen_pthat,"gen_pthat/F");
+	  
     //genlevel information from photons
     myEvent->Branch("ngenphotons",&ngenphotons,"ngenphotons/I");
     myEvent->Branch("gen_photonpt",gen_pho_pt,"gen_pho_pt[ngenphotons]/F");
@@ -1545,7 +1715,8 @@ void Analyzer::beginJob(){
     myEvent->Branch("is_Wtau_event",&is_Wtau_event,"is_Wtau_event/O");   
     myEvent->Branch("is_SingleHardPhoton_event",&is_SingleHardPhoton_event,"is_SingleHardPhoton_event/O");
     myEvent->Branch("is_diphoton_event",&is_diphoton_event,"is_diphoton_event/O");
-    
+    myEvent->Branch("is_isr_photon_event",&is_isr_photon_event,"is_isr_photon_event/O");
+	  
     myEvent->Branch("n_signal_events",&n_signal_events,"n_signal_events/I");
     myEvent->Branch("n_Z_events",&n_Z_events,"n_Z_events/I");
     myEvent->Branch("n_W_events",&n_W_events,"n_W_events/I");

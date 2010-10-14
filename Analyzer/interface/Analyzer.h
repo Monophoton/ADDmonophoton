@@ -32,6 +32,8 @@ class Analyzer : public edm::EDAnalyzer {
   bool is_Welec_event, is_Wmu_event, is_Wtau_event ;
   bool is_SingleHardPhoton_event;
   bool is_diphoton_event;
+  bool is_isr_photon_event;
+  float gen_pthat;
   
   int n_signal_events,n_Z_events,n_W_events;
   int n_Zelec_events, n_Zmu_events, n_Ztau_events, n_Znunu_events; 
@@ -39,7 +41,8 @@ class Analyzer : public edm::EDAnalyzer {
   int n_diphoton_events, n_SingleHardPhoton_events;
   
   unsigned int RunNumber, EventNumber, LumiNumber, BXNumber;
-  unsigned int totalIntensityBeam1, totalIntensityBeam2, avgInsDelLumi;
+  unsigned int totalIntensityBeam1, totalIntensityBeam2;
+  float avgInsDelLumi, avgInsDelLumiErr, avgInsRecLumi, avgInsRecLumiErr;
   int ngenphotons;
   int nhardphotons;
   int Photon_n;
@@ -73,8 +76,19 @@ class Analyzer : public edm::EDAnalyzer {
   bool HLT_Photon50_Cleaned_event;
   bool HLT_Photon70_NoHE_Cleaned_event;
   bool HLT_Photon100_NoHE_Cleaned_event;
-  
-  
+  bool HLT_DoublePhoton17_L1R_event;
+  bool HLT_DoublePhoton5_CEP_L1R_event;
+  bool HLT_Photon100_NoHE_Cleaned_L1R_v1_event;
+  bool HLT_Photon10_Cleaned_L1R_event;
+  bool HLT_Photon15_Cleaned_L1R_event;
+  bool HLT_Photon17_SC17HE_L1R_v1_event;
+  bool HLT_Photon20_NoHE_L1R_event;
+  bool HLT_Photon30_Isol_EBOnly_Cleaned_L1R_v1_event;
+  bool HLT_Photon35_Isol_Cleaned_L1R_v1_event;
+  bool HLT_Photon50_Cleaned_L1R_v1_event;
+  bool HLT_Photon50_NoHE_L1R_event; 
+  bool HLT_Photon70_NoHE_Cleaned_L1R_v1_event;
+ 
   std::map<std::string,int> HLT_chosen;
   std::map<std::string,int> L1_chosen;
   
@@ -107,6 +121,7 @@ class Analyzer : public edm::EDAnalyzer {
   bool runtaus_;
   bool runHLT_;
   bool runL1_;
+  bool runscraping_;
   bool runtracks_;
   bool runrechit_;
   bool runHErechit_;
@@ -127,8 +142,13 @@ class Analyzer : public edm::EDAnalyzer {
   float chi2[10];
   float vtracksize[10];
   float vndof[10];
-  bool v_isFake[10];
+  bool  v_isFake[10];
   float v_d0[10];
+  
+  //scraping variables
+  bool  Scraping_isScrapingEvent;
+  int   Scraping_numOfTracks;
+  float Scraping_fractionOfGoodTracks;
   
   //track variables
   float trk_pt[200];
@@ -147,12 +167,12 @@ class Analyzer : public edm::EDAnalyzer {
   float jet_phi[100];
   float jet_emEnergyFraction[100];
   float jet_energyFractionHadronic[100];
-  int jet_hitsInN90[100];
-  int jet_n90Hits[100];
+  int   jet_hitsInN90[100];
+  int   jet_n90Hits[100];
   float jet_fHPD[100];
   float jet_fRBX[100];
   float jet_RHF[100];
-  int jet_nTowers[100];
+  int   jet_nTowers[100];
   
   //electron variables
   float electron_pt[100];
@@ -174,11 +194,11 @@ class Analyzer : public edm::EDAnalyzer {
   float muon_charge[100];
   float muon_eta[100];
   float muon_phi[100];
-  bool muon_isGlobalMuon[100];
-  bool muon_isTrackerMuon[100];
-  bool muon_isStandAloneMuon[100];
-  bool muon_InnerTrack_isNonnull[100];
-  bool muon_OuterTrack_isNonnull[100];
+  bool  muon_isGlobalMuon[100];
+  bool  muon_isTrackerMuon[100];
+  bool  muon_isStandAloneMuon[100];
+  bool  muon_InnerTrack_isNonnull[100];
+  bool  muon_OuterTrack_isNonnull[100];
   
   float muon_OuterTrack_InnerPoint_x[100];
   float muon_OuterTrack_InnerPoint_y[100];
@@ -214,11 +234,11 @@ class Analyzer : public edm::EDAnalyzer {
   float cosmicmuon_charge[100];
   float cosmicmuon_eta[100];
   float cosmicmuon_phi[100];
-  bool cosmicmuon_isGlobalMuon[100];
-  bool cosmicmuon_isTrackerMuon[100];
-  bool cosmicmuon_isStandAloneMuon[100];
-  bool cosmicmuon_InnerTrack_isNonnull[100];
-  bool cosmicmuon_OuterTrack_isNonnull[100];
+  bool  cosmicmuon_isGlobalMuon[100];
+  bool  cosmicmuon_isTrackerMuon[100];
+  bool  cosmicmuon_isStandAloneMuon[100];
+  bool  cosmicmuon_InnerTrack_isNonnull[100];
+  bool  cosmicmuon_OuterTrack_isNonnull[100];
   
   float cosmicmuon_OuterTrack_InnerPoint_x[100];
   float cosmicmuon_OuterTrack_InnerPoint_y[100];
@@ -263,14 +283,14 @@ class Analyzer : public edm::EDAnalyzer {
   float gen_pho_phi[1000];
   float gen_pho_eta[1000];
   float gen_pho_E[1000];
-  int    gen_pho_status[1000];
-  int gen_pho_motherID[1000];
-  int gen_pho_motherStatus[1000];
+  int   gen_pho_status[1000];
+  int   gen_pho_motherID[1000];
+  int   gen_pho_motherStatus[1000];
   float gen_pho_motherPt[1000];
   float gen_pho_motherEta[1000];
   float gen_pho_motherPhi[1000];
-  int gen_pho_GrandmotherID[1000];
-  int gen_pho_GrandmotherStatus[1000];
+  int   gen_pho_GrandmotherID[1000];
+  int   gen_pho_GrandmotherStatus[1000];
   float gen_pho_GrandmotherPt[1000];
   float gen_pho_GrandmotherEta[1000];
   float gen_pho_GrandmotherPhi[1000];
@@ -371,11 +391,11 @@ class Analyzer : public edm::EDAnalyzer {
   float pho_py[100];
   float pho_pz[100];
   float pho_r9[100];
-  bool pho_isEB[100];
-  bool pho_isEE[100];
-  bool pho_isEBGap[100];
-  bool pho_isEEGap[100];
-  bool pho_isEBEEGap[100];
+  bool  pho_isEB[100];
+  bool  pho_isEE[100];
+  bool  pho_isEBGap[100];
+  bool  pho_isEEGap[100];
+  bool  pho_isEBEEGap[100];
   float pho_e1x5[100];
   float pho_e2x5[100];
   float pho_e3x3[100];
@@ -409,12 +429,12 @@ class Analyzer : public edm::EDAnalyzer {
   float pho_trkSumPtHollowConeDR04[100];
   int   pho_nTrkSolidConeDR04[100];
   int   pho_nTrkHollowConeDR04[100];
-  float   pho_HoE[100];
-  bool pho_hasPixelSeed[100];   
+  float pho_HoE[100];
+  bool  pho_hasPixelSeed[100];   
   
   //SC variables
   float pho_sc_energy[100];
-  int    pho_size[100];
+  int   pho_size[100];
   float pho_sc_eta[100];
   float pho_sc_phi[100];
   float pho_sc_etaWidth[100];
@@ -429,7 +449,7 @@ class Analyzer : public edm::EDAnalyzer {
   float matchpho_px[100];
   float matchpho_py[100];
   float matchpho_pz[100];
-  bool    ismatchedpho[100];
+  bool  ismatchedpho[100];
   
   //converted photon variabes
   unsigned int pho_nTracks[100];
@@ -453,8 +473,8 @@ class Analyzer : public edm::EDAnalyzer {
   float pho_timing_xtal[100][100];
   float pho_timingavg_xtal[100];
   float pho_energy_xtal[100][100];
-  int    pho_ieta_xtalEB[100][100];
-  int    pho_iphi_xtalEB[100][100];
+  int   pho_ieta_xtalEB[100][100];
+  int   pho_iphi_xtalEB[100][100];
   float pho_rookFraction[100];
   float pho_s9[100];
   
