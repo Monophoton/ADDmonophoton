@@ -28,9 +28,9 @@ addPfMET(process, 'PF')
 addTcMET(process,"TC")
 
 
-# get the 900 GeV jet corrections
+# get the jet corrections
 from PhysicsTools.PatAlgos.tools.jetTools import *
-switchJECSet( process, "Summer09_7TeV_ReReco332")
+switchJECSet( process, "Spring10")
 
 # run ak5 gen jets
 from PhysicsTools.PatAlgos.tools.cmsswVersionTools import *
@@ -129,6 +129,7 @@ process.demo = cms.EDAnalyzer('Analyzer',
                               rungenParticleCandidates = cms.untracked.bool(False),
                               runHLT           = cms.untracked.bool(True),
                               runL1            = cms.untracked.bool(True),
+                              runscraping      = cms.untracked.bool(True),
                               runtracks        = cms.untracked.bool(True),
                               runvertex        = cms.untracked.bool(True)
                               )
