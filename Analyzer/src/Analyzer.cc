@@ -12,7 +12,7 @@
 //
 // Original Author:  Sandhya Jain
 //         Created:  Fri Apr 17 11:00:06 CEST 2009
-// $Id: Analyzer.cc,v 1.28 2010/10/07 17:14:59 miceli Exp $
+// $Id: Analyzer.cc,v 1.29 2010/10/14 12:59:51 miceli Exp $
 //
 //
 
@@ -1213,6 +1213,10 @@ void Analyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup){
 	     pho_ieta_xtalEB[x][y]           = crystalinfo_container[y].ieta;
 	     pho_iphi_xtalEB[x][y]           = crystalinfo_container[y].iphi;
 	   }//end of for (unsigned int y =0; y < crystalinfo_container.size();y++
+           const reco::BasicCluster& seedClus = *(myphoton_container[x].superCluster()->seed());
+           edm::ESHandle<CaloGeometry> geoHandle;	       
+	   iSetup.get<CaloGeometryRecord>().get(geoHandle);
+	   const CaloGeometry* caloGeom = geoHandle.product();
 	   if(myphoton_container[x].isEB()){
 	     std::vector<float> showershapes_barrel = EcalClusterTools::roundnessBarrelSuperClusters(*(myphoton_container[x].superCluster()),*barrelRecHits,0);
 	     pho_roundness[x]    = (float)showershapes_barrel[0];
@@ -1227,7 +1231,15 @@ void Analyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup){
 	                           EcalClusterTools::eRight( *(myphoton_container[x].superCluster()->seed()), 
 							   &(*barrelRecHits), &(*topology));
 	     if(debug_on && 1-pho_swissCross[x]/pho_maxEnergyXtal[x] > 0.95) 
-	       cout<<"This photon candidate is an ECAL spike identified by Swiss Cross algorithm."<<endl; 
+	       cout<<"This photon candidate is an ECAL spike identified by Swiss Cross algorithm."<<endl;
+
+            vector<float> stdCov = EcalClusterTools::covariances(seedClus,&(*barrelRecHits),&(*topology),&(*caloGeom));
+            vector<float> crysCov = EcalClusterTools::localCovariances(seedClus,&(*barrelRecHits),&(*topology));
+            pho_SigmaEtaPhi[x]   = sqrt(stdCov[1]);
+            pho_SigmaIetaIphi[x] = sqrt(crysCov[1]);    
+            pho_SigmaPhiPhi[x]   = sqrt(stdCov[2]);
+            pho_SigmaIphiIphi[x] = sqrt(crysCov[2]);
+ 
 	   }//end of if(myphoton_container[x].isEB())
 	   else{ 
 	     pho_roundness[x]   = -99.;
@@ -1245,6 +1257,14 @@ void Analyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup){
 	       cout<<"This photon candidate is an ECAL spike identified by Swiss Cross algorithm." << endl;
 	       cout<<"This would be weird since there aren't spikes in the endcap of ECAL"<<endl; 
 	     }
+
+             vector<float> stdCov = EcalClusterTools::covariances(seedClus,&(*endcapRecHits),&(*topology),&(*caloGeom));
+             vector<float> crysCov = EcalClusterTools::localCovariances(seedClus,&(*endcapRecHits),&(*topology));
+             pho_SigmaEtaPhi[x]   = sqrt(stdCov[1]);
+             pho_SigmaIetaIphi[x] = sqrt(crysCov[1]);   
+             pho_SigmaPhiPhi[x]   = sqrt(stdCov[2]);
+             pho_SigmaIphiIphi[x] = sqrt(crysCov[2]);
+
 	   }//end of else (if !EB)
 	 }//end of for loop over x
        }//if(myphoton_container.size!=0) 
@@ -1782,6 +1802,10 @@ void Analyzer::beginJob(){
     myEvent->Branch("Photon_maxEnergyXtal",pho_maxEnergyXtal,"pho_maxEnergyXtal[Photon_n]/F");
     myEvent->Branch("Photon_SigmaEtaEta",pho_SigmaEtaEta,"pho_SigmaEtaEta[Photon_n]/F");
     myEvent->Branch("Photon_SigmaIetaIeta",pho_SigmaIetaIeta,"pho_SigmaIetaIeta[Photon_n]/F");
+    myEvent->Branch("Photon_SigmaEtaPhi",pho_SigmaEtaPhi,"pho_SigmaEtaPhi[Photon_n]/F");
+    myEvent->Branch("Photon_SigmaIetaIphi",pho_SigmaIetaIphi,"pho_SigmaIetaIphi[Photon_n]/F");
+    myEvent->Branch("Photon_SigmaPhiPhi",pho_SigmaPhiPhi,"pho_SigmaPhiPhi[Photon_n]/F");
+    myEvent->Branch("Photon_SigmaIphiIphi",pho_SigmaIphiIphi,"pho_SigmaIphiIphi[Photon_n]/F");
     myEvent->Branch("Photon_Roundness",pho_roundness,"pho_roundness[Photon_n]/F");
     myEvent->Branch("Photon_Angle",pho_angle,"pho_angle[Photon_n]/F");
     myEvent->Branch("Photon_ecalRecHitSumEtConeDR03",pho_ecalRecHitSumEtConeDR03,"pho_ecalRecHitSumEtConeDR03[Photon_n]/F");

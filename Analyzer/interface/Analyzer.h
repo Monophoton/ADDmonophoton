@@ -404,6 +404,10 @@ class Analyzer : public edm::EDAnalyzer {
   float pho_r2x5[100];
   float pho_SigmaEtaEta[100];
   float pho_SigmaIetaIeta[100];
+  float pho_SigmaEtaPhi[100];
+  float pho_SigmaIetaIphi[100];
+  float pho_SigmaPhiPhi[100];
+  float pho_SigmaIphiIphi[100];
   float pho_roundness[100];
   float pho_angle[100];
   float pho_maxEnergyXtal[100];
