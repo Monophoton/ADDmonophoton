@@ -496,10 +496,10 @@ class Analyzer : public edm::EDAnalyzer {
   //calomet variables
   float CaloMetSig;
   float CaloMetCorr;
-  float CaloMetEt;
-  float CaloMetEx;
-  float CaloMetEy;
-  float CaloMetPhi;
+  float CaloMetPt[6];
+  float CaloMetPx[6];
+  float CaloMetPy[6];
+  float CaloMetPhi[6];
   float CaloEtFractionHadronic;
   float CaloEmEtFraction;
   float CaloHadEtInHB;
@@ -511,24 +511,24 @@ class Analyzer : public edm::EDAnalyzer {
   float CaloEmEtInHF;
   float CaloMetEz;
   float CaloMaxEtInEmTowers;
-  float CaloSumEt;
+  float CaloMetSumEt[6];
   float CaloMaxEtInHadTowers;
   float Delta_phi;
   
   //PFMet variables
-  float PFMetPt;
-  float PFMetPx;
-  float PFMetPy;
-  float PFMetPhi;
-  float PFMetSumEt;
+  float PFMetPt[6];
+  float PFMetPx[6];
+  float PFMetPy[6];
+  float PFMetPhi[6];
+  float PFMetSumEt[6];
   float Delta_phiPF;
   
   //TCMet variables
-  float TCMetPt;
-  float TCMetPx;
-  float TCMetPy;
-  float TCMetPhi;
-  float TCMetSumEt;
+  float TCMetPt[6];
+  float TCMetPx[6];
+  float TCMetPy[6];
+  float TCMetPhi[6];
+  float TCMetSumEt[6];
   float Delta_phiTC;
   
   //genMet variables

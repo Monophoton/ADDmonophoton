@@ -12,7 +12,7 @@
 //
 // Original Author:  Sandhya Jain
 //         Created:  Fri Apr 17 11:00:06 CEST 2009
-// $Id: Analyzer.cc,v 1.29 2010/10/14 12:59:51 miceli Exp $
+// $Id: Analyzer.cc,v 1.30 2010/10/15 19:13:16 miceli Exp $
 //
 //
 
@@ -1270,37 +1270,69 @@ void Analyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup){
        }//if(myphoton_container.size!=0) 
      }//if(runrechit_)
      
-   }//if(runphotons_)  
+   }//if(runphotons_)
+   //calomet variables  
    if(runmet_){
      edm::Handle<edm::View<pat::MET> > metHandle;
      iEvent.getByLabel(metLabel_,metHandle);
-     //const edm::View<pat::MET> & mets = *metHandle;
-     edm::View<pat::MET>::const_iterator met;
-     for ( met = metHandle->begin(); met != metHandle->end(); met++){
-       //calomet variables
-       CaloMetSig                            = met->mEtSig();
-       CaloMetEt                             = met->pt();
-       CaloMetEx                             = met->px();
-       CaloMetEy                             = met->py();
-       CaloMetPhi                            = correct_phi(met->phi());
-       CaloEtFractionHadronic                = met->etFractionHadronic();
-       CaloEmEtFraction                      = met->emEtFraction();
-       CaloHadEtInHB                         = met->hadEtInHB();
-       CaloHadEtInHO                         = met->hadEtInHO();
-       CaloHadEtInHE                         = met->hadEtInHE();
-       CaloHadEtInHF                         = met->hadEtInHF();
-       CaloEmEtInEB                          = met->emEtInEB();
-       CaloEmEtInEE                          = met->emEtInEE();
-       CaloEmEtInHF                          = met->emEtInHF();
-       CaloMetEz                             = met->e_longitudinal();
-       CaloMaxEtInEmTowers                   = met->maxEtInEmTowers();
-       CaloSumEt                             = met->sumEt();
-       CaloMaxEtInHadTowers                  = met->maxEtInHadTowers();
+     if ( metHandle.isValid() ){
+      const edm::View<pat::MET> & met = *metHandle;
+      //edm::View<pat::MET>::const_iterator met;
+       CaloMetSig                            = met[0].mEtSig();
+       CaloEtFractionHadronic                = met[0].etFractionHadronic();
+       CaloEmEtFraction                      = met[0].emEtFraction();
+       CaloHadEtInHB                         = met[0].hadEtInHB();
+       CaloHadEtInHO                         = met[0].hadEtInHO();
+       CaloHadEtInHE                         = met[0].hadEtInHE();
+       CaloHadEtInHF                         = met[0].hadEtInHF();
+       CaloEmEtInEB                          = met[0].emEtInEB();
+       CaloEmEtInEE                          = met[0].emEtInEE();
+       CaloEmEtInHF                          = met[0].emEtInHF();
+       CaloMetEz                             = met[0].e_longitudinal();
+       CaloMaxEtInEmTowers                   = met[0].maxEtInEmTowers();
+       CaloMaxEtInHadTowers                  = met[0].maxEtInHadTowers();
+       // 0=full corr1=uncorrNone  2=uncorrALL 3=uncorrJES  4=uncorrMUON  5=TAU
+       
+       CaloMetPt[0]                          = met[0].pt();
+       CaloMetPx[0]                          = met[0].px();
+       CaloMetPy[0]                          = met[0].py();
+       CaloMetPhi[0]                         = correct_phi(met[0].phi());
+       CaloMetSumEt[0]                       = met[0].sumEt();
+       
+       CaloMetPt[1]                          = met[0].uncorrectedPt(pat::MET::uncorrNONE); 
+       CaloMetPhi[1]                         = correct_phi(met[0].uncorrectedPhi(pat::MET::uncorrNONE)); 
+       CaloMetPx[1]                          = met[0].corEx(pat::MET::uncorrNONE); 
+       CaloMetPy[1]                          = met[0].corEy(pat::MET::uncorrNONE); 
+       CaloMetSumEt[1]                       = met[0].corSumEt(pat::MET::uncorrNONE); 
+       
+       CaloMetPt[2]                          = met[0].uncorrectedPt(pat::MET::uncorrALL); 
+       CaloMetPhi[2]                         = correct_phi(met[0].uncorrectedPhi(pat::MET::uncorrALL)); 
+       CaloMetPx[2]                          = met[0].corEx(pat::MET::uncorrALL); 
+       CaloMetPy[2]                          = met[0].corEy(pat::MET::uncorrALL); 
+       CaloMetSumEt[2]                       = met[0].corSumEt(pat::MET::uncorrALL); 
+       
+       CaloMetPt[3]                          = met[0].uncorrectedPt(pat::MET::uncorrJES); 
+       CaloMetPhi[3]                         = correct_phi(met[0].uncorrectedPhi(pat::MET::uncorrJES)); 
+       CaloMetPx[3]                          = met[0].corEx(pat::MET::uncorrJES); 
+       CaloMetPy[3]                          = met[0].corEy(pat::MET::uncorrJES); 
+       CaloMetSumEt[3]                       = met[0].corSumEt(pat::MET::uncorrJES); 
+       
+       CaloMetPt[4]                          = met[0].uncorrectedPt(pat::MET::uncorrMUON); 
+       CaloMetPhi[4]                         = correct_phi(met[0].uncorrectedPhi(pat::MET::uncorrMUON)); 
+       CaloMetPx[4]                          = met[0].corEx(pat::MET::uncorrMUON); 
+       CaloMetPy[4]                          = met[0].corEy(pat::MET::uncorrMUON); 
+       CaloMetSumEt[4]                       = met[0].corSumEt(pat::MET::uncorrMUON); 
+       
+       CaloMetPt[5]                          = met[0].uncorrectedPt(pat::MET::uncorrTAU); 
+       CaloMetPhi[5]                         = correct_phi(met[0].uncorrectedPhi(pat::MET::uncorrTAU)); 
+       CaloMetPx[5]                          = met[0].corEx(pat::MET::uncorrTAU); 
+       CaloMetPy[5]                          = met[0].corEy(pat::MET::uncorrTAU); 
+       CaloMetSumEt[5]                       = met[0].corSumEt(pat::MET::uncorrTAU); 
        if(runphotons_==1)
 	 if (myphoton_container.size()!=0)
-	   Delta_phi                         = fabs(reco::deltaPhi(correct_phi(met->phi()),correct_phi(myphoton_container[0].phi())));
+	   Delta_phi                       = fabs(reco::deltaPhi(correct_phi(met[0].phi()),correct_phi(myphoton_container[0].phi())));
        if(rungenmet_){
-	 const reco::GenMET *genMet = met->genMET();
+	 const reco::GenMET *genMet = met[0].genMET();
 	 genMetPt     = genMet->et();
 	 genMetPhi    = correct_phi(genMet->phi());
 	 genMetSumEt  = genMet->sumEt();
@@ -1317,14 +1349,46 @@ void Analyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup){
      iEvent.getByLabel(PFmetLabel_,metPFHandle);
      const edm::View<pat::MET> & metsPF = *metPFHandle;
      if ( metPFHandle.isValid() ){
-       PFMetPt     = metsPF[0].et();
-       PFMetPhi    = correct_phi(metsPF[0].phi());
-       PFMetSumEt  = metsPF[0].sumEt();
-       PFMetPx     = metsPF[0].px();
-       PFMetPy     = metsPF[0].py();
-       if(runphotons_==1)
-	 if (myphoton_container.size()!=0)
-	   Delta_phiPF  = fabs(reco::deltaPhi(PFMetPhi,correct_phi(myphoton_container[0].phi())));
+     // 0=full corr1=uncorrNone  2=uncorrALL 3=uncorrJES  4=uncorrMUON  5=TAU
+     PFMetPt[0]                          = metsPF[0].pt();
+     PFMetPx[0]                          = metsPF[0].px();
+     PFMetPy[0]                          = metsPF[0].py();
+     PFMetPhi[0]                         = correct_phi(metsPF[0].phi());
+     PFMetSumEt[0]                       = metsPF[0].sumEt();
+     
+     PFMetPt[1]                          = metsPF[0].uncorrectedPt(pat::MET::uncorrNONE); 
+     PFMetPhi[1]                         = correct_phi(metsPF[0].uncorrectedPhi(pat::MET::uncorrNONE)); 
+     PFMetPx[1]                          = metsPF[0].corEx(pat::MET::uncorrNONE); 
+     PFMetPy[1]                          = metsPF[0].corEy(pat::MET::uncorrNONE); 
+     PFMetSumEt[1]                       = metsPF[0].corSumEt(pat::MET::uncorrNONE); 
+     
+     PFMetPt[2]                          = metsPF[0].uncorrectedPt(pat::MET::uncorrALL); 
+     PFMetPhi[2]                         = correct_phi(metsPF[0].uncorrectedPhi(pat::MET::uncorrALL)); 
+     PFMetPx[2]                          = metsPF[0].corEx(pat::MET::uncorrALL); 
+     PFMetPy[2]                          = metsPF[0].corEy(pat::MET::uncorrALL); 
+     PFMetSumEt[2]                       = metsPF[0].corSumEt(pat::MET::uncorrALL); 
+     
+     PFMetPt[3]                          = metsPF[0].uncorrectedPt(pat::MET::uncorrJES); 
+     PFMetPhi[3]                         = correct_phi(metsPF[0].uncorrectedPhi(pat::MET::uncorrJES)); 
+     PFMetPx[3]                          = metsPF[0].corEx(pat::MET::uncorrJES); 
+     PFMetPy[3]                          = metsPF[0].corEy(pat::MET::uncorrJES); 
+     PFMetSumEt[3]                       = metsPF[0].corSumEt(pat::MET::uncorrJES); 
+     
+     PFMetPt[4]                          = metsPF[0].uncorrectedPt(pat::MET::uncorrMUON); 
+     PFMetPhi[4]                         = correct_phi(metsPF[0].uncorrectedPhi(pat::MET::uncorrMUON)); 
+     PFMetPx[4]                          = metsPF[0].corEx(pat::MET::uncorrMUON); 
+     PFMetPy[4]                          = metsPF[0].corEy(pat::MET::uncorrMUON); 
+     PFMetSumEt[4]                       = metsPF[0].corSumEt(pat::MET::uncorrMUON); 
+     
+     PFMetPt[5]                          = metsPF[0].uncorrectedPt(pat::MET::uncorrTAU); 
+     PFMetPhi[5]                         = correct_phi(metsPF[0].uncorrectedPhi(pat::MET::uncorrTAU)); 
+     PFMetPx[5]                          = metsPF[0].corEx(pat::MET::uncorrTAU); 
+     PFMetPy[5]                          = metsPF[0].corEy(pat::MET::uncorrTAU); 
+     PFMetSumEt[5]                       = metsPF[0].corSumEt(pat::MET::uncorrTAU); 
+
+     if(runphotons_==1)
+       if (myphoton_container.size()!=0)
+	 Delta_phiPF  = fabs(reco::deltaPhi(PFMetPhi[0],correct_phi(myphoton_container[0].phi())));
      }
      else{
        LogWarning("METEventSelector") << "No Met results for InputTag " ;
@@ -1336,14 +1400,46 @@ void Analyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup){
      iEvent.getByLabel(TCmetLabel_,metTCHandle);
      const edm::View<pat::MET> & metsTC = *metTCHandle;
      if ( metTCHandle.isValid() ){
-       TCMetPt     = metsTC[0].et();
-       TCMetPhi    = correct_phi(metsTC[0].phi());
-       TCMetSumEt  = metsTC[0].sumEt();
-       TCMetPx     = metsTC[0].px();
-       TCMetPy     = metsTC[0].py();
+       // 0=full corr1=uncorrNone  2=uncorrALL 3=uncorrJES  4=uncorrMUON  5=TAU
+       TCMetPt[0]                          = metsTC[0].pt();
+       TCMetPx[0]                          = metsTC[0].px();
+       TCMetPy[0]                          = metsTC[0].py();
+       TCMetPhi[0]                         = correct_phi(metsTC[0].phi());
+       TCMetSumEt[0]                       = metsTC[0].sumEt();
+       
+       TCMetPt[1]                          = metsTC[0].uncorrectedPt(pat::MET::uncorrNONE); 
+       TCMetPhi[1]                         = correct_phi(metsTC[0].uncorrectedPhi(pat::MET::uncorrNONE)); 
+       TCMetPx[1]                          = metsTC[0].corEx(pat::MET::uncorrNONE); 
+       TCMetPy[1]                          = metsTC[0].corEy(pat::MET::uncorrNONE); 
+       TCMetSumEt[1]                       = metsTC[0].corSumEt(pat::MET::uncorrNONE); 
+       
+       TCMetPt[2]                          = metsTC[0].uncorrectedPt(pat::MET::uncorrALL); 
+       TCMetPhi[2]                         = correct_phi(metsTC[0].uncorrectedPhi(pat::MET::uncorrALL)); 
+       TCMetPx[2]                          = metsTC[0].corEx(pat::MET::uncorrALL); 
+       TCMetPy[2]                          = metsTC[0].corEy(pat::MET::uncorrALL); 
+       TCMetSumEt[2]                       = metsTC[0].corSumEt(pat::MET::uncorrALL); 
+       
+       TCMetPt[3]                          = metsTC[0].uncorrectedPt(pat::MET::uncorrJES); 
+       TCMetPhi[3]                         = correct_phi(metsTC[0].uncorrectedPhi(pat::MET::uncorrJES)); 
+       TCMetPx[3]                          = metsTC[0].corEx(pat::MET::uncorrJES); 
+       TCMetPy[3]                          = metsTC[0].corEy(pat::MET::uncorrJES); 
+       TCMetSumEt[3]                       = metsTC[0].corSumEt(pat::MET::uncorrJES); 
+       
+       TCMetPt[4]                          = metsTC[0].uncorrectedPt(pat::MET::uncorrMUON); 
+       TCMetPhi[4]                         = correct_phi(metsTC[0].uncorrectedPhi(pat::MET::uncorrMUON)); 
+       TCMetPx[4]                          = metsTC[0].corEx(pat::MET::uncorrMUON); 
+       TCMetPy[4]                          = metsTC[0].corEy(pat::MET::uncorrMUON); 
+       TCMetSumEt[4]                       = metsTC[0].corSumEt(pat::MET::uncorrMUON); 
+       
+       TCMetPt[5]                          = metsTC[0].uncorrectedPt(pat::MET::uncorrTAU); 
+       TCMetPhi[5]                         = correct_phi(metsTC[0].uncorrectedPhi(pat::MET::uncorrTAU)); 
+       TCMetPx[5]                          = metsTC[0].corEx(pat::MET::uncorrTAU); 
+       TCMetPy[5]                          = metsTC[0].corEy(pat::MET::uncorrTAU); 
+       TCMetSumEt[5]                       = metsTC[0].corSumEt(pat::MET::uncorrTAU); 
+       
        if(runphotons_==1)
 	 if (myphoton_container.size()!=0)
-	   Delta_phiTC  = fabs(reco::deltaPhi(TCMetPhi,correct_phi(myphoton_container[0].phi()))); 
+	   Delta_phiTC  = fabs(reco::deltaPhi(TCMetPhi[0],correct_phi(myphoton_container[0].phi()))); 
      }
      else{
        LogWarning("METEventSelector") << "No Met results for InputTag " ;
@@ -1351,6 +1447,7 @@ void Analyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup){
      } 
      
    }//end of if(runTCmet_)
+
    if(runjets_){
      edm::Handle<edm::View<pat::Jet> > jetHandle;
      iEvent.getByLabel(jetLabel_,jetHandle);
@@ -1897,13 +1994,7 @@ void Analyzer::beginJob(){
   if(runmet_){
     //Calomet variables
     myEvent->Branch("CaloMetSigma",&CaloMetSig,"CaloMetSig/F");
-    //myEvent->Branch("CaloMetCorr",&CaloMetCorr,"CaloMetCorr/F");
-    myEvent->Branch("CaloMetEt",&CaloMetEt,"CaloMetEt/F");
-    myEvent->Branch("CaloMetEx",&CaloMetEx,"CaloMetEx/F");
-    myEvent->Branch("CaloMetEy",&CaloMetEy,"CaloMetEy/F");
     myEvent->Branch("CaloMetEz",&CaloMetEz,"CaloMetEz/F");
-    myEvent->Branch("CaloMetPhi",&CaloMetPhi,"CaloMetPhi/F");
-    myEvent->Branch("CaloMetSumEt",&CaloSumEt,"CaloMetSumEt/F");
     myEvent->Branch("CaloEtFractionHadronic",&CaloEtFractionHadronic,"CaloEtFractionHadronic/F");
     myEvent->Branch("CaloEmEtFraction",&CaloEmEtFraction,"CaloEmEtFraction/F");
     myEvent->Branch("CaloHadEtInHB",&CaloHadEtInHB,"CaloHadEtInHB/F");
@@ -1915,7 +2006,12 @@ void Analyzer::beginJob(){
     myEvent->Branch("CaloEmEtInHF",&CaloEmEtInHF,"CaloEmEtInHF/F");
     myEvent->Branch("CaloMaxEtInEmTowers",&CaloMaxEtInEmTowers,"CaloMaxEtInEmTowers/F");
     myEvent->Branch("CaloMaxEtInHadTowers",&CaloMaxEtInHadTowers,"CaloMaxEtInHadTowers/F");
-    
+    myEvent->Branch("CaloMetPt",CaloMetPt,"CaloMetPt[6]/F");
+    myEvent->Branch("CaloMetPx",CaloMetPx,"CaloMetPx[6]/F");
+    myEvent->Branch("CaloMetPy",CaloMetPy,"CaloMetPy[6]/F");
+    myEvent->Branch("CaloMetPhi",CaloMetPhi,"CaloMetPhi[6]/F");
+    myEvent->Branch("CaloMetSumEt",CaloMetSumEt,"CaloMetSumEt[6]/F");
+
     if(rungenmet_){
       myEvent->Branch("genMetPt",&genMetPt,"genMetPt/F");
       myEvent->Branch("genMetPx",&genMetPx,"genMetPx/F");
@@ -1930,22 +2026,22 @@ void Analyzer::beginJob(){
     myEvent->Branch("Delta_phiGEN",&Delta_phiGEN,"Delta_phiGEN/F");
   
   if(runPFmet_){
-    myEvent->Branch("PFMetPt",&PFMetPt,"PFMetPt/F");
-    myEvent->Branch("PFMetPx",&PFMetPx,"PFMetPx/F");
-    myEvent->Branch("PFMetPy",&PFMetPy,"PFMetPy/F");
-    myEvent->Branch("PFMetPhi",&PFMetPhi,"PFMetPhi/F");
-    myEvent->Branch("PFMetSumEt",&PFMetSumEt,"PFMetSumEt/F");
+    myEvent->Branch("PFMetPt",PFMetPt,"PFMetPt[6]/F");
+    myEvent->Branch("PFMetPx",PFMetPx,"PFMetPx[6]/F");
+    myEvent->Branch("PFMetPy",PFMetPy,"PFMetPy[6]/F");
+    myEvent->Branch("PFMetPhi",PFMetPhi,"PFMetPhi[6]/F");
+    myEvent->Branch("PFMetSumEt",PFMetSumEt,"PFMetSumEt[6]/F");
   }//end of if(runmet)
   if(runPFmet_&& runphotons_)
     myEvent->Branch("Delta_phiPF",&Delta_phiPF,"Delta_phiPF/F");
   
   
   if(runTCmet_){
-    myEvent->Branch("TCMetPt",&TCMetPt,"TCMetPt/F");
-    myEvent->Branch("TCMetPx",&TCMetPx,"TCMetPx/F");
-    myEvent->Branch("TCMetPy",&TCMetPy,"TCMetPy/F");
-    myEvent->Branch("TCMetPhi",&TCMetPhi,"TCMetPhi/F");
-    myEvent->Branch("TCMetSumEt",&TCMetSumEt,"TCMetSumEt/F");
+    myEvent->Branch("TCMetPt",TCMetPt,"TCMetPt[6]/F");
+    myEvent->Branch("TCMetPx",TCMetPx,"TCMetPx[6]/F");
+    myEvent->Branch("TCMetPy",TCMetPy,"TCMetPy[6]/F");
+    myEvent->Branch("TCMetPhi",TCMetPhi,"TCMetPhi[6]/F");
+    myEvent->Branch("TCMetSumEt",TCMetSumEt,"TCMetSumEt[6]/F");
   }//end of if(runmet)
   if(runTCmet_&& runphotons_)
     myEvent->Branch("Delta_phiTC",&Delta_phiTC,"Delta_phiTC/F");
