@@ -189,9 +189,11 @@ process.ecalCleanClustering = cms.Sequence(process.cleanedEcalClusters*process.c
 #Comment out process.ecalCleanClustering if you don't
 #need to redo clustering.
 process.p = cms.Path(
-   # process.hltHighLevel*
+   process.conversionSequence*
+   process.photonSequence*
+   process.photonIDSequence*
    #process.ecalCleanClustering*
- #  process.hltHighLevel*
+   #process.hltHighLevel*
    process.patDefaultSequence*
    process.demo
     )

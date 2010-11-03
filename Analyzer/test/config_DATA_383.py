@@ -79,7 +79,7 @@ process.source = cms.Source("PoolSource",
 process.options = cms.untracked.PSet(
 	fileMode = cms.untracked.string('NOMERGE')
 )
-#process.source.skipEvents = cms.untracked.uint32(7300)
+process.source.skipEvents = cms.untracked.uint32(7300)
 # let it run
 
 process.content = cms.EDAnalyzer("EventContentAnalyzer")
@@ -116,7 +116,7 @@ process.demo = cms.EDAnalyzer('Analyzer',
                               runscraping      = cms.untracked.bool(True),
                               runtracks        = cms.untracked.bool(True),
                               runvertex        = cms.untracked.bool(True),
-                              debug           =  cms.untracked.bool(False)
+                              debug            = cms.untracked.bool(False)
                               )
 #process.out.fileName = "DROPPED"
 
@@ -187,12 +187,15 @@ process.cleanedElectronreco = cms.Sequence(particleFlowReco*pfElectronTranslator
 process.cleanedEgammaSkimReco = cms.Sequence(process.cleanedLocalreco*process.cleanedElectronseeding*process.cleanedElectrontracking*process.cleanedElectronreco*process.conversionSequence*process.trackerOnlyConversionSequence*process.photonSequence*process.interestingEgammaIsoDetIds*process.photonIDSequence*process.eIdSequence)
 process.ecalCleanClustering = cms.Sequence(process.cleanedEcalClusters*process.cleanedEgammaSkimReco)
 ################End extra stuff.
+
 #Comment out process.ecalCleanClustering if you don't
 #need to redo clustering.
 process.p = cms.Path(
-   # process.hltHighLevel*
+   process.conversionSequence*
+   process.photonSequence*
+   process.photonIDSequence*
    #process.ecalCleanClustering*
- #  process.hltHighLevel*
+   #process.hltHighLevel*
    process.patDefaultSequence*
    process.demo
     )
