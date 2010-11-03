@@ -80,12 +80,6 @@ process.options = cms.untracked.PSet(
 )
 #process.source.skipEvents = cms.untracked.uint32(400)
 # let it run
-
-print
-print "============== Warning =============="
-print "technical trigger filter:    ENABLED"
-print "physics declare bit filter:  ENABLED"
-print "primary vertex filter:       ENABLED"
 process.content = cms.EDAnalyzer("EventContentAnalyzer")
 process.demo = cms.EDAnalyzer('Analyzer',
                               electronTag      = cms.untracked.InputTag("selectedPatElectrons"),
@@ -119,13 +113,15 @@ process.demo = cms.EDAnalyzer('Analyzer',
                               runL1            = cms.untracked.bool(True),
                               runscraping      = cms.untracked.bool(False),
                               runtracks        = cms.untracked.bool(True),
-                              runvertex        = cms.untracked.bool(True)
+                              runvertex        = cms.untracked.bool(True),
+                              debug            = cms.untracked.bool(False)
                               )
 #process.out.fileName = "DROPPED"
 
 ##This part is only needed if you're going to redo
 ##any part of the clustering, e.g. if you're
 ##running 3_8 over 3_6 data
+
 ########################
     ## TRACKING:
     ## Skip events with HV off

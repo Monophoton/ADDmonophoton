@@ -10,6 +10,7 @@
 #include "DataFormats/EcalRecHit/interface/EcalRecHitCollections.h"
 //#include "FWCore/Framework/interface/TriggerNames.h"
 #include "FWCore/Common/interface/TriggerNames.h"
+#include "HLTrigger/HLTcore/interface/HLTConfigProvider.h"
 #include <string>
 
 class Analyzer : public edm::EDAnalyzer {
@@ -20,10 +21,22 @@ class Analyzer : public edm::EDAnalyzer {
   
  private:
   virtual void beginJob() ;
+  virtual void beginRun(const edm::Run& , const edm::EventSetup&);
   virtual void analyze(const edm::Event&, const edm::EventSetup&);
   virtual void endJob() ;
   
   
+  HLTConfigProvider hltConfig_;
+  std::vector<std::string> photon_triggers_in_run;
+  std::vector<std::string> met_triggers_in_run;
+  std::vector<std::string> all_triggers;
+  std::vector<int> all_triggerprescales;
+  std::vector<bool> all_ifTriggerpassed;
+  std::vector<std::string> *triggernames;
+  std::vector<int> *triggerprescales;
+  std::vector<bool> *ifTriggerpassed;
+  int ntriggers;
+
   // ----------member data ---------------------------
   edm::ESHandle<CaloTopology> theCaloTopo_;
   int nevents;
@@ -57,37 +70,6 @@ class Analyzer : public edm::EDAnalyzer {
   //HLT
   
   edm::TriggerNames triggerNames_;  // TriggerNames class
-  std::vector<std::string>  hlNames_;  // name of each HLT algorithm
-  
-  bool HLT_MET50_event;
-  bool HLT_MET75_event;
-  bool HLT_Photon15_event;
-  bool HLT_Photon25_event;
-  bool HLT_DoubleEle10_event;
-  bool HLT_DoubleMu3_event;
-  bool HLT_Photon20_event;
-  bool HLT_Photon20_Cleaned_event;
-  bool HLT_Photon30_event;
-  bool HLT_Photon30_L1R_8E29_event;
-  bool HLT_Photon30_L1R_1E31_event;
-  bool HLT_Photon30_Cleaned_event;
-  bool HLT_Photon30_Isol_EBOnly_Cleaned_event;
-  bool HLT_Photon35_Isol_Cleaned_event;
-  bool HLT_Photon50_Cleaned_event;
-  bool HLT_Photon70_NoHE_Cleaned_event;
-  bool HLT_Photon100_NoHE_Cleaned_event;
-  bool HLT_DoublePhoton17_L1R_event;
-  bool HLT_DoublePhoton5_CEP_L1R_event;
-  bool HLT_Photon100_NoHE_Cleaned_L1R_v1_event;
-  bool HLT_Photon10_Cleaned_L1R_event;
-  bool HLT_Photon15_Cleaned_L1R_event;
-  bool HLT_Photon17_SC17HE_L1R_v1_event;
-  bool HLT_Photon20_NoHE_L1R_event;
-  bool HLT_Photon30_Isol_EBOnly_Cleaned_L1R_v1_event;
-  bool HLT_Photon35_Isol_Cleaned_L1R_v1_event;
-  bool HLT_Photon50_Cleaned_L1R_v1_event;
-  bool HLT_Photon50_NoHE_L1R_event; 
-  bool HLT_Photon70_NoHE_Cleaned_L1R_v1_event;
  
   std::map<std::string,int> HLT_chosen;
   std::map<std::string,int> L1_chosen;
@@ -126,6 +108,7 @@ class Analyzer : public edm::EDAnalyzer {
   bool runrechit_;
   bool runHErechit_;
   bool runvertex_;
+  bool debug_;
   bool init_;
   
   //output root file
@@ -140,8 +123,8 @@ class Analyzer : public edm::EDAnalyzer {
   float vy[10];
   float vz[10];
   float chi2[10];
-  float vtracksize[10];
-  float vndof[10];
+  int vtracksize[10];
+  int vndof[10];
   bool  v_isFake[10];
   float v_d0[10];
   
@@ -155,6 +138,9 @@ class Analyzer : public edm::EDAnalyzer {
   float trk_px[200];
   float trk_py[200];
   float trk_pz[200];
+  float trk_vx[200];
+  float trk_vy[200];
+  float trk_vz[200];
   float trk_eta[200];
   float trk_phi[200];
   
@@ -163,6 +149,9 @@ class Analyzer : public edm::EDAnalyzer {
   float jet_px[100];
   float jet_py[100];
   float jet_pz[100];
+  float jet_vx[100];
+  float jet_vy[100];
+  float jet_vz[100];
   float jet_eta[100];
   float jet_phi[100];
   float jet_emEnergyFraction[100];
@@ -179,6 +168,9 @@ class Analyzer : public edm::EDAnalyzer {
   float electron_px[100];
   float electron_py[100];
   float electron_pz[100];
+  float electron_vx[100];
+  float electron_vy[100];
+  float electron_vz[100];
   float electron_energy[100];
   float electron_charge[100];
   float electron_eta[100];
@@ -190,6 +182,9 @@ class Analyzer : public edm::EDAnalyzer {
   float muon_px[100];
   float muon_py[100];
   float muon_pz[100];
+  float muon_vx[100];
+  float muon_vy[100];
+  float muon_vz[100];
   float muon_energy[100];
   float muon_charge[100];
   float muon_eta[100];
@@ -270,6 +265,9 @@ class Analyzer : public edm::EDAnalyzer {
   float tau_px[100];
   float tau_py[100];
   float tau_pz[100];
+  float tau_vx[100];
+  float tau_vy[100];
+  float tau_vz[100];
   float tau_energy[100];
   float tau_charge[100];
   float tau_eta[100];
@@ -390,6 +388,9 @@ class Analyzer : public edm::EDAnalyzer {
   float pho_px[100];
   float pho_py[100];
   float pho_pz[100];
+  float pho_vx[100];
+  float pho_vy[100];
+  float pho_vz[100];
   float pho_r9[100];
   bool  pho_isEB[100];
   bool  pho_isEE[100];
@@ -463,9 +464,9 @@ class Analyzer : public edm::EDAnalyzer {
   float pho_pairMomentum_y[100];
   float pho_pairMomentum_z[100];
   float pho_EoverP[100];
-  float pho_vertex_x[100];
-  float pho_vertex_y[100];
-  float pho_vertex_z[100];
+  float pho_conv_vx[100];
+  float pho_conv_vy[100];
+  float pho_conv_vz[100];
   float pho_zOfPrimaryVertex[100];
   float pho_distOfMinimumApproach[100];
   float pho_dPhiTracksAtVtx[100];      

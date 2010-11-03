@@ -65,7 +65,8 @@ readFiles = cms.untracked.vstring()
 secFiles = cms.untracked.vstring()
 
 readFiles.extend( [
-'file:/uscms/home/miceli/scratch/monophoton/CMSSW_3_8_3/src/ADDmonophoton/Skimmer/test/monopho.root'
+'/store/data/Run2010A/EG/RECO/Sep17ReReco_v2/0053/E26BA7A4-23CA-DF11-8F97-003048C692DE.root',
+'/store/data/Run2010A/EG/RECO/Sep17ReReco_v2/0038/B22F7921-57C8-DF11-B356-003048D4DEBC.root',
 #'dcache:/pnfs/cms/WAX/11/store/user/askew/HighPT/Jul16th/HighETSkim_9_1.root',
 #'dcache:/pnfs/cms/WAX/11/store/user/askew/HighPT/Jul16th/HighETSkim_99_1.root'
     ] );
@@ -78,14 +79,9 @@ process.source = cms.Source("PoolSource",
 process.options = cms.untracked.PSet(
 	fileMode = cms.untracked.string('NOMERGE')
 )
-#process.source.skipEvents = cms.untracked.uint32(400)
+#process.source.skipEvents = cms.untracked.uint32(7300)
 # let it run
 
-print
-print "============== Warning =============="
-print "technical trigger filter:    ENABLED"
-print "physics declare bit filter:  ENABLED"
-print "primary vertex filter:       ENABLED"
 process.content = cms.EDAnalyzer("EventContentAnalyzer")
 process.demo = cms.EDAnalyzer('Analyzer',
                               electronTag      = cms.untracked.InputTag("selectedPatElectrons"),
@@ -102,24 +98,25 @@ process.demo = cms.EDAnalyzer('Analyzer',
                               Tracks           = cms.untracked.InputTag("generalTracks"),
                               Vertices         = cms.untracked.InputTag("offlinePrimaryVertices","",""),
                               outFile          = cms.untracked.string("output_00.root"),
-                              runphotons       = cms.untracked.bool(True),
-                              runHErechit      = cms.untracked.bool(True),
-                              runrechit        = cms.untracked.bool(True),
-                              runmet           = cms.untracked.bool(True),
+                              runphotons       = cms.untracked.bool(False),
+                              runHErechit      = cms.untracked.bool(False),
+                              runrechit        = cms.untracked.bool(False),
+                              runmet           = cms.untracked.bool(False),
                               rungenmet        = cms.untracked.bool(False),
-                              runPFmet         = cms.untracked.bool(True),
-                              runTCmet         = cms.untracked.bool(True),
-                              runjets          = cms.untracked.bool(True),
-                              runelectrons     = cms.untracked.bool(True),
-                              runtaus          = cms.untracked.bool(True),
-                              runmuons         = cms.untracked.bool(True),
-                              runcosmicmuons   = cms.untracked.bool(True),
+                              runPFmet         = cms.untracked.bool(False),
+                              runTCmet         = cms.untracked.bool(False),
+                              runjets          = cms.untracked.bool(False),
+                              runelectrons     = cms.untracked.bool(False),
+                              runtaus          = cms.untracked.bool(False),
+                              runmuons         = cms.untracked.bool(False),
+                              runcosmicmuons   = cms.untracked.bool(False),
                               rungenParticleCandidates = cms.untracked.bool(False),
                               runHLT           = cms.untracked.bool(True),
-                              runL1            = cms.untracked.bool(True),
-                              runscraping      = cms.untracked.bool(True),
-                              runtracks        = cms.untracked.bool(True),
-                              runvertex        = cms.untracked.bool(True)
+                              runL1            = cms.untracked.bool(False),
+                              runscraping      = cms.untracked.bool(False),
+                              runtracks        = cms.untracked.bool(False),
+                              runvertex        = cms.untracked.bool(False),
+                              debug            = cms.untracked.bool(False)
                               )
 #process.out.fileName = "DROPPED"
 
