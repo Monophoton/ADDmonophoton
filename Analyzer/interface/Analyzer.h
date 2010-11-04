@@ -176,6 +176,15 @@ class Analyzer : public edm::EDAnalyzer {
   float electron_eta[100];
   float electron_phi[100];
   float electron_trkIso[100];
+  float electron_ecalIso[100];
+  float electron_hcalIso[100];
+  float electron_HoE[100];
+  float electron_SigmaIetaIeta[100];
+  float electron_dEtaIn[100];
+  float electron_dPhiIn[100];
+  float electron_sc_energy[100];
+  float electron_sc_eta[100];
+  float electron_sc_phi[100];
   
   //muon variables
   float muon_pt[100];

@@ -1468,18 +1468,27 @@ void Analyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup){
      }
      Electron_n = 0;
      for(unsigned int x=0;x < myelectron_container.size();x++){
-       electron_pt[x]  = myelectron_container[x].pt();
-       electron_energy[x]  = myelectron_container[x].energy();
-       electron_px[x]  = myelectron_container[x].px();
-       electron_py[x]  = myelectron_container[x].py();
-       electron_pz[x]  = myelectron_container[x].pz();
-       electron_vx[x]  = myelectron_container[x].vx();
-       electron_vy[x]  = myelectron_container[x].vy();
-       electron_vz[x]  = myelectron_container[x].vz();
-       electron_phi[x] = correct_phi(myelectron_container[x].phi());
-       electron_eta[x] = myelectron_container[x].eta();
-       electron_charge[x] = myelectron_container[x].charge();
-       electron_trkIso[x] = myelectron_container[x].trackIso();
+       electron_pt[x]       = myelectron_container[x].pt();
+       electron_energy[x]   = myelectron_container[x].energy();
+       electron_px[x]       = myelectron_container[x].px();
+       electron_py[x]       = myelectron_container[x].py();
+       electron_pz[x]       = myelectron_container[x].pz();
+       electron_vx[x]       = myelectron_container[x].vx();
+       electron_vy[x]       = myelectron_container[x].vy();
+       electron_vz[x]       = myelectron_container[x].vz();
+       electron_phi[x]      = correct_phi(myelectron_container[x].phi());
+       electron_eta[x]      = myelectron_container[x].eta();
+       electron_charge[x]       = myelectron_container[x].charge();
+       electron_HoE[x]          = myelectron_container[x].hadronicOverEm();
+       electron_SigmaIetaIeta[x]= myelectron_container[x].sigmaIetaIeta();               
+       electron_trkIso[x]       = myelectron_container[x].dr03TkSumPt() ;
+       electron_ecalIso[x]      = myelectron_container[x].dr03EcalRecHitSumEt();
+       electron_hcalIso[x]      = myelectron_container[x].dr03HcalTowerSumEt();
+       electron_dEtaIn[x]       = myelectron_container[x].deltaEtaSuperClusterTrackAtVtx();
+       electron_dPhiIn[x]       = myelectron_container[x].deltaPhiSuperClusterTrackAtVtx();
+       electron_sc_energy[x]    = myelectron_container[x].superCluster()->energy();
+       electron_sc_eta[x]       = myelectron_container[x].superCluster()->eta();
+       electron_sc_phi[x]       = correct_phi(myelectron_container[x].superCluster()->phi());
        Electron_n++;
      }//end of for loop
    }
@@ -1605,6 +1614,15 @@ void Analyzer::beginJob(){
     myEvent->Branch("Electron_energy",electron_energy,"electron_energy[Electron_n]/F");
     myEvent->Branch("Electron_charge",electron_charge,"electron_charge[Electron_n]/F");
     myEvent->Branch("Electron_trkIso",electron_trkIso,"electron_trkIso[Electron_n]/F");   
+    myEvent->Branch("Electron_ecalIso",electron_ecalIso,"electron_ecalIso[Electron_n]/F");   
+    myEvent->Branch("Electron_hcalIso",electron_hcalIso,"electron_hcalIso[Electron_n]/F");   
+    myEvent->Branch("Electron_SigmaIetaIeta",electron_SigmaIetaIeta,"electron_SigmaIetaIeta[Electron_n]/F");   
+    myEvent->Branch("Electron_dEtaIn",electron_dEtaIn,"electron_dEtaIn[Electron_n]/F");   
+    myEvent->Branch("Electron_dPhiIn",electron_dPhiIn,"electron_dPhiIn[Electron_n]/F");   
+    myEvent->Branch("Electron_HoE",electron_HoE,"electron_HoE[Electron_n]/F");   
+    myEvent->Branch("Electron_sc_energy",electron_sc_energy,"electron_sc_energy[Electron_n]/F");
+    myEvent->Branch("Electron_sc_eta",electron_sc_eta,"electron_sc_eta[Electron_n]/F");
+    myEvent->Branch("Electron_sc_phi",electron_sc_phi,"electron_sc_phi[Electron_n]/F");
   }
   
   if (runmuons_){
