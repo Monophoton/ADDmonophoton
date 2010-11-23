@@ -13,7 +13,7 @@
 //
 // Original Author:  Sandhya Jain
 //         Created:  Fri Apr 17 11:00:06 CEST 2009
-// $Id: Analyzer.cc,v 1.31 2010/10/20 14:27:09 sandhya Exp $
+// $Id: Analyzer.cc,v 1.33 2010/11/04 00:05:15 sandhya Exp $
 //
 //
 
@@ -981,6 +981,9 @@ void Analyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup){
 	 pho_sc_energy[x]             =  myphoton_container[x].superCluster()->energy();
 	 pho_sc_eta[x]                =  myphoton_container[x].superCluster()->eta();
 	 pho_sc_phi[x]                =  correct_phi(myphoton_container[x].superCluster()->phi());
+	 pho_sc_x[x]                  =  myphoton_container[x].superCluster()->x();
+         pho_sc_y[x]                  =  myphoton_container[x].superCluster()->y();
+         pho_sc_z[x]                  =  myphoton_container[x].superCluster()->z();
 	 pho_sc_etaWidth[x]           =  myphoton_container[x].superCluster()->etaWidth();
 	 pho_sc_phiWidth[x]           =  myphoton_container[x].superCluster()->phiWidth();
 	 pho_HoE[x]                   =  myphoton_container[x].hadronicOverEm();              
@@ -1934,6 +1937,10 @@ void Analyzer::beginJob(){
     myEvent->Branch("Photon_sc_energy",pho_sc_energy,"pho_sc_energy[Photon_n]/F");
     myEvent->Branch("Photon_sc_eta",pho_sc_eta,"pho_sc_eta[Photon_n]/F");
     myEvent->Branch("Photon_sc_phi",pho_sc_phi,"pho_sc_phi[Photon_n]/F");
+    myEvent->Branch("Photon_sc_x",pho_sc_x,"pho_sc_x[Photon_n]/F");
+    myEvent->Branch("Photon_sc_y",pho_sc_y,"pho_sc_y[Photon_n]/F");
+    myEvent->Branch("Photon_sc_z",pho_sc_z,"pho_sc_z[Photon_n]/F");
+
     myEvent->Branch("Photon_etaWidth",pho_sc_etaWidth,"pho_sc_etaWidth[Photon_n]/F");
     myEvent->Branch("Photon_phiWidth",pho_sc_phiWidth,"pho_sc_phiWidth[Photon_n]/F");
     myEvent->Branch("Photon_sc_et",pho_sc_et,"pho_sc_et[Photon_n]/F");

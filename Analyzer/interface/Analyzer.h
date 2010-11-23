@@ -454,7 +454,9 @@ class Analyzer : public edm::EDAnalyzer {
   float pho_sc_etaWidth[100];
   float pho_sc_phiWidth[100];
   float pho_sc_et[100];
-  
+  float pho_sc_x[100];
+  float pho_sc_y[100];
+  float pho_sc_z[100];
   //gen matched photon 
   float matchpho_E[100];
   float matchpho_pt[100];
