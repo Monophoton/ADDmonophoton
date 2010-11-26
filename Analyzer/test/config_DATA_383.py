@@ -15,7 +15,7 @@ process.load("FWCore.MessageLogger.MessageLogger_cfi")
 #======
 
 ## global tag for data
-process.GlobalTag.globaltag = cms.string('GR_R_38X_V13A::All')
+process.GlobalTag.globaltag = cms.string('GR_R_38X_V15::All')
 
 from PhysicsTools.PatAlgos.tools.metTools import *
 removeMCMatching(process, ['All'])
@@ -79,7 +79,6 @@ process.source = cms.Source("PoolSource",
 process.options = cms.untracked.PSet(
 	fileMode = cms.untracked.string('NOMERGE')
 )
-process.source.skipEvents = cms.untracked.uint32(7300)
 # let it run
 
 process.content = cms.EDAnalyzer("EventContentAnalyzer")
