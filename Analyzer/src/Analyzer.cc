@@ -13,7 +13,7 @@
 //
 // Original Author:  Sandhya Jain
 //         Created:  Fri Apr 17 11:00:06 CEST 2009
-// $Id: Analyzer.cc,v 1.33 2010/11/04 00:05:15 sandhya Exp $
+// $Id: Analyzer.cc,v 1.34 2010/11/23 19:35:25 shruti Exp $
 //
 //
 
@@ -65,6 +65,10 @@
 #include "Geometry/Records/interface/IdealGeometryRecord.h"
 #include "Geometry/CaloTopology/interface/EcalBarrelTopology.h"
 #include "Geometry/CaloTopology/interface/EcalEndcapTopology.h"
+#include "DataFormats/EcalRecHit/interface/EcalRecHitCollections.h"
+#include "RecoLocalCalo/EcalRecAlgos/interface/EcalSeverityLevelAlgo.h"
+#include "RecoEcal/EgammaCoreTools/interface/EcalClusterLazyTools.h"
+
 
 #include "TString.h"
 #include "TH1D.h"
@@ -1009,6 +1013,7 @@ void Analyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup){
 	 pho_isEBGap[x]                      = myphoton_container[x].isEBGap(); 
 	 pho_isEEGap[x]                      = myphoton_container[x].isEEGap(); 
 	 pho_isEBEEGap[x]                    = myphoton_container[x].isEBEEGap(); 
+         pho_hasConvTrk[x]                   = myphoton_container[x].hasConversionTracks();
 	 
 	 if(myphoton_container[x].genParticleRef().isNonnull()){
 	   matchpho_E[x]                =  myphoton_container[x].genPhoton()->energy();
@@ -1117,6 +1122,10 @@ void Analyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup){
        Handle<EcalRecHitCollection> Erechit;//endcap
        iEvent.getByLabel(rechitBLabel_,Brechit);
        iEvent.getByLabel(rechitELabel_,Erechit);
+
+       //this will be needed later for swiss corss
+       EcalClusterLazyTools lazyTool(iEvent, iSetup,rechitBLabel_, rechitELabel_ );
+
        const EcalRecHitCollection* barrelRecHits= Brechit.product();
        const EcalRecHitCollection* endcapRecHits= Erechit.product();
        edm::ESHandle<CaloTopology> pTopology;
@@ -1198,6 +1207,19 @@ void Analyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup){
 	     pho_roundness[x]    = (float)showershapes_barrel[0];
 	     pho_angle[x]        = (float)showershapes_barrel[1];
 	     pho_s9[x]           = pho_energy_xtal[x][0]/pho_e3x3[x];
+
+             //-New way to get swiss cross
+             const reco::CaloClusterPtr  seed = myphoton_container[x].superCluster()->seed();
+             DetId id = lazyTool.getMaximum(*seed).first;
+             float swissCross=-99.;
+
+             const EcalRecHitCollection & rechits = ( myphoton_container[x].isEB() ? *Brechit : *Brechit);
+             EcalRecHitCollection::const_iterator it = rechits.find( id );
+
+               if( it != rechits.end() ){swissCross = EcalSeverityLevelAlgo::swissCross( id, rechits, 0.08, true);}
+               pho_swissCross[x]=swissCross;
+             
+            /*
 	     pho_swissCross[x]   = EcalClusterTools::eTop( *(myphoton_container[x].superCluster()->seed()), 
 							   &(*barrelRecHits), &(*topology))+ 
 	                           EcalClusterTools::eBottom( *(myphoton_container[x].superCluster()->seed()), 
@@ -1206,6 +1228,7 @@ void Analyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup){
 							   &(*barrelRecHits), &(*topology)) + 
 	                           EcalClusterTools::eRight( *(myphoton_container[x].superCluster()->seed()), 
 							   &(*barrelRecHits), &(*topology));
+            */
 	     if(debug_ && 1-pho_swissCross[x]/pho_maxEnergyXtal[x] > 0.95) 
 	       cout<<"This photon candidate is an ECAL spike identified by Swiss Cross algorithm."<<endl;
 
@@ -1221,6 +1244,21 @@ void Analyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup){
 	     pho_roundness[x]   = -99.;
 	     pho_angle[x]       = -99.;
 	     pho_s9[x]          = pho_energy_xtal[x][0]/pho_e3x3[x];
+
+             //----New way to get the swiss cross
+             const reco::CaloClusterPtr  seed = myphoton_container[x].superCluster()->seed();
+             DetId id = lazyTool.getMaximum(*seed).first;
+             float swissCross=-99.;
+
+             const EcalRecHitCollection & rechits = ( myphoton_container[x].isEB() ? *Erechit : *Erechit);
+             EcalRecHitCollection::const_iterator it = rechits.find( id );
+
+            if( it != rechits.end() ) {swissCross = EcalSeverityLevelAlgo::swissCross( id, rechits, 0.08, true);}
+
+            pho_swissCross[x]=swissCross;
+            
+
+            /*// Old way to get SwissX  
 	     pho_swissCross[x]   = EcalClusterTools::eTop( *(myphoton_container[x].superCluster()->seed()), 
 							   &(*endcapRecHits), &(*topology))+ 
 	                           EcalClusterTools::eBottom( *(myphoton_container[x].superCluster()->seed()), 
@@ -1229,6 +1267,8 @@ void Analyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup){
 							   &(*endcapRecHits), &(*topology)) + 
 	                           EcalClusterTools::eRight( *(myphoton_container[x].superCluster()->seed()), 
 							   &(*endcapRecHits), &(*topology));
+            */
+
 	     if(debug_ && 1-pho_swissCross[x]/pho_maxEnergyXtal[x] > 0.95) {
 	       cout<<"This photon candidate is an ECAL spike identified by Swiss Cross algorithm." << endl;
 	       cout<<"This would be weird since there aren't spikes in the endcap of ECAL"<<endl; 
@@ -1442,6 +1482,7 @@ void Analyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup){
 	 jet_pt[x]  = myjet_container[x].pt();
 	 jet_px[x]  = myjet_container[x].px();
 	 jet_py[x]  = myjet_container[x].py();
+         jet_E[x]   = myjet_container[x].energy();
 	 jet_pz[x]  = myjet_container[x].pz();
 	 jet_vx[x]  = myjet_container[x].vx();
 	 jet_vy[x]  = myjet_container[x].vy();
@@ -1586,6 +1627,7 @@ void Analyzer::beginJob(){
     myEvent->Branch("Jet_n",&Jet_n,"Jet_n/I");
     myEvent->Branch("Jet_px",jet_px,"jet_px[Jet_n]/F");
     myEvent->Branch("Jet_py",jet_py,"jet_py[Jet_n]/F");
+    myEvent->Branch("Jet_E",jet_E,"jet_E[Jet_n]/F");
     myEvent->Branch("Jet_pz",jet_pz,"jet_pz[Jet_n]/F");
     myEvent->Branch("Jet_vx",jet_vx,"jet_vx[Jet_n]/F");
     myEvent->Branch("Jet_vy",jet_vy,"jet_vy[Jet_n]/F");
@@ -1954,6 +1996,7 @@ void Analyzer::beginJob(){
     myEvent->Branch("matchphotonpz",matchpho_pz,"matchpho_pz[Photon_n]/F");
     myEvent->Branch("ismatchedphoton",ismatchedpho,"ismatchedpho[Photon_n]/O");
     
+    myEvent->Branch("Photon_hasConvTrk",pho_hasConvTrk,"pho_hasConvTrk[Photon_n]/O"); 
     myEvent->Branch("Photon_ntracks",pho_nTracks,"pho_nTracks[Photon_n]/I");
     myEvent->Branch("Photon_isconverted",pho_isConverted,"pho_isConverted[Photon_n]/O");
     myEvent->Branch("Photon_pairInvmass",pho_pairInvariantMass,"pho_pairInvariantMass[Photon_n]/F");

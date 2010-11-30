@@ -148,6 +148,7 @@ class Analyzer : public edm::EDAnalyzer {
   float jet_pt[100];
   float jet_px[100];
   float jet_py[100];
+  float jet_E[100];
   float jet_pz[100];
   float jet_vx[100];
   float jet_vy[100];
@@ -424,8 +425,9 @@ class Analyzer : public edm::EDAnalyzer {
   float pho_theta[100];
   float pho_et[100];
   float pho_swissCross[100];
-  bool    pho_isConverted[100];
-  
+  bool  pho_isConverted[100];
+  bool  pho_hasConvTrk[100]; 
+ 
   //isolation variables
   float pho_ecalRecHitSumEtConeDR03[100];
   float pho_hcalTowerSumEtConeDR03[100];
