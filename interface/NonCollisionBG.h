@@ -16,51 +16,66 @@
 #include <TROOT.h>
 #include <TMath.h>
 #include <iostream>
+#include <vector>
+#include "TVector3.h"
+#include "TFile.h"
+#include "TH1.h"
+#include "TH1F.h"
+
 using namespace std;
+using namespace ROOT;
 
 class NonCollisionBG {
 
-    public :
-    NonCollisionBG();
-    virtual ~NonCollisionBG();
+  public :
+  NonCollisionBG();
+  virtual ~NonCollisionBG();
+  
+  //public variables for constructor/destructor/FisherDCosmic
+  TFile* file_COSMIC;
+  TFile* file_PHOTON;
+  
+  //Cosmic functions
+  float sigmaRCosmic(float Photon_sc_x, float Photon_sc_y, float Photon_sc_z,float CosmicMuon_OuterTrack_InnerPoint_x[],float CosmicMuon_OuterTrack_InnerPoint_y[],float CosmicMuon_OuterTrack_InnerPoint_z[], float  CosmicMuon_OuterTrack_InnerPoint_px[],float CosmicMuon_OuterTrack_InnerPoint_py[],float CosmicMuon_OuterTrack_InnerPoint_pz[], int CosmicMuon_n);
+  float fisherCosmic3(float Photon_Roundness, float Photon_Angle, float Photon_phHasConversionTracks);
+  float fisherCosmic2(float Photon_Roundness, float Photon_Angle);
+   
+  //Halo functions
+  bool isHEHalo(float photonSCphi, int nAllHERecHits, float HERecHitX[], float HERecHitY[], float HERecHitEnergy[], float HERecHitTime[], bool useTime=false);
+  bool isTrackHalo(float photonSCphi, int nCosMu, float CosTrackX[], float CosTracksY[]);
+
+  //Spike functions
+  float simpleBarrelE2E9(int nRH, vector<int> &ietaRH, vector<int> &iphiRH, vector<float> &eRH, int arrayLimit = 100); //assume first entry is seed! (highest energy)
+  bool isE2E9Spike(int nRH, vector<int> &ietaRH, vector<int> &iphiRH, vector<float> &eRH, int arrayLimit = 100);
+  bool isTimeSpike(vector<float> &tRH);
+   
+  private:
+  //Cosmic functions
+  vector<pair <bool,TVector3> > getEBIntersections( const TVector3& X,  const TVector3& P);
+  double h(double z, double& length);
+  double OuterEBRho(double zprimeprime );
+  double tDCA(const TVector3& X, const TVector3& P);
+  vector <double> outerIntersectionTs(const TVector3& X, const TVector3& P, double timeDCA);
+  vector <double> innerIntersectionTs(double R, const TVector3& X, const TVector3& P);
+  float prob(TH1F* h, float value);
     
-    //Cosmic functions
+  //Halo functions
+  float absDeltaPhi(float phi1, float phi2);
+  float fixPhi(float phi); //makes range [-pi,pi] to [0,2pi]
     
+  //Spike functions
     
-    //Halo functions
-    bool isHEHalo(float photonSCphi, int nAllHERecHits, float HERecHitX[], float HERecHitY[], float HERecHitEnergy[], float HERecHitTime[], bool useTime=false);
-    bool isTrackHalo(float photonSCphi, int nCosMu, float CosTrackX[], float CosTracksY[]);
-    
-    //Spike functions
-    float simpleBarrelE2E9(int nRH, vector<int> &ietaRH, vector<int> &iphiRH, vector<float> &eRH, int arrayLimit = 100); //assume first entry is seed! (highest energy)
-    bool isE2E9Spike(int nRH, vector<int> &ietaRH, vector<int> &iphiRH, vector<float> &eRH, int arrayLimit = 100);
-    bool isTimeSpike(vector<float> &tRH);
-    
-    
-    
-    
-    
-    
-    private:
-    //Cosmic functions
-    
-    
-    //Halo functions
-    float absDeltaPhi(float phi1, float phi2);
-    float fixPhi(float phi); //makes range [-pi,pi] to [0,2pi]
-    
-    //Spike functions
-    
-    
-    
-    ClassDef(NonCollisionBG,0)
+  ClassDef(NonCollisionBG,0)
 };
 
 NonCollisionBG::NonCollisionBG(){
+  file_PHOTON = TFile::Open("photon_MC.root","READ");
+  file_COSMIC = TFile::Open("data_cosmics.root","READ");
 }
 
 NonCollisionBG::~NonCollisionBG(){
-    //Delete stuff here made with 'new'!
+  file_PHOTON->Close();
+  file_COSMIC->Close();
 }
 
 #endif 
