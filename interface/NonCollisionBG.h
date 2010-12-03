@@ -37,7 +37,7 @@ class NonCollisionBG {
   
   //Cosmic functions
   float sigmaRCosmic(float Photon_sc_x, float Photon_sc_y, float Photon_sc_z,float CosmicMuon_OuterTrack_InnerPoint_x[],float CosmicMuon_OuterTrack_InnerPoint_y[],float CosmicMuon_OuterTrack_InnerPoint_z[], float  CosmicMuon_OuterTrack_InnerPoint_px[],float CosmicMuon_OuterTrack_InnerPoint_py[],float CosmicMuon_OuterTrack_InnerPoint_pz[], int CosmicMuon_n);
-  float fisherCosmic3(float Photon_Roundness, float Photon_Angle, float Photon_phHasConversionTracks);
+  float fisherCosmic3(float Photon_Roundness, float Photon_Angle, bool Photon_phHasConversionTracks);
   float fisherCosmic2(float Photon_Roundness, float Photon_Angle);
    
   //Halo functions
@@ -58,6 +58,7 @@ class NonCollisionBG {
   vector <double> outerIntersectionTs(const TVector3& X, const TVector3& P, double timeDCA);
   vector <double> innerIntersectionTs(double R, const TVector3& X, const TVector3& P);
   float prob(TH1F* h, float value);
+  float prob2(TH1F* h, bool Photon_phHasConversionTracks);
     
   //Halo functions
   float absDeltaPhi(float phi1, float phi2);

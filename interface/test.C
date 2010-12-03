@@ -67,7 +67,7 @@ void test(){
     int pho = 0; // this is the photon index, as if we were looping over a bunch of photons
     float Photon_sc_phi[3]={0.,0.,0.};
     int i = 2;
-    float Photon_phHasConversionTracks[3]= {0, 1, 1};
+    bool Photon_phHasConversionTracks[3]= {false,true,true};
     float Photon_Roundness[3] = {0.9, 0.1, 0.8};
     float Photon_Angle[3]= {0.9,0.3,1.0};
     //for i =0 { its more like signal event, for i = 1, bkg like event}

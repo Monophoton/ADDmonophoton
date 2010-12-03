@@ -24,7 +24,7 @@ vector< pair<bool,TVector3> > solutions;
 //////////////////////////////////////////////////////////
 
 // Example useage fisherCosmic3(Photon_Roundness[pho],Photon_Angle[pho],Photon_phHasConversionTracks[pho])
-float NonCollisionBG::fisherCosmic3(float Photon_Roundness, float Photon_Angle, float Photon_phHasConversionTracks){
+float NonCollisionBG::fisherCosmic3(float Photon_Roundness, float Photon_Angle, bool Photon_phHasConversionTracks){
 
   TH1F *sigRound          = (TH1F*)file_PHOTON->Get("h_Rho_MC");                                                                                                                     
   TH1F *sigAngle          = (TH1F*)file_PHOTON->Get("h_Angle_MC");
@@ -39,8 +39,8 @@ float NonCollisionBG::fisherCosmic3(float Photon_Roundness, float Photon_Angle, 
   float sigProb2          = prob(sigAngle, Photon_Angle);
   float bkgProb2          = prob(bkgAngle, Photon_Angle);
     
-  float sigProb3          = prob(sighasconversion,Photon_phHasConversionTracks);
-  float bkgProb3          = prob(bkghasconversion,Photon_phHasConversionTracks);
+  float sigProb3          = prob2(sighasconversion,Photon_phHasConversionTracks);
+  float bkgProb3          = prob2(bkghasconversion,Photon_phHasConversionTracks);
   
   //cout<<"(signal like event if prob_Signal ~1 and bkg like event if prob_Signal ~0)"<<endl;
   return sigProb1*sigProb2*sigProb3/(sigProb1*sigProb2*sigProb3 + bkgProb1*bkgProb2*bkgProb3);
@@ -70,6 +70,16 @@ float NonCollisionBG::prob(TH1F* h, float value){
   float norm = h->Integral(1, h->GetNbinsX());
   return float(h->GetBinContent(iBin))/norm;
 }
+
+float NonCollisionBG::prob2(TH1F* h, bool Photon_phHasConversionTracks){
+   float value=0.;
+   if(Photon_phHasConversionTracks){value=1.;}
+   else{value=0.;}
+  int iBin = h->FindBin(value);
+  float norm = h->Integral(1, h->GetNbinsX());
+  return float(h->GetBinContent(iBin))/norm;
+}
+
 
 float NonCollisionBG::sigmaRCosmic(float Pho_sc_x, float Pho_sc_y, float Pho_sc_z,float CosmicMuon_OuterTrack_InnerPoint_x[],float CosmicMuon_OuterTrack_InnerPoint_y[],float CosmicMuon_OuterTrack_InnerPoint_z[], float  CosmicMuon_OuterTrack_InnerPoint_px[],float CosmicMuon_OuterTrack_InnerPoint_py[],float CosmicMuon_OuterTrack_InnerPoint_pz[], int CosmicMuon_n){
   float dr = 1000000;	
