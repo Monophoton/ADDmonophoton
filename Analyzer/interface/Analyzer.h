@@ -29,6 +29,8 @@ class Analyzer : public edm::EDAnalyzer {
   HLTConfigProvider hltConfig_;
   std::vector<std::string> photon_triggers_in_run;
   std::vector<std::string> met_triggers_in_run;
+  std::vector<std::string> cosmic_triggers_in_run;
+  std::vector<std::string> halo_triggers_in_run;
   std::vector<std::string> all_triggers;
   std::vector<int> all_triggerprescales;
   std::vector<bool> all_ifTriggerpassed;
@@ -67,6 +69,8 @@ class Analyzer : public edm::EDAnalyzer {
   int Track_n;
   int Jet_n;
   int HERecHit_subset_n;
+  int CSCseg_n;
+  int RPChit_n;
   //HLT
   
   edm::TriggerNames triggerNames_;  // TriggerNames class
@@ -78,12 +82,15 @@ class Analyzer : public edm::EDAnalyzer {
   
   edm::InputTag eleLabel_;
   edm::InputTag muoLabel_;
+  edm::InputTag cosMuoLabel_;
   edm::InputTag jetLabel_;
   edm::InputTag tauLabel_;
   edm::InputTag metLabel_;
   edm::InputTag PFmetLabel_;
   edm::InputTag TCmetLabel_;
   edm::InputTag phoLabel_;
+  edm::InputTag cscLabel_;
+  edm::InputTag rpcLabel_;
   edm::InputTag rechitBLabel_;
   edm::InputTag rechitELabel_;
   edm::InputTag hlTriggerResults_;  // Input tag for TriggerResults
@@ -108,6 +115,8 @@ class Analyzer : public edm::EDAnalyzer {
   bool runrechit_;
   bool runHErechit_;
   bool runvertex_;
+  bool runCSCseg_;
+  bool runRPChit_;
   bool debug_;
   bool init_;
   
@@ -506,6 +515,22 @@ class Analyzer : public edm::EDAnalyzer {
   float HERecHit_subset_x[10000];
   float HERecHit_subset_y[10000];
   float HERecHit_subset_z[10000];
+  
+  //CSCseg info
+  float CSCseg_time[10000];
+  float CSCseg_x[10000];
+  float CSCseg_y[10000];
+  float CSCseg_z[10000];
+  float CSCseg_phi[10000];
+  float CSCseg_DirectionX[10000];
+  float CSCseg_DirectionY[10000];
+  float CSCseg_DirectionZ[10000];
+  
+  //RPChit info
+  float RPChit_x[10000];
+  float RPChit_y[10000];
+  float RPChit_z[10000];
+  int RPChit_BunchX[10000];
   
   //calomet variables
   float CaloMetSig;

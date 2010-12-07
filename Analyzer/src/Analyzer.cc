@@ -13,7 +13,7 @@
 //
 // Original Author:  Sandhya Jain
 //         Created:  Fri Apr 17 11:00:06 CEST 2009
-// $Id: Analyzer.cc,v 1.34 2010/11/23 19:35:25 shruti Exp $
+// $Id: Analyzer.cc,v 1.35 2010/11/30 15:06:58 schauhan Exp $
 //
 //
 
@@ -68,7 +68,20 @@
 #include "DataFormats/EcalRecHit/interface/EcalRecHitCollections.h"
 #include "RecoLocalCalo/EcalRecAlgos/interface/EcalSeverityLevelAlgo.h"
 #include "RecoEcal/EgammaCoreTools/interface/EcalClusterLazyTools.h"
-
+#include <DataFormats/CSCRecHit/interface/CSCSegmentCollection.h>
+#include "DataFormats/GeometryVector/interface/GlobalPoint.h"
+#include "DataFormats/GeometryVector/interface/GlobalVector.h"
+#include "DataFormats/GeometryVector/interface/LocalPoint.h"
+#include "DataFormats/GeometryVector/interface/LocalVector.h"
+#include "Geometry/CSCGeometry/interface/CSCGeometry.h"
+#include "Geometry/CSCGeometry/interface/CSCChamber.h"
+#include "Geometry/CSCGeometry/interface/CSCLayer.h"
+#include "Geometry/CSCGeometry/interface/CSCLayerGeometry.h"
+#include "Geometry/Records/interface/MuonGeometryRecord.h"
+//#include "Geometry/CommonDetUnit/interface/GlobalTrackingGeometry.h"
+#include "Geometry/CommonDetUnit/interface/GeomDet.h"
+#include "DataFormats/RPCRecHit/interface/RPCRecHitCollection.h"
+#include <Geometry/RPCGeometry/interface/RPCGeometry.h>
 
 #include "TString.h"
 #include "TH1D.h"
@@ -138,12 +151,15 @@ Analyzer::Analyzer(const edm::ParameterSet& iConfig):
 //histocontainer_(),
   eleLabel_(iConfig.getUntrackedParameter<edm::InputTag>("electronTag")),
   muoLabel_(iConfig.getUntrackedParameter<edm::InputTag>("muonTag")),
+  cosMuoLabel_(iConfig.getUntrackedParameter<edm::InputTag>("cosMuonTag")),
   jetLabel_(iConfig.getUntrackedParameter<edm::InputTag>("jetTag")),
   tauLabel_(iConfig.getUntrackedParameter<edm::InputTag>("tauTag")),
   metLabel_(iConfig.getUntrackedParameter<edm::InputTag>("metTag")),
   PFmetLabel_(iConfig.getUntrackedParameter<edm::InputTag>("PFmetTag")),
   TCmetLabel_(iConfig.getUntrackedParameter<edm::InputTag>("TCmetTag")),
   phoLabel_(iConfig.getUntrackedParameter<edm::InputTag>("photonTag")),
+  cscLabel_(iConfig.getUntrackedParameter<edm::InputTag>("cscTag")),
+  rpcLabel_(iConfig.getUntrackedParameter<edm::InputTag>("rpcTag")),
   rechitBLabel_(iConfig.getUntrackedParameter<edm::InputTag>("rechitBTag")),
   rechitELabel_(iConfig.getUntrackedParameter<edm::InputTag>("rechitETag")),
   hlTriggerResults_(iConfig.getUntrackedParameter<edm::InputTag>("HLTriggerResults")),
@@ -168,6 +184,8 @@ Analyzer::Analyzer(const edm::ParameterSet& iConfig):
   runrechit_(iConfig.getUntrackedParameter<bool>("runrechit")),
   runHErechit_(iConfig.getUntrackedParameter<bool>("runHErechit")),
   runvertex_(iConfig.getUntrackedParameter<bool>("runvertex")),
+  runCSCseg_(iConfig.getUntrackedParameter<bool>("runCSCseg")),
+  runRPChit_(iConfig.getUntrackedParameter<bool>("runRPChit")),
   debug_(iConfig.getUntrackedParameter<bool>("debug")),
   init_(false)
 {
@@ -203,8 +221,7 @@ Analyzer::Analyzer(const edm::ParameterSet& iConfig):
 }
 
 
-Analyzer::~Analyzer()
-{
+Analyzer::~Analyzer(){
   // do anything here that needs to be done at desctruction time
   // (e.g. close files, deallocate resources etc.)
   
@@ -217,95 +234,147 @@ Analyzer::~Analyzer()
 // member functions
 //
 void 
-Analyzer::beginRun(const edm::Run& iRun, const edm::EventSetup& iSetup)
-{
-  if(debug_)
-    {
-      cout<<"\n----------------------------------------------------------------------------------------------------------------"<<endl;
-      cout<<"----------------------------------------------------------------------------------------------------------------"<<endl;
-      cout<<"BEGIN NEW RUN: "<<iRun.run()<<endl;
-    }
-      bool changed(true);
-      if (hltConfig_.init(iRun,iSetup,"HLT",changed)) {  // HLTlabel_ is grabbed from the cfg file
-	// if init returns TRUE, initialisation has succeeded!
-	if(debug_) std::cout << "Initalizing HLTConfigProvider"  << std::endl;
-	if (changed) 
-	  {
-	    // The HLT config has actually changed wrt the previous Run, hence rebook your
-	    // histogr ams or do anything else dependent on the revised HLT config
-	    if(debug_) cout<< "HLT config has changed wrt the previous Run"  << std::endl;
-	    photon_triggers_in_run.clear();
-	    met_triggers_in_run.clear();
-	    if(debug_){
-	    cout<<" Trigger Table : "<<hltConfig_.tableName()<<endl;
-	    cout<<" Available photon and met triggers : "<<endl;}
-	    unsigned int ntriggers = hltConfig_.size();
-	    // Loop over all available triggers
-	    for (unsigned int t=0;t<ntriggers;++t)
-	      {
-		std::string hltname(hltConfig_.triggerName(t));
-		string string_search ("HLT_Photon");
-		string string_search1 ("HLT_MET");
-		//search the trigger name for string_search. 
-		size_t found = hltname.find(string_search);
-		size_t found1 = hltname.find(string_search1);
-		//cout<<"Does "<<hltname<<" contain "<<string_search<<" ? found returns "<<int(found)<<endl;
-		if (found!=string::npos )
-		  {
-		    if(debug_) cout<<"  "<<t<<" Photon HLT path in this run\t"<<hltname<<endl;
-		    photon_triggers_in_run.push_back(hltname);
-		  }
-		
-		if (found1!=string::npos )
-		  {
-		    if(debug_)cout<<"  "<<t<<" MET HLT path in this run\t"<<hltname<<endl;
-		    met_triggers_in_run.push_back(hltname);
-		    
-		  }
-	      }
-	    for(int x = 0; x< (int)photon_triggers_in_run.size();x++)
-	      {
-		bool found = false;
-		for(int i = 0; i< (int)all_triggers.size();i++)
-		  {
-		    if(all_triggers[i]==photon_triggers_in_run[x]) found = true;
-		  }
-		if(!found)
-		  all_triggers.push_back(photon_triggers_in_run[x]);
-	      }
-	    
-	    for(int x= 0; x< (int)met_triggers_in_run.size();x++)
-	      {
-		bool found = false;
-		for(int i = 0; i< (int)all_triggers.size();i++)
-		  {
-		    if(all_triggers[i]==met_triggers_in_run[x]) found = true;
-		  }
-		if(!found)
-		  all_triggers.push_back(met_triggers_in_run[x]);
-	      }
-	  }
-      }
-      else 
-	{
-	  // if init returns FALSE, initialisation has NOT succeeded, which indicates a problem
-	  // with the file and/or code and needs to be investigated!
-	  std::cout << " HLT config extraction failure with name " << hlTriggerResults_ << std::endl;
-	  // In this case, all access methods will return empty values!
-	}
-      ntriggers = (int)all_triggers.size();
+Analyzer::beginRun(const edm::Run& iRun, const edm::EventSetup& iSetup){
+  if(debug_){
+    cout<<"\n----------------------------------------------------------------------------------------------------------------"<<endl;
+    cout<<"----------------------------------------------------------------------------------------------------------------"<<endl;
+    cout<<"BEGIN NEW RUN: "<<iRun.run()<<endl;
+  }
+  bool changed(true);
+  if(hltConfig_.init(iRun,iSetup,"HLT",changed)){  // HLTlabel_ is grabbed from the cfg file
+    // if init returns TRUE, initialisation has succeeded!
+    if(debug_) std::cout << "Initalizing HLTConfigProvider"  << std::endl;
+    if(changed){
+      // The HLT config has actually changed wrt the previous Run, hence rebook your
+      // histogr ams or do anything else dependent on the revised HLT config
+      if(debug_) cout<< "HLT config has changed wrt the previous Run"  << std::endl;
+      photon_triggers_in_run.clear();
+      met_triggers_in_run.clear();
+      cosmic_triggers_in_run.clear();
+      halo_triggers_in_run.clear();
       if(debug_){
-	cout<<"----------------------------------------------------------------------------------------------------------------"<<endl;
-	cout<<"----------------------------------------------------------------------------------------------------------------"<<endl;
-	cout<<"the triggers in HLT list till now are:"<<endl;
-	for(int i = 0; i< ntriggers;i++) cout<<"\t"<<all_triggers[i]<<endl;
+        cout<<" Trigger Table : "<<hltConfig_.tableName()<<endl;
+        cout<<" Available photon, met, cosmic, and halo triggers : "<<endl;
       }
+      unsigned int ntriggers = hltConfig_.size();
       
+      // Loop over all available triggers
+      for(unsigned int t=0;t<ntriggers;++t){
+        std::string hltname(hltConfig_.triggerName(t));
+        string string_search ("HLT_Photon");
+        string string_search1 ("HLT_MET");
+        string string_search_cosmic("cosmic");
+        string string_search_Cosmic("Cosmic");
+        string string_search_halo("halo");
+        string string_search_Halo("Halo");
+        
+        //search the trigger name for string_search. 
+        size_t found = hltname.find(string_search);
+        size_t found1 = hltname.find(string_search1);
+        size_t found_cosmic = hltname.find(string_search_cosmic);
+        size_t found_Cosmic = hltname.find(string_search_Cosmic);
+        size_t found_halo = hltname.find(string_search_halo);
+        size_t found_Halo = hltname.find(string_search_Halo);
+        
+        //cout<<"Does "<<hltname<<" contain "<<string_search<<" ? found returns "<<int(found)<<endl;
+  
+        if(found!=string::npos ){
+          if(debug_) cout<<"  "<<t<<" Photon HLT path in this run\t"<<hltname<<endl;
+          photon_triggers_in_run.push_back(hltname);
+        }
+	
+        if(found1!=string::npos ){
+          if(debug_)cout<<"  "<<t<<" MET HLT path in this run\t"<<hltname<<endl;
+            met_triggers_in_run.push_back(hltname);    
+        }
+        
+        if(found_cosmic!=string::npos ){
+          if(debug_) cout<<"  "<<t<<" cosmic trigger found in this run\t"<<hltname<<endl;
+          cosmic_triggers_in_run.push_back(hltname);
+        }
+        
+        if(found_Cosmic!=string::npos ){
+          if(debug_) cout<<"  "<<t<<" Cosmic trigger found in this run\t"<<hltname<<endl;
+          cosmic_triggers_in_run.push_back(hltname);
+        }
+        
+        if(found_halo!=string::npos ){
+          if(debug_) cout<<"  "<<t<<" halo trigger found in this run\t"<<hltname<<endl;
+          halo_triggers_in_run.push_back(hltname);
+        }
+        
+        if(found_Halo!=string::npos ){
+          if(debug_) cout<<"  "<<t<<" Halo trigger found in this run\t"<<hltname<<endl;
+          halo_triggers_in_run.push_back(hltname);
+        }
+        
+      }//loop over ntriggers
+
+      //SAVE PHOTON TRIGGER INFO
+      for(int x = 0; x< (int)photon_triggers_in_run.size();x++){
+        bool found = false;
+
+        for(int i = 0; i< (int)all_triggers.size();i++){
+          if(all_triggers[i]==photon_triggers_in_run[x]) found = true;
+        }//loop all triggers
+
+        if(!found)
+          all_triggers.push_back(photon_triggers_in_run[x]);
+      }//loop photon triggers
+      
+      
+      //SAVE MET TRIGGER INFO
+      for(int x= 0; x< (int)met_triggers_in_run.size();x++){
+        bool found = false;
+
+        for(int i = 0; i< (int)all_triggers.size();i++){
+          if(all_triggers[i]==met_triggers_in_run[x]) found = true;
+        }//loop all triggers
+
+        if(!found) all_triggers.push_back(met_triggers_in_run[x]);
+      }//loop met triggers
+      
+      
+      //SAVE COSMIC TRIGGER INFO
+      for(int x= 0; x< (int)cosmic_triggers_in_run.size();x++){
+        bool found = false;
+
+        for(int i = 0; i< (int)all_triggers.size();i++){
+          if(all_triggers[i]==cosmic_triggers_in_run[x]) found = true;
+        }//loop all triggers
+
+        if(!found) all_triggers.push_back(cosmic_triggers_in_run[x]);
+      }//loop cosmic triggers
+      
+      
+      //SAVE HALO TRIGGER INFO
+      for(int x= 0; x< (int)halo_triggers_in_run.size();x++){
+        bool found = false;
+
+        for(int i = 0; i< (int)all_triggers.size();i++){
+          if(all_triggers[i]==halo_triggers_in_run[x]) found = true;
+        }//loop all triggers
+
+        if(!found) all_triggers.push_back(halo_triggers_in_run[x]);
+      }//loop halo triggers
+      
+      
+    }//loop over all available triggers
+  }else{
+      // if init returns FALSE, initialisation has NOT succeeded, which indicates a problem
+      // with the file and/or code and needs to be investigated!
+    std::cout << " HLT config extraction failure with name " << hlTriggerResults_ << std::endl;
+      // In this case, all access methods will return empty values!
+  }
+    
+  ntriggers = (int)all_triggers.size();
+  if(debug_){
+    cout<<"----------------------------------------------------------------------------------------------------------------"<<endl;
+    cout<<"----------------------------------------------------------------------------------------------------------------"<<endl;
+    cout<<"the triggers in HLT list till now are:"<<endl;
+    for(int i = 0; i< ntriggers;i++) cout<<"\t"<<all_triggers[i]<<endl;
+  }  
 }
-
-
-
-
 
 
 
@@ -351,8 +420,12 @@ void Analyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup){
       avgInsRecLumiErr = lumiSummary->avgInsRecLumiErr();
     }
   }
-	if(debug_) cout<<"DEBUG: start saving stuff"<<endl;
+  if(debug_) cout<<"DEBUG: start saving stuff"<<endl;
   nevents++;
+  
+  
+  
+  
   //getting handle to generator level information
   if( rungenParticleCandidates_ ){
 	  
@@ -633,6 +706,8 @@ void Analyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup){
     //if(debug_) cout<<"mygenphoton_container loop ended"<<std::endl; 
   }//end of if(rungenParticleCandidates_)
   if(debug_) cout<<"DEBUG: finish saving gen"<<endl;
+  
+  
   ///// L1
   if(runL1_){
     edm::ESHandle<L1GtTriggerMenu> menuRcd;
@@ -654,34 +729,32 @@ void Analyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup){
  
   if(runHLT_){
     Handle<TriggerResults> HLTR;
-     iEvent.getByLabel(hlTriggerResults_,HLTR);
-     if (HLTR.isValid()) {
-       all_triggerprescales.clear();
-       all_ifTriggerpassed.clear();
-       const edm::TriggerNames &triggerNames_ = iEvent.triggerNames(*HLTR);
-       vector<int> idx;
-          for(int i = 0; i< ntriggers;i++)
-	 {
-	   all_triggerprescales.push_back(0);
-	   all_ifTriggerpassed.push_back(0);
-	   idx.push_back(triggerNames_.triggerIndex(all_triggers[i]));
-	 }
-       Int_t hsize = Int_t(HLTR->size());
-       for(int i=0;i<ntriggers;i++)
-	 if (idx[i] < hsize)
-	     {
-	       all_ifTriggerpassed[i]=HLTR->accept(idx[i]);
-	       all_triggerprescales[i]=hltConfig_.prescaleValue( iEvent, iSetup, all_triggers[i]);
-	     }
-       if(debug_){
-	 for(int i=0;i<ntriggers;i++)
-	   {
-	     cout<<"prescale for "<<all_triggers[i]<<" is: "<< all_triggerprescales[i]<<endl;
-	     cout<<"if triggger passed for "<<all_triggers[i]<<" : "<<all_ifTriggerpassed[i]<<endl;
-	   }
-       }
-     }
-  }
+    iEvent.getByLabel(hlTriggerResults_,HLTR);
+    if (HLTR.isValid()) {
+      all_triggerprescales.clear();
+      all_ifTriggerpassed.clear();
+      const edm::TriggerNames &triggerNames_ = iEvent.triggerNames(*HLTR);
+      vector<int> idx;
+      for(int i = 0; i< ntriggers;i++){
+        all_triggerprescales.push_back(0);
+        all_ifTriggerpassed.push_back(0);
+        idx.push_back(triggerNames_.triggerIndex(all_triggers[i]));
+      }
+      Int_t hsize = Int_t(HLTR->size());
+      for(int i=0;i<ntriggers;i++){
+        if(idx[i] < hsize){
+          all_ifTriggerpassed[i]=HLTR->accept(idx[i]);
+          all_triggerprescales[i]=hltConfig_.prescaleValue( iEvent, iSetup, all_triggers[i]);
+	}
+      }
+      if(debug_){
+        for(int i=0;i<ntriggers;i++){
+          cout<<"prescale for "<<all_triggers[i]<<" is: "<< all_triggerprescales[i]<<endl;
+          cout<<"if triggger passed for "<<all_triggers[i]<<" : "<<all_ifTriggerpassed[i]<<endl;
+        }//loop over ntriggers
+      }//debug
+    }//if HLTR is Valid
+  }//runHLT_
    
   if(runvertex_){
     Handle<reco::VertexCollection> recVtxs;
@@ -713,7 +786,7 @@ void Analyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup){
  
     // get GeneralTracks collection
     edm::Handle<reco::TrackCollection> tkRef;
-    iEvent.getByLabel("generalTracks",tkRef);    
+    iEvent.getByLabel(Tracks_,tkRef);    
     const reco::TrackCollection* tkColl = tkRef.product();
 
     int numhighpurity=0;
@@ -858,7 +931,7 @@ void Analyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup){
    if(runcosmicmuons_){
      //cosmic muon
      edm::Handle<reco::MuonCollection>cosmicMuonHandle;
-     iEvent.getByLabel("muonsFromCosmics",cosmicMuonHandle);
+     iEvent.getByLabel(cosMuoLabel_,cosmicMuonHandle);
      const reco::MuonCollection & cosmicmuons = *cosmicMuonHandle;
      vector <reco::Muon> mycosmicmuon_container;
      
@@ -941,7 +1014,7 @@ void Analyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup){
        CosmicMuon_n++;
      }//end of for loop
    }//if runcosmicmuons_
-	
+    
    // declare outside of runphotons_ so that we can use this container inside other "bools_"
    std::vector<pat::Photon> myphoton_container;
    myphoton_container.clear();
@@ -1112,10 +1185,12 @@ void Analyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup){
 	       }//if delta dphi from photon is small and E>1 try to save
 	     }
 	   }
-	 }
+	 }// runHErechit_ && pho_isEB
+         
 	 Photon_n++;
        }//end of for loop over x
      }//if(myphoton_container.size!=0) 
+     
      //to get the photon hit information from every crystal of SC
      if(runrechit_){ 
        Handle<EcalRecHitCollection> Brechit;//barrel
@@ -1287,6 +1362,97 @@ void Analyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup){
      }//if(runrechit_)
      
    }//if(runphotons_)
+   
+   if(runCSCseg_){ //Store CSC segments
+     // Get the CSC Geometry :
+     ESHandle<CSCGeometry> cscGeom;
+     iSetup.get<MuonGeometryRecord>().get(cscGeom);
+     // get CSC segment collection
+     Handle<CSCSegmentCollection> cscSegments;
+     iEvent.getByLabel(cscLabel_, cscSegments);
+     CSCseg_n = 0;
+           
+     for(CSCSegmentCollection::const_iterator it=cscSegments->begin(); CSCseg_n<10000 && it != cscSegments->end(); it++){
+       CSCDetId id  = (CSCDetId)it->cscDetId();
+       LocalVector segDir = it->localDirection();
+       LocalPoint localPos = it->localPosition();
+
+       // global transformation
+       const CSCChamber* cscchamber = cscGeom->chamber(id);
+       if (cscchamber) {
+         
+         GlobalPoint globalPosition = cscchamber->toGlobal(localPos);
+         GlobalVector globalDirection = cscchamber->toGlobal(segDir);
+         
+         int nhits = 0;
+         float timeSum = 0;
+         // Get the CSC recHits that contribute to this segment.
+         std::vector<CSCRecHit2D> theseRecHits = it->specificRecHits();
+         for( vector<CSCRecHit2D>::const_iterator iRH =theseRecHits.begin(); iRH != theseRecHits.end(); iRH++){
+           if( !(iRH->isValid()) ) continue;  // only interested in valid hits
+           nhits++;
+           float rhTime = iRH->tpeak();
+           timeSum += rhTime;
+         }//end rechit loop
+
+         float segmentTime = -999;
+         if (nhits>0)
+           segmentTime = timeSum/nhits;
+         
+         CSCseg_time[CSCseg_n] = segmentTime;
+         CSCseg_x[CSCseg_n]    = globalPosition.x();
+         CSCseg_y[CSCseg_n]    = globalPosition.y();
+         CSCseg_z[CSCseg_n]    = globalPosition.z();
+         CSCseg_phi[CSCseg_n]  = globalPosition.phi();
+               
+         CSCseg_DirectionX[CSCseg_n] = globalDirection.x();
+         CSCseg_DirectionY[CSCseg_n] = globalDirection.y();
+         CSCseg_DirectionZ[CSCseg_n] = globalDirection.z();
+        
+         CSCseg_n++;
+       }
+     }// loop over segs
+   }// runCSCseg_
+   
+  if(runRPChit_){
+     /*
+     // Get the RPC Geometry  
+     edm::ESHandle<RPCGeometry> rpcGeo;
+     iSetup.get<MuonGeometryRecord>().get(rpcGeo);
+  
+     //get RPC hit collection
+     edm::Handle<RPCRecHitCollection> rpcHits;
+     iEvent.getByLabel("cscSegments",rpcHits);
+     
+     for(RPCRecHitCollection::const_iterator RecHitsIt = rpcRecHitRange->begin(); RecHitsIt!=rpcRecHitRange->end(); RecHitsIt++){
+     
+     
+     }//loop over rpc hits
+     */
+     
+    //get geometry of tracking stuff
+    //edm::ESHandle<GlobalTrackingGeometry> geometry;
+    edm::ESHandle<RPCGeometry> geometry;
+    //iSetup.get<GlobalTrackingGeometryRecord>().get(geometry);
+    iSetup.get<MuonGeometryRecord>().get(geometry);
+    //get RPC hit collection
+     edm::Handle<RPCRecHitCollection> rpcHits;
+     iEvent.getByLabel(rpcLabel_,rpcHits);
+     
+     RPChit_n=0;
+     for(RPCRecHitCollection::const_iterator RecHitsIt = rpcHits->begin(); RPChit_n<10000 && RecHitsIt!=rpcHits->end(); RecHitsIt++){
+       const GeomDet *det = geometry->idToDet(RecHitsIt->geographicalId());
+       GlobalPoint pos = det->toGlobal(RecHitsIt->localPosition());
+       RPChit_x[RPChit_n] = pos.x();
+       RPChit_y[RPChit_n] = pos.y();
+       RPChit_z[RPChit_n] = pos.z();
+       //BunchX is in units of 25ns. BunchX=0 is the expected value for collision muons.
+       RPChit_BunchX[RPChit_n] = RecHitsIt->BunchX();
+       RPChit_n++;
+     }//loop over rpc hits
+
+   }//runRPChit_
+   
    //calomet variables  
    if(runmet_){
      edm::Handle<edm::View<pat::MET> > metHandle;
@@ -2038,6 +2204,26 @@ void Analyzer::beginJob(){
     
   }//end of if (runphotons_)
 	
+  if(runCSCseg_){
+    myEvent->Branch("CSCseg_n", &CSCseg_n, "CSCseg_n/I");
+    myEvent->Branch("CSCseg_time", CSCseg_time, "CSCseg_time[CSCseg_n]/F");
+    myEvent->Branch("CSCseg_x", CSCseg_x, "CSCseg_x[CSCseg_n]/F");
+    myEvent->Branch("CSCseg_y", CSCseg_y, "CSCseg_y[CSCseg_n]/F");
+    myEvent->Branch("CSCseg_z", CSCseg_z, "CSCseg_z[CSCseg_n]/F");
+    myEvent->Branch("CSCseg_phi", CSCseg_phi, "CSCseg_phi[CSCseg_n]/F");
+    myEvent->Branch("CSCseg_DirectionX", CSCseg_DirectionX, "CSCseg_DirectionX[CSCseg_n]/F");
+    myEvent->Branch("CSCseg_DirectionY", CSCseg_DirectionY, "CSCseg_DirectionY[CSCseg_n]/F");
+    myEvent->Branch("CSCseg_DirectionZ", CSCseg_DirectionZ, "CSCseg_DirectionZ[CSCseg_n]/F");
+  }// end of runCSCeg_
+
+  if(runRPChit_){
+    myEvent->Branch("RPChit_n", &RPChit_n, "RPChit_n/I");
+    myEvent->Branch("RPChit_x", RPChit_x, "RPChit_x[RPChit_n]/F");
+    myEvent->Branch("RPChit_y", RPChit_y, "RPChit_y[RPChit_n]/F");
+    myEvent->Branch("RPChit_z", RPChit_z, "RPChit_z[RPChit_n]/F");
+    myEvent->Branch("RPChit_BunchX", RPChit_BunchX, "RPChit_BunchX[RPChit_n]/I");
+  }//end of runRPChit_
+
   if(runmet_){
     //Calomet variables
     myEvent->Branch("CaloMetSigma",&CaloMetSig,"CaloMetSig/F");
