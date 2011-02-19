@@ -15,6 +15,7 @@
 
 #include <TROOT.h>
 #include <TMath.h>
+#include <math.h>
 #include <iostream>
 #include <vector>
 #include "TVector3.h"
@@ -43,7 +44,9 @@ class NonCollisionBG {
   //Halo functions
   bool isHEHalo(float photonSCphi, int nAllHERecHits, float HERecHitX[], float HERecHitY[], float HERecHitEnergy[], float HERecHitTime[], bool useTime=false);
   bool isTrackHalo(float photonSCphi, int nCosMu, float CosTrackX[], float CosTracksY[]);
-
+  bool isCSCHalo(float photonSCphi, int nAllCSCSegments, float CSCSegmentX[], float CSCSegmentY[], float CSCSegmentTime[], bool useTime=false);
+  float deltaPhiCSCHalo(float photonSCphi,float CSCSegmentX,float CSCSegmentY);
+  
   //Spike functions
   float simpleBarrelE2E9(int nRH, vector<int> &ietaRH, vector<int> &iphiRH, vector<float> &eRH, int arrayLimit = 100); //assume first entry is seed! (highest energy)
   bool isE2E9Spike(int nRH, vector<int> &ietaRH, vector<int> &iphiRH, vector<float> &eRH, int arrayLimit = 100);

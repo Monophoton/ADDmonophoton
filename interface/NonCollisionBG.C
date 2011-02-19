@@ -13,14 +13,7 @@ ClassImp(NonCollisionBG)
 //////////////////////////////////////////////////////////
 // 
 // Cosmic functions
-/*vector<pair <bool,TVector3> > getEBIntersections( const TVector3& X,  const TVector3& P);
-double h(double z, double& length);
-double OuterEBRho(double zprimeprime );
-double tDCA(const TVector3& X, const TVector3& P);
-vector <double> outerIntersectionTs(const TVector3& X, const TVector3& P, double timeDCA);
-vector <double> innerIntersectionTs(double R, const TVector3& X, const TVector3& P);
-vector< pair<bool,TVector3> > solutions;
-*/
+//
 //////////////////////////////////////////////////////////
 
 // Example useage fisherCosmic3(Photon_Roundness[pho],Photon_Angle[pho],Photon_phHasConversionTracks[pho])
@@ -550,6 +543,44 @@ bool NonCollisionBG::isTrackHalo(float photonSCphi, int nCosMu, float CosTrackX[
   }// loop over CosTracks
     
   return false;
+}
+
+// Example useage isCSCHalo(Photon_sc_phi[x], CSCseg_n, CSCseg_x, CSCseg_y, CSCseg_time, false)
+// useTime is defualt false (specified in .h file)
+bool NonCollisionBG::isCSCHalo(float photonSCphi, int nAllCSCSegments, float CSCSegmentX[], float CSCSegmentY[], float CSCSegmentTime[], bool useTime){
+  
+  float deltaPhi_csc_MAX_CUT = 0.2;
+  float CSCSegmentTime_MAX_CUT = 0.;
+  
+  for(int cscseg = 0; cscseg < nAllCSCSegments; cscseg++){
+    bool deltaPhiCSC_isHalo = false;
+    //bool rhoCSC_isHalo = false;
+    bool timeCSC_isHalo = false;
+    
+    float CSCSegmentPhi = TMath::ATan2(CSCSegmentY[cscseg],CSCSegmentX[cscseg]);
+    float deltaPhi_csc = absDeltaPhi(fixPhi(photonSCphi),fixPhi(CSCSegmentPhi));
+    
+    float rho_csc = sqrt( CSCSegmentX[cscseg]*CSCSegmentX[cscseg] + CSCSegmentY[cscseg]*CSCSegmentY[cscseg]);
+    
+    if(deltaPhi_csc<deltaPhi_csc_MAX_CUT) deltaPhiCSC_isHalo = true;
+    if(CSCSegmentTime[cscseg]<CSCSegmentTime_MAX_CUT) timeCSC_isHalo = true;
+    
+    if(useTime){
+      if(deltaPhiCSC_isHalo && timeCSC_isHalo) return true;
+    }else{ // don't useTime
+      if(deltaPhiCSC_isHalo) return true;
+    }
+  }// loop over CSC segments
+  return false;
+}
+
+// Example useage deltaPhiCSCHalo(Photon_sc_phi[x], CSCseg_x[x], CSCseg_y[x])
+float NonCollisionBG::deltaPhiCSCHalo(float photonSCphi, float CSCSegmentX, float CSCSegmentY){
+
+  float CSCSegmentPhi = TMath::ATan2(CSCSegmentY,CSCSegmentX);
+  float deltaPhi_csc = absDeltaPhi(fixPhi(photonSCphi),fixPhi(CSCSegmentPhi));
+  //cout<<"CSCSegmentY: "<<CSCSegmentY<<"CSCSegmentX: "<<CSCSegmentX<<"PhotonSCphi:"<< fixPhi(photonSCphi)<<"CSCSegmentPhi: "<<fixPhi(CSCSegmentPhi)<<"deltaPhi_csc: " <<deltaPhi_csc<<endl; 
+  return deltaPhi_csc;
 }
 
 //before using this, make sure phi1 and phi2 are defined on the same range
