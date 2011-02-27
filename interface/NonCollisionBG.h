@@ -56,8 +56,7 @@ class NonCollisionBG {
   //Cosmic functions
   vector<pair <bool,TVector3> > getEBIntersections( const TVector3& X,  const TVector3& P);
   double h(double z, double& length);
-  double OuterEBRho(double zprimeprime );
-  double OuterEBRho_cal(double zprimeprime );
+  double OuterEBRho(double zprimeprime, int iterations = 100 );
   double tDCA(const TVector3& X, const TVector3& P);
   vector <double> outerIntersectionTs(const TVector3& X, const TVector3& P, double timeDCA);
   vector <double> innerIntersectionTs(double R, const TVector3& X, const TVector3& P);

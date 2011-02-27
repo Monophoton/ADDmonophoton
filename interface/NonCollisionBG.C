@@ -349,21 +349,19 @@ double NonCollisionBG::h(double z, double& length){
   
 }
 
-//==== Iterative step = 100 to calculate dR faster. So, OuterEBRho() should be replaced by OuterEBRho_cal()
-
-double NonCollisionBG::OuterEBRho_cal(double zprimeprime ){
+// iterations = 100 by default in the .h file
+double NonCollisionBG::OuterEBRho(double zprimeprime, int iterations ){
   // zprimeprime is just a funny name for the z location where you would
   // like to know the radius of the outer envelope of the barrel Ecal.
   // This is computed numerically below.
   double lengthOfTheCrystal = 23.0;
-  
+
   double minDZ = 1000;
   double bestH = 1000;
-  int max_no = 100;
-  for(int i = 0; i != max_no; ++i) {
+  for(int i = 0; i < iterations; ++i) {
     // newZ is a trial Z point we are testing
-    double newZ = zprimeprime - lengthOfTheCrystal*(1 - 0.001*i);
-    
+    double newZ = zprimeprime - lengthOfTheCrystal*(1. - (1./iterations)*i);
+
     // get length and height of this crystal whose front face is at newZ
     double length = 0;
     double height = h(newZ, length); // length is passed by reference!
@@ -381,40 +379,10 @@ double NonCollisionBG::OuterEBRho_cal(double zprimeprime ){
       //    << endl;
     }
   }
- 
+
   return bestH+129.0; // return the radius of the outer EB surface
 }
 
-///=== iterative step = 1000.  Original iterative steps
-double NonCollisionBG::OuterEBRho(double zprimeprime ){
-  // zprimeprime is just a funny name for the z location where you would                                                                                                                 
-  // like to know the radius of the outer envelope of the barrel Ecal.                                                                                                                   
-  // This is computed numerically below.                                                                                                                                                 
-  double lengthOfTheCrystal = 23.0;
-
-  double minDZ = 1000;
-  double bestH = 1000;
-
-  for(int i = 0; i != 1000; ++i) {
-    // newZ is a trial Z point we are testing                                                                                                                                            
-    double newZ = zprimeprime - lengthOfTheCrystal*(1 - 0.001*i);
-
-    // get length and height of this crystal whose front face is at newZ                                                                                                                 
-    double length = 0;
-    double height = h(newZ, length); // length is passed by reference!                                                                                                                   
-    // face z postion, newZ, we must vary newZ until                                                                                                                                     
-    // zprimeprime = newZ + length                                                                                                                                                       
-    double dz = fabs(zprimeprime - (newZ + length));
-    if( dz < minDZ ){
-      minDZ = dz;
-      bestH = height;
-
-    }
-  }
-
-  return bestH+129.0; // return the radius of the outer EB surface                                                                                                                       
-}
-//===============
 double NonCollisionBG::tDCA(const TVector3& X, const TVector3& P){
  
   // get position, and momentum components
