@@ -10,7 +10,6 @@
 #include "DataFormats/EcalRecHit/interface/EcalRecHitCollections.h"
 //#include "FWCore/Framework/interface/TriggerNames.h"
 #include "FWCore/Common/interface/TriggerNames.h"
-#include "HLTrigger/HLTcore/interface/HLTConfigProvider.h"
 #include <string>
 
 class Analyzer : public edm::EDAnalyzer {
@@ -21,24 +20,10 @@ class Analyzer : public edm::EDAnalyzer {
   
  private:
   virtual void beginJob() ;
-  virtual void beginRun(const edm::Run& , const edm::EventSetup&);
   virtual void analyze(const edm::Event&, const edm::EventSetup&);
   virtual void endJob() ;
   
   
-  HLTConfigProvider hltConfig_;
-  std::vector<std::string> photon_triggers_in_run;
-  std::vector<std::string> met_triggers_in_run;
-  std::vector<std::string> cosmic_triggers_in_run;
-  std::vector<std::string> halo_triggers_in_run;
-  std::vector<std::string> all_triggers;
-  std::vector<int> all_triggerprescales;
-  std::vector<bool> all_ifTriggerpassed;
-  std::vector<std::string> *triggernames;
-  std::vector<int> *triggerprescales;
-  std::vector<bool> *ifTriggerpassed;
-  int ntriggers;
-
   // ----------member data ---------------------------
   edm::ESHandle<CaloTopology> theCaloTopo_;
   int nevents;
@@ -47,17 +32,13 @@ class Analyzer : public edm::EDAnalyzer {
   bool is_Welec_event, is_Wmu_event, is_Wtau_event ;
   bool is_SingleHardPhoton_event;
   bool is_diphoton_event;
-  bool is_isr_photon_event;
-  float gen_pthat;
   
   int n_signal_events,n_Z_events,n_W_events;
   int n_Zelec_events, n_Zmu_events, n_Ztau_events, n_Znunu_events; 
   int n_Welec_events, n_Wmu_events, n_Wtau_events;
   int n_diphoton_events, n_SingleHardPhoton_events;
   
-  unsigned int RunNumber, EventNumber, LumiNumber, BXNumber;
-  unsigned int totalIntensityBeam1, totalIntensityBeam2;
-  float avgInsDelLumi, avgInsDelLumiErr, avgInsRecLumi, avgInsRecLumiErr;
+  int RunNumber, EventNumber, LumiNumber, BXNumber;
   int ngenphotons;
   int nhardphotons;
   int Photon_n;
@@ -69,12 +50,22 @@ class Analyzer : public edm::EDAnalyzer {
   int Track_n;
   int Jet_n;
   int HERecHit_subset_n;
-  int CSCseg_n;
-  int RPChit_n;
   //HLT
   
   edm::TriggerNames triggerNames_;  // TriggerNames class
- 
+  std::vector<std::string>  hlNames_;  // name of each HLT algorithm
+  
+  bool HLT_MET50_event;
+  bool HLT_MET75_event;
+  bool HLT_Photon15_event;
+  bool HLT_Photon25_event;
+  bool HLT_DoubleEle10_event;
+  bool HLT_DoubleMu3_event;
+  bool HLT_Photon20_event;
+  bool HLT_Photon20_Cleaned_event;
+  bool HLT_Photon30_event;
+  
+  
   std::map<std::string,int> HLT_chosen;
   std::map<std::string,int> L1_chosen;
   
@@ -82,15 +73,12 @@ class Analyzer : public edm::EDAnalyzer {
   
   edm::InputTag eleLabel_;
   edm::InputTag muoLabel_;
-  edm::InputTag cosMuoLabel_;
   edm::InputTag jetLabel_;
   edm::InputTag tauLabel_;
   edm::InputTag metLabel_;
   edm::InputTag PFmetLabel_;
   edm::InputTag TCmetLabel_;
   edm::InputTag phoLabel_;
-  edm::InputTag cscLabel_;
-  edm::InputTag rpcLabel_;
   edm::InputTag rechitBLabel_;
   edm::InputTag rechitELabel_;
   edm::InputTag hlTriggerResults_;  // Input tag for TriggerResults
@@ -110,14 +98,10 @@ class Analyzer : public edm::EDAnalyzer {
   bool runtaus_;
   bool runHLT_;
   bool runL1_;
-  bool runscraping_;
   bool runtracks_;
   bool runrechit_;
   bool runHErechit_;
   bool runvertex_;
-  bool runCSCseg_;
-  bool runRPChit_;
-  bool debug_;
   bool init_;
   
   //output root file
@@ -132,24 +116,16 @@ class Analyzer : public edm::EDAnalyzer {
   float vy[10];
   float vz[10];
   float chi2[10];
-  int vtracksize[10];
-  int vndof[10];
-  bool  v_isFake[10];
+  float vtracksize[10];
+  float vndof[10];
+  bool v_isFake[10];
   float v_d0[10];
-  
-  //scraping variables
-  bool  Scraping_isScrapingEvent;
-  int   Scraping_numOfTracks;
-  float Scraping_fractionOfGoodTracks;
   
   //track variables
   float trk_pt[200];
   float trk_px[200];
   float trk_py[200];
   float trk_pz[200];
-  float trk_vx[200];
-  float trk_vy[200];
-  float trk_vz[200];
   float trk_eta[200];
   float trk_phi[200];
   
@@ -157,62 +133,43 @@ class Analyzer : public edm::EDAnalyzer {
   float jet_pt[100];
   float jet_px[100];
   float jet_py[100];
-  float jet_E[100];
   float jet_pz[100];
-  float jet_vx[100];
-  float jet_vy[100];
-  float jet_vz[100];
   float jet_eta[100];
   float jet_phi[100];
   float jet_emEnergyFraction[100];
   float jet_energyFractionHadronic[100];
-  int   jet_hitsInN90[100];
-  int   jet_n90Hits[100];
+  int jet_hitsInN90[100];
+  int jet_n90Hits[100];
   float jet_fHPD[100];
   float jet_fRBX[100];
   float jet_RHF[100];
-  int   jet_nTowers[100];
+  int jet_nTowers[100];
   
   //electron variables
   float electron_pt[100];
   float electron_px[100];
   float electron_py[100];
   float electron_pz[100];
-  float electron_vx[100];
-  float electron_vy[100];
-  float electron_vz[100];
   float electron_energy[100];
   float electron_charge[100];
   float electron_eta[100];
   float electron_phi[100];
   float electron_trkIso[100];
-  float electron_ecalIso[100];
-  float electron_hcalIso[100];
-  float electron_HoE[100];
-  float electron_SigmaIetaIeta[100];
-  float electron_dEtaIn[100];
-  float electron_dPhiIn[100];
-  float electron_sc_energy[100];
-  float electron_sc_eta[100];
-  float electron_sc_phi[100];
   
   //muon variables
   float muon_pt[100];
   float muon_px[100];
   float muon_py[100];
   float muon_pz[100];
-  float muon_vx[100];
-  float muon_vy[100];
-  float muon_vz[100];
   float muon_energy[100];
   float muon_charge[100];
   float muon_eta[100];
   float muon_phi[100];
-  bool  muon_isGlobalMuon[100];
-  bool  muon_isTrackerMuon[100];
-  bool  muon_isStandAloneMuon[100];
-  bool  muon_InnerTrack_isNonnull[100];
-  bool  muon_OuterTrack_isNonnull[100];
+  bool muon_isGlobalMuon[100];
+  bool muon_isTrackerMuon[100];
+  bool muon_isStandAloneMuon[100];
+  bool muon_InnerTrack_isNonnull[100];
+  bool muon_OuterTrack_isNonnull[100];
   
   float muon_OuterTrack_InnerPoint_x[100];
   float muon_OuterTrack_InnerPoint_y[100];
@@ -248,11 +205,11 @@ class Analyzer : public edm::EDAnalyzer {
   float cosmicmuon_charge[100];
   float cosmicmuon_eta[100];
   float cosmicmuon_phi[100];
-  bool  cosmicmuon_isGlobalMuon[100];
-  bool  cosmicmuon_isTrackerMuon[100];
-  bool  cosmicmuon_isStandAloneMuon[100];
-  bool  cosmicmuon_InnerTrack_isNonnull[100];
-  bool  cosmicmuon_OuterTrack_isNonnull[100];
+  bool cosmicmuon_isGlobalMuon[100];
+  bool cosmicmuon_isTrackerMuon[100];
+  bool cosmicmuon_isStandAloneMuon[100];
+  bool cosmicmuon_InnerTrack_isNonnull[100];
+  bool cosmicmuon_OuterTrack_isNonnull[100];
   
   float cosmicmuon_OuterTrack_InnerPoint_x[100];
   float cosmicmuon_OuterTrack_InnerPoint_y[100];
@@ -284,9 +241,6 @@ class Analyzer : public edm::EDAnalyzer {
   float tau_px[100];
   float tau_py[100];
   float tau_pz[100];
-  float tau_vx[100];
-  float tau_vy[100];
-  float tau_vz[100];
   float tau_energy[100];
   float tau_charge[100];
   float tau_eta[100];
@@ -300,14 +254,14 @@ class Analyzer : public edm::EDAnalyzer {
   float gen_pho_phi[1000];
   float gen_pho_eta[1000];
   float gen_pho_E[1000];
-  int   gen_pho_status[1000];
-  int   gen_pho_motherID[1000];
-  int   gen_pho_motherStatus[1000];
+  int    gen_pho_status[1000];
+  int gen_pho_motherID[1000];
+  int gen_pho_motherStatus[1000];
   float gen_pho_motherPt[1000];
   float gen_pho_motherEta[1000];
   float gen_pho_motherPhi[1000];
-  int   gen_pho_GrandmotherID[1000];
-  int   gen_pho_GrandmotherStatus[1000];
+  int gen_pho_GrandmotherID[1000];
+  int gen_pho_GrandmotherStatus[1000];
   float gen_pho_GrandmotherPt[1000];
   float gen_pho_GrandmotherEta[1000];
   float gen_pho_GrandmotherPhi[1000];
@@ -407,15 +361,12 @@ class Analyzer : public edm::EDAnalyzer {
   float pho_px[100];
   float pho_py[100];
   float pho_pz[100];
-  float pho_vx[100];
-  float pho_vy[100];
-  float pho_vz[100];
   float pho_r9[100];
-  bool  pho_isEB[100];
-  bool  pho_isEE[100];
-  bool  pho_isEBGap[100];
-  bool  pho_isEEGap[100];
-  bool  pho_isEBEEGap[100];
+  bool pho_isEB[100];
+  bool pho_isEE[100];
+  bool pho_isEBGap[100];
+  bool pho_isEEGap[100];
+  bool pho_isEBEEGap[100];
   float pho_e1x5[100];
   float pho_e2x5[100];
   float pho_e3x3[100];
@@ -424,19 +375,14 @@ class Analyzer : public edm::EDAnalyzer {
   float pho_r2x5[100];
   float pho_SigmaEtaEta[100];
   float pho_SigmaIetaIeta[100];
-  float pho_SigmaEtaPhi[100];
-  float pho_SigmaIetaIphi[100];
-  float pho_SigmaPhiPhi[100];
-  float pho_SigmaIphiIphi[100];
   float pho_roundness[100];
   float pho_angle[100];
   float pho_maxEnergyXtal[100];
   float pho_theta[100];
   float pho_et[100];
   float pho_swissCross[100];
-  bool  pho_isConverted[100];
-  bool  pho_hasConvTrk[100]; 
- 
+  bool    pho_isConverted[100];
+  
   //isolation variables
   float pho_ecalRecHitSumEtConeDR03[100];
   float pho_hcalTowerSumEtConeDR03[100];
@@ -454,20 +400,18 @@ class Analyzer : public edm::EDAnalyzer {
   float pho_trkSumPtHollowConeDR04[100];
   int   pho_nTrkSolidConeDR04[100];
   int   pho_nTrkHollowConeDR04[100];
-  float pho_HoE[100];
-  bool  pho_hasPixelSeed[100];   
+  float   pho_HoE[100];
+  bool pho_hasPixelSeed[100];   
   
   //SC variables
   float pho_sc_energy[100];
-  int   pho_size[100];
+  int    pho_size[100];
   float pho_sc_eta[100];
   float pho_sc_phi[100];
   float pho_sc_etaWidth[100];
   float pho_sc_phiWidth[100];
   float pho_sc_et[100];
-  float pho_sc_x[100];
-  float pho_sc_y[100];
-  float pho_sc_z[100];
+  
   //gen matched photon 
   float matchpho_E[100];
   float matchpho_pt[100];
@@ -476,7 +420,7 @@ class Analyzer : public edm::EDAnalyzer {
   float matchpho_px[100];
   float matchpho_py[100];
   float matchpho_pz[100];
-  bool  ismatchedpho[100];
+  bool    ismatchedpho[100];
   
   //converted photon variabes
   unsigned int pho_nTracks[100];
@@ -486,9 +430,9 @@ class Analyzer : public edm::EDAnalyzer {
   float pho_pairMomentum_y[100];
   float pho_pairMomentum_z[100];
   float pho_EoverP[100];
-  float pho_conv_vx[100];
-  float pho_conv_vy[100];
-  float pho_conv_vz[100];
+  float pho_vertex_x[100];
+  float pho_vertex_y[100];
+  float pho_vertex_z[100];
   float pho_zOfPrimaryVertex[100];
   float pho_distOfMinimumApproach[100];
   float pho_dPhiTracksAtVtx[100];      
@@ -500,8 +444,8 @@ class Analyzer : public edm::EDAnalyzer {
   float pho_timing_xtal[100][100];
   float pho_timingavg_xtal[100];
   float pho_energy_xtal[100][100];
-  int   pho_ieta_xtalEB[100][100];
-  int   pho_iphi_xtalEB[100][100];
+  int    pho_ieta_xtalEB[100][100];
+  int    pho_iphi_xtalEB[100][100];
   float pho_rookFraction[100];
   float pho_s9[100];
   
@@ -516,29 +460,13 @@ class Analyzer : public edm::EDAnalyzer {
   float HERecHit_subset_y[10000];
   float HERecHit_subset_z[10000];
   
-  //CSCseg info
-  float CSCseg_time[10000];
-  float CSCseg_x[10000];
-  float CSCseg_y[10000];
-  float CSCseg_z[10000];
-  float CSCseg_phi[10000];
-  float CSCseg_DirectionX[10000];
-  float CSCseg_DirectionY[10000];
-  float CSCseg_DirectionZ[10000];
-  
-  //RPChit info
-  float RPChit_x[10000];
-  float RPChit_y[10000];
-  float RPChit_z[10000];
-  int RPChit_BunchX[10000];
-  
   //calomet variables
   float CaloMetSig;
   float CaloMetCorr;
-  float CaloMetPt[6];
-  float CaloMetPx[6];
-  float CaloMetPy[6];
-  float CaloMetPhi[6];
+  float CaloMetEt;
+  float CaloMetEx;
+  float CaloMetEy;
+  float CaloMetPhi;
   float CaloEtFractionHadronic;
   float CaloEmEtFraction;
   float CaloHadEtInHB;
@@ -550,24 +478,24 @@ class Analyzer : public edm::EDAnalyzer {
   float CaloEmEtInHF;
   float CaloMetEz;
   float CaloMaxEtInEmTowers;
-  float CaloMetSumEt[6];
+  float CaloSumEt;
   float CaloMaxEtInHadTowers;
   float Delta_phi;
   
   //PFMet variables
-  float PFMetPt[6];
-  float PFMetPx[6];
-  float PFMetPy[6];
-  float PFMetPhi[6];
-  float PFMetSumEt[6];
+  float PFMetPt;
+  float PFMetPx;
+  float PFMetPy;
+  float PFMetPhi;
+  float PFMetSumEt;
   float Delta_phiPF;
   
   //TCMet variables
-  float TCMetPt[6];
-  float TCMetPx[6];
-  float TCMetPy[6];
-  float TCMetPhi[6];
-  float TCMetSumEt[6];
+  float TCMetPt;
+  float TCMetPx;
+  float TCMetPy;
+  float TCMetPhi;
+  float TCMetSumEt;
   float Delta_phiTC;
   
   //genMet variables

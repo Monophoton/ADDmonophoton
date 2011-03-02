@@ -15,15 +15,7 @@
 <use name=CondFormats/DataRecord>
 <use name=Geometry/CaloGeometry>
 <use name=PhysicsTools/UtilAlgos>   
-<use name=DataFormats/Luminosity>
-<use name=HLTrigger/HLTcore>
-<use name=DataFormats/CSCRecHit>
-<use name=DataFormats/GeometryVector>
-<use name=Geometry/CSCGeometry>
-<use name=Geometry/Records>
-<use name=Geometry/CommonDetUnit>
-<use name=DataFormats/RPCRecHit>
-<use name=Geometry/RPCGeometry>
+
 <flags EDM_PLUGIN=1>
 <export>
    <use name=root>
@@ -41,12 +33,4 @@
    <use name=CondFormats/L1TObjects>
    <use name=CondFormats/DataRecord>
    <use name=Geometry/CaloGeometry>
-   <use name=DataFormats/Luminosity>
-   <use name=DataFormats/CSCRecHit>
-   <use name=DataFormats/GeometryVector>
-   <use name=Geometry/CSCGeometry>
-   <use name=Geometry/Records>
-   <use name=Geometry/CommonDetUnit>
-   <use name=DataFormats/RPCRecHit>
-   <use name=Geometry/RPCGeometry>
 </export>
