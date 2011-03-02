@@ -38,6 +38,7 @@ class NonCollisionBG {
   
   //Cosmic functions
   float sigmaRCosmic(float Photon_sc_x, float Photon_sc_y, float Photon_sc_z,float CosmicMuon_OuterTrack_InnerPoint_x[],float CosmicMuon_OuterTrack_InnerPoint_y[],float CosmicMuon_OuterTrack_InnerPoint_z[], float  CosmicMuon_OuterTrack_InnerPoint_px[],float CosmicMuon_OuterTrack_InnerPoint_py[],float CosmicMuon_OuterTrack_InnerPoint_pz[], int CosmicMuon_n);
+  float deltaRCosmic(float Photon_sc_x, float Photon_sc_y, float Photon_sc_z,float CosmicMuon_OuterTrack_InnerPoint_x[],float CosmicMuon_OuterTrack_InnerPoint_y[],float CosmicMuon_OuterTrack_InnerPoint_z[], float  CosmicMuon_OuterTrack_InnerPoint_px[],float CosmicMuon_OuterTrack_InnerPoint_py[],float CosmicMuon_OuterTrack_InnerPoint_pz[], int CosmicMuon_n);
   float fisherCosmic3(float Photon_Roundness, float Photon_Angle, bool Photon_phHasConversionTracks);
   float fisherCosmic2(float Photon_Roundness, float Photon_Angle);
    
@@ -56,7 +57,7 @@ class NonCollisionBG {
   //Cosmic functions
   vector<pair <bool,TVector3> > getEBIntersections( const TVector3& X,  const TVector3& P);
   double h(double z, double& length);
-  double OuterEBRho(double zprimeprime, int iterations = 100 );
+  double OuterEBRho(double zprimeprime, int iterations = 5 );
   double tDCA(const TVector3& X, const TVector3& P);
   vector <double> outerIntersectionTs(const TVector3& X, const TVector3& P, double timeDCA);
   vector <double> innerIntersectionTs(double R, const TVector3& X, const TVector3& P);

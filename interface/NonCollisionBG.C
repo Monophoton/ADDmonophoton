@@ -73,149 +73,290 @@ float NonCollisionBG::prob2(TH1F* h, bool Photon_phHasConversionTracks){
   return float(h->GetBinContent(iBin))/norm;
 }
 
-
+//example useage: float mySigmaRCosmic = bg->sigmaRCosmic(Photon_sc_x[i],  Photon_sc_y[i], Photon_sc_z[i],CosmicMuon_OuterTrack_InnerPoint_x,CosmicMuon_OuterTrack_InnerPoint_y,CosmicMuon_OuterTrack_InnerPoint_z, CosmicMuon_OuterTrack_InnerPoint_px,CosmicMuon_OuterTrack_InnerPoint_py,CosmicMuon_OuterTrack_InnerPoint_pz, CosmicMuon_n)
 float NonCollisionBG::sigmaRCosmic(float Pho_sc_x, float Pho_sc_y, float Pho_sc_z,float CosmicMuon_OuterTrack_InnerPoint_x[],float CosmicMuon_OuterTrack_InnerPoint_y[],float CosmicMuon_OuterTrack_InnerPoint_z[], float  CosmicMuon_OuterTrack_InnerPoint_px[],float CosmicMuon_OuterTrack_InnerPoint_py[],float CosmicMuon_OuterTrack_InnerPoint_pz[], int CosmicMuon_n){
-  float dr = 1000000;	
-  float dr_min_cos = 99999;
-  float dx_min_cos = 10000;
-  float dy_min_cos = 10000;
-  float dz_min_cos = 10000;
-  float dr2_cos =10000;  
-  float dx_cos = -1000;
-  float dy_cos = -1000;
-  float dz_cos = -1000;
-  float dr_cos = -1000;
-  vector< pair<bool,TVector3> > solutions;
-  
-  for(int iMuon=0 ; iMuon !=CosmicMuon_n; iMuon++){   
-    bool singlesol = false;
-    bool bothsol = false;
+    float dr_min_cos = 99999;
+    float dx_min_cos = 10000;
+    float dy_min_cos = 10000;
+    float dz_min_cos = 10000;
     
-    float averageSolution_x1 = 0.;
-    float averageSolution_y1 = 0.;
-    float averageSolution_z1 = 0.;
-    float averageSolution_x2 = 0.;
-    float averageSolution_y2 = 0.;
-    float averageSolution_z2 = 0.;
-    TVector3 point(CosmicMuon_OuterTrack_InnerPoint_x[iMuon],CosmicMuon_OuterTrack_InnerPoint_y[iMuon],CosmicMuon_OuterTrack_InnerPoint_z[iMuon]);		
-    TVector3 direction(CosmicMuon_OuterTrack_InnerPoint_px[iMuon],CosmicMuon_OuterTrack_InnerPoint_py[iMuon],CosmicMuon_OuterTrack_InnerPoint_pz[iMuon]);
-    solutions= getEBIntersections(point, direction);
+    vector< pair<bool,TVector3> > solutions;
+    
+    for(int iMuon=0 ; iMuon !=CosmicMuon_n; iMuon++){   
+        bool singlesol = false;
+        bool bothsol = false;
+        
+        float averageSolution_x1 = 0.;
+        float averageSolution_y1 = 0.;
+        float averageSolution_z1 = 0.;
+        float averageSolution_x2 = 0.;
+        float averageSolution_y2 = 0.;
+        float averageSolution_z2 = 0.;
+        TVector3 point(CosmicMuon_OuterTrack_InnerPoint_x[iMuon],CosmicMuon_OuterTrack_InnerPoint_y[iMuon],CosmicMuon_OuterTrack_InnerPoint_z[iMuon]);		
+        TVector3 direction(CosmicMuon_OuterTrack_InnerPoint_px[iMuon],CosmicMuon_OuterTrack_InnerPoint_py[iMuon],CosmicMuon_OuterTrack_InnerPoint_pz[iMuon]);
+        solutions= getEBIntersections(point, direction);
+        
+        if(solutions.size()==4){
+            
+            if(solutions[0].first==true && solutions[1].first==false){
+                averageSolution_x1 = solutions[0].second.X();
+                averageSolution_y1 = solutions[0].second.Y();
+                averageSolution_z1 = solutions[0].second.Z();
+            }else if(solutions[0].first==false && solutions[1].first==true){
+                averageSolution_x1 = solutions[1].second.X();
+                averageSolution_y1 = solutions[1].second.Y();
+                averageSolution_z1 = solutions[1].second.Z();
+            }else if(solutions[0].first==true && solutions[1].first==true){
+                averageSolution_x1 = (solutions[0].second.X() + solutions[1].second.X())/2.;
+                averageSolution_y1 = (solutions[0].second.Y() + solutions[1].second.Y())/2.;
+                averageSolution_z1 = (solutions[0].second.Z() + solutions[1].second.Z())/2.;
+            }
+            
+            if(solutions[2].first==true && solutions[3].first==false){
+                averageSolution_x2 = solutions[2].second.X();
+                averageSolution_y2 = solutions[2].second.Y();
+                averageSolution_z2 = solutions[2].second.Z();
+            }else if(solutions[2].first==false && solutions[3].first==true){
+                averageSolution_x2 = solutions[3].second.X();
+                averageSolution_y2 = solutions[3].second.Y();
+                averageSolution_z2 = solutions[3].second.Z();
+            }else if(solutions[2].first==true && solutions[3].first==true){
+                averageSolution_x2 = (solutions[2].second.X() + solutions[3].second.X())/2.;
+                averageSolution_y2 = (solutions[2].second.Y() + solutions[3].second.Y())/2.;
+                averageSolution_z2 = (solutions[2].second.Z() + solutions[3].second.Z())/2.;
+            }
+            
+        }else if(solutions.size()==2){
+            
+            if(solutions[0].first==true && solutions[1].first==false){
+                averageSolution_x1 = solutions[0].second.X();
+                averageSolution_y1 = solutions[0].second.Y();
+                averageSolution_z1 = solutions[0].second.Z();
+            }else if(solutions[0].first==false && solutions[1].first==true){
+                averageSolution_x1 = solutions[1].second.X();
+                averageSolution_y1 = solutions[1].second.Y();
+                averageSolution_z1 = solutions[1].second.Z();
+            }else if(solutions[0].first==true && solutions[1].first==true){
+                averageSolution_x1 = (solutions[0].second.X() + solutions[1].second.X())/2.;
+                averageSolution_y1 = (solutions[0].second.Y() + solutions[1].second.Y())/2.;
+                averageSolution_z1 = (solutions[0].second.Z() + solutions[1].second.Z())/2.;
+            }
+            
+        }else if(solutions.size()==1){
+            if(solutions[0].first == true){
+                averageSolution_x1 = solutions[0].second.X();
+                averageSolution_y1 = solutions[0].second.Y();
+                averageSolution_z1 = solutions[0].second.Z();
+            }
+        }
+        //========distance of separation between first muon intersection in ECAL and SC position 
+        
+        //cout << "**dx1** "<< dx2_cos << " dy1: " << dy2_cos << "dz1: "<< dz2_cos << endl;
+        
+        //single solution means that the muon track only reported a DCA (solutions.size==1)
+        // or that the muon grazed the ecal, never entering the tracking region
+        // (solutions.size==2) where both of these solutions are intersections with the outer barrel only
+        if(solutions.size()==2 || solutions.size()==1) singlesol = true;
+        //both solutions means that the muon track passed through the tracking region so that
+        // there is an intersection with the outer barrel and inner barrel on it's way in, and
+        // there is an intersection with the inner barrel and outer barrel on it's way out hence
+        // (solutions.size()==4)
+        if(solutions.size()==4) bothsol = true;
+        
+        //initialize these
+        float dr_cos = -1.;
+        float dx_cos = 10000.;
+        float dy_cos = 10000.;
+        float dz_cos = 10000.;
+        float dr2_cos = -1.;
+        float dx2_cos = 10000.;
+        float dy2_cos = 10000.;
+        float dz2_cos = 10000.;
+        
+        if(bothsol == true){
+            dx_cos = Pho_sc_x - averageSolution_x1;
+            dy_cos = Pho_sc_y - averageSolution_y1;
+            dz_cos = Pho_sc_z - averageSolution_z1;
+            dx2_cos = Pho_sc_x - averageSolution_x2;
+            dy2_cos = Pho_sc_y - averageSolution_y2;
+            dz2_cos = Pho_sc_z - averageSolution_z2;
+            dr_cos  = sqrt((dx_cos*dx_cos/4.4/4.4) + (dy_cos*dy_cos/4.1/4.1) + (dz_cos*dz_cos/4.6/4.6));
+            dr2_cos  = sqrt((dx2_cos*dx2_cos/4.4/4.4) + (dy2_cos*dy2_cos/4.1/4.1) + (dz2_cos*dz2_cos/4.6/4.6));
+            if( dr2_cos < dr_min_cos ){
+                dr_min_cos = dr2_cos;
+                dx_min_cos = dx2_cos;
+                dy_min_cos = dy2_cos;
+                dz_min_cos = dz2_cos;
+            }
+            if( dr_cos < dr_min_cos ){
+                dr_min_cos = dr_cos;
+                dx_min_cos = dx_cos;
+                dy_min_cos = dy_cos;
+                dz_min_cos = dz_cos;
+            }
+            
+        }
+        if (singlesol== true){
+            dx_cos = Pho_sc_x - averageSolution_x1;
+            dy_cos = Pho_sc_y - averageSolution_y1;
+            dz_cos = Pho_sc_z - averageSolution_z1;
+            dr_cos  = sqrt((dx_cos*dx_cos/5.2/5.2) + (dy_cos*dy_cos/4.8/4.8) + (dz_cos*dz_cos/9/9));
+            
+            if( dr_cos < dr_min_cos ){
+                dr_min_cos = dr_cos;
+                dx_min_cos = dx_cos;
+                dy_min_cos = dy_cos;
+                dz_min_cos = dz_cos;
+            }
+        }
+        //cout << "mydrcos: "<< dr_min_cos << endl;
+    }//loop muon
+    
+    return dr_min_cos; 
+    
+}
 
-    if(solutions.size()==4){
-
-      if(solutions[0].first==true && solutions[1].first==false){
-        averageSolution_x1 = solutions[0].second.X();
-        averageSolution_y1 = solutions[0].second.Y();
-        averageSolution_z1 = solutions[0].second.Z();
-      }else if(solutions[0].first==false && solutions[1].first==true){
-        averageSolution_x1 = solutions[1].second.X();
-        averageSolution_y1 = solutions[1].second.Y();
-        averageSolution_z1 = solutions[1].second.Z();
-      }else if(solutions[0].first==true && solutions[1].first==true){
-        averageSolution_x1 = (solutions[0].second.X() + solutions[1].second.X())/2.;
-        averageSolution_y1 = (solutions[0].second.Y() + solutions[1].second.Y())/2.;
-        averageSolution_z1 = (solutions[0].second.Z() + solutions[1].second.Z())/2.;
-      }
-	
-      if(solutions[2].first==true && solutions[3].first==false){
-        averageSolution_x2 = solutions[2].second.X();
-        averageSolution_y2 = solutions[2].second.Y();
-        averageSolution_z2 = solutions[2].second.Z();
-      }else if(solutions[2].first==false && solutions[3].first==true){
-        averageSolution_x2 = solutions[3].second.X();
-        averageSolution_y2 = solutions[3].second.Y();
-        averageSolution_z2 = solutions[3].second.Z();
-      }else if(solutions[2].first==true && solutions[3].first==true){
-        averageSolution_x2 = (solutions[2].second.X() + solutions[3].second.X())/2.;
-        averageSolution_y2 = (solutions[2].second.Y() + solutions[3].second.Y())/2.;
-        averageSolution_z2 = (solutions[2].second.Z() + solutions[3].second.Z())/2.;
-      }
-			
-    }else if(solutions.size()==2){
-	
-      if(solutions[0].first==true && solutions[1].first==false){
-        averageSolution_x1 = solutions[0].second.X();
-        averageSolution_y1 = solutions[0].second.Y();
-        averageSolution_z1 = solutions[0].second.Z();
-      }else if(solutions[0].first==false && solutions[1].first==true){
-        averageSolution_x1 = solutions[1].second.X();
-        averageSolution_y1 = solutions[1].second.Y();
-        averageSolution_z1 = solutions[1].second.Z();
-      }else if(solutions[0].first==true && solutions[1].first==true){
-        averageSolution_x1 = (solutions[0].second.X() + solutions[1].second.X())/2.;
-        averageSolution_y1 = (solutions[0].second.Y() + solutions[1].second.Y())/2.;
-        averageSolution_z1 = (solutions[0].second.Z() + solutions[1].second.Z())/2.;
-      }
-
-    }else if(solutions.size()==1){
-      if(solutions[0].first == true){
-        averageSolution_x1 = solutions[0].second.X();
-        averageSolution_y1 = solutions[0].second.Y();
-        averageSolution_z1 = solutions[0].second.Z();
-      }
-    }
-    //========distance of separation between first muon intersection in ECAL and SC position 
-    dx_cos = Pho_sc_x - averageSolution_x1;
-    dy_cos = Pho_sc_y - averageSolution_y1;
-    dz_cos = Pho_sc_z - averageSolution_z1;
-    float dx2_cos = Pho_sc_x - averageSolution_x2 ;
-    float dy2_cos = Pho_sc_y - averageSolution_y2;
-    float dz2_cos = Pho_sc_z - averageSolution_z2;
-    //cout << "**dx1** "<< dx2_cos << " dy1: " << dy2_cos << "dz1: "<< dz2_cos << endl;
-      
-    //select event with one soln or both	
-    if((averageSolution_x1 ==0 && averageSolution_x2 !=0) || (averageSolution_x1 !=0 && averageSolution_x2 ==0)) singlesol = true;
-    if(averageSolution_x1 !=0 && averageSolution_x2 !=0) bothsol = true;
-      
-    if(dx_cos !=Pho_sc_x && dy_cos !=Pho_sc_y && dz_cos !=Pho_sc_z && bothsol == true){
-      dr_cos  = sqrt((dx_cos*dx_cos/4.4/4.4) + (dy_cos*dy_cos/4.1/4.1) + (dz_cos*dz_cos/4.6/4.6));
-    }
-    if (dx_cos !=Pho_sc_x && dy_cos !=Pho_sc_y && dz_cos !=Pho_sc_z && singlesol== true){
-      dr_cos  = sqrt((dx_cos*dx_cos/5.2/5.2) + (dy_cos*dy_cos/4.8/4.8) + (dz_cos*dz_cos/9/9));
-    }
-    if(dx_cos == Pho_sc_x && dy_cos == Pho_sc_y && dz_cos == Pho_sc_z) {
-      dr_cos = 2000;
-      dx_cos = 10000;
-      dy_cos = 10000;
-      dz_cos = 10000;
-    }
-		
-		
-    if(dx2_cos !=Pho_sc_x && dy2_cos !=Pho_sc_y && dz2_cos !=Pho_sc_z && bothsol==true){
-      dr2_cos  = sqrt((dx2_cos*dx2_cos/4.4/4.4) + (dy2_cos*dy2_cos/4.1/4.1) + (dz2_cos*dz2_cos/4.6/4.6));
-    }
-    if(dx2_cos !=Pho_sc_x && dy2_cos !=Pho_sc_y && dz2_cos !=Pho_sc_z && singlesol==true){
-      dr2_cos  = sqrt((dx2_cos*dx2_cos/5.2/5.2) + (dy2_cos*dy2_cos/4.8/4.8) + (dz2_cos*dz2_cos/9/9));
-    }
-    if(dx2_cos == Pho_sc_x && dy2_cos == Pho_sc_y && dz2_cos == Pho_sc_z){
-      dr2_cos = 2000;
-      dx2_cos = 10000;
-      dy2_cos = 10000;
-      dz2_cos = 10000;
-    }
-		
-		
-    bool otherSolution = false;
-    if( dr2_cos < dr_cos ){
-      otherSolution = true;
-      dr_cos = dr2_cos;
-      dx_cos = dx2_cos;
-      dy_cos = dy2_cos;
-      dz_cos = dz2_cos;
-    }
-		
-    if(dr_cos < dr_min_cos){
-      dr_min_cos = dr_cos;
-      dx_min_cos = dx_cos;
-      dy_min_cos = dy_cos;
-      dz_min_cos = dz_cos;
-    }
-    //cout << "mydrcos: "<< dr_min_cos << endl;
-  }//loop muon
-  
-  dr = dr_min_cos;
-  return dr ;  
-  
+//example useage: float myDeltaRCosmic = bg->deltaRCosmic(Photon_sc_x[i],  Photon_sc_y[i], Photon_sc_z[i],CosmicMuon_OuterTrack_InnerPoint_x,CosmicMuon_OuterTrack_InnerPoint_y,CosmicMuon_OuterTrack_InnerPoint_z, CosmicMuon_OuterTrack_InnerPoint_px,CosmicMuon_OuterTrack_InnerPoint_py,CosmicMuon_OuterTrack_InnerPoint_pz, CosmicMuon_n)
+float NonCollisionBG::deltaRCosmic(float Pho_sc_x, float Pho_sc_y, float Pho_sc_z,float CosmicMuon_OuterTrack_InnerPoint_x[],float CosmicMuon_OuterTrack_InnerPoint_y[],float CosmicMuon_OuterTrack_InnerPoint_z[], float  CosmicMuon_OuterTrack_InnerPoint_px[],float CosmicMuon_OuterTrack_InnerPoint_py[],float CosmicMuon_OuterTrack_InnerPoint_pz[], int CosmicMuon_n){
+    float dr_min_cos = 99999;
+    float dx_min_cos = 10000;
+    float dy_min_cos = 10000;
+    float dz_min_cos = 10000;
+    
+    vector< pair<bool,TVector3> > solutions;
+    
+    for(int iMuon=0 ; iMuon !=CosmicMuon_n; iMuon++){   
+        bool singlesol = false;
+        bool bothsol = false;
+        
+        float averageSolution_x1 = 0.;
+        float averageSolution_y1 = 0.;
+        float averageSolution_z1 = 0.;
+        float averageSolution_x2 = 0.;
+        float averageSolution_y2 = 0.;
+        float averageSolution_z2 = 0.;
+        TVector3 point(CosmicMuon_OuterTrack_InnerPoint_x[iMuon],CosmicMuon_OuterTrack_InnerPoint_y[iMuon],CosmicMuon_OuterTrack_InnerPoint_z[iMuon]);		
+        TVector3 direction(CosmicMuon_OuterTrack_InnerPoint_px[iMuon],CosmicMuon_OuterTrack_InnerPoint_py[iMuon],CosmicMuon_OuterTrack_InnerPoint_pz[iMuon]);
+        solutions= getEBIntersections(point, direction);
+        
+        if(solutions.size()==4){
+            
+            if(solutions[0].first==true && solutions[1].first==false){
+                averageSolution_x1 = solutions[0].second.X();
+                averageSolution_y1 = solutions[0].second.Y();
+                averageSolution_z1 = solutions[0].second.Z();
+            }else if(solutions[0].first==false && solutions[1].first==true){
+                averageSolution_x1 = solutions[1].second.X();
+                averageSolution_y1 = solutions[1].second.Y();
+                averageSolution_z1 = solutions[1].second.Z();
+            }else if(solutions[0].first==true && solutions[1].first==true){
+                averageSolution_x1 = (solutions[0].second.X() + solutions[1].second.X())/2.;
+                averageSolution_y1 = (solutions[0].second.Y() + solutions[1].second.Y())/2.;
+                averageSolution_z1 = (solutions[0].second.Z() + solutions[1].second.Z())/2.;
+            }
+            
+            if(solutions[2].first==true && solutions[3].first==false){
+                averageSolution_x2 = solutions[2].second.X();
+                averageSolution_y2 = solutions[2].second.Y();
+                averageSolution_z2 = solutions[2].second.Z();
+            }else if(solutions[2].first==false && solutions[3].first==true){
+                averageSolution_x2 = solutions[3].second.X();
+                averageSolution_y2 = solutions[3].second.Y();
+                averageSolution_z2 = solutions[3].second.Z();
+            }else if(solutions[2].first==true && solutions[3].first==true){
+                averageSolution_x2 = (solutions[2].second.X() + solutions[3].second.X())/2.;
+                averageSolution_y2 = (solutions[2].second.Y() + solutions[3].second.Y())/2.;
+                averageSolution_z2 = (solutions[2].second.Z() + solutions[3].second.Z())/2.;
+            }
+            
+        }else if(solutions.size()==2){
+            
+            if(solutions[0].first==true && solutions[1].first==false){
+                averageSolution_x1 = solutions[0].second.X();
+                averageSolution_y1 = solutions[0].second.Y();
+                averageSolution_z1 = solutions[0].second.Z();
+            }else if(solutions[0].first==false && solutions[1].first==true){
+                averageSolution_x1 = solutions[1].second.X();
+                averageSolution_y1 = solutions[1].second.Y();
+                averageSolution_z1 = solutions[1].second.Z();
+            }else if(solutions[0].first==true && solutions[1].first==true){
+                averageSolution_x1 = (solutions[0].second.X() + solutions[1].second.X())/2.;
+                averageSolution_y1 = (solutions[0].second.Y() + solutions[1].second.Y())/2.;
+                averageSolution_z1 = (solutions[0].second.Z() + solutions[1].second.Z())/2.;
+            }
+            
+        }else if(solutions.size()==1){
+            if(solutions[0].first == true){
+                averageSolution_x1 = solutions[0].second.X();
+                averageSolution_y1 = solutions[0].second.Y();
+                averageSolution_z1 = solutions[0].second.Z();
+            }
+        }
+        //========distance of separation between first muon intersection in ECAL and SC position 
+        
+        //cout << "**dx1** "<< dx2_cos << " dy1: " << dy2_cos << "dz1: "<< dz2_cos << endl;
+        
+        //single solution means that the muon track only reported a DCA (solutions.size==1)
+        // or that the muon grazed the ecal, never entering the tracking region
+        // (solutions.size==2) where both of these solutions are intersections with the outer barrel only
+        if(solutions.size()==2 || solutions.size()==1) singlesol = true;
+        //both solutions means that the muon track passed through the tracking region so that
+        // there is an intersection with the outer barrel and inner barrel on it's way in, and
+        // there is an intersection with the inner barrel and outer barrel on it's way out hence
+        // (solutions.size()==4)
+        if(solutions.size()==4) bothsol = true;
+        
+        //initialize these
+        float dr_cos = -1.;
+        float dx_cos = 10000.;
+        float dy_cos = 10000.;
+        float dz_cos = 10000.;
+        float dr2_cos = -1.;
+        float dx2_cos = 10000.;
+        float dy2_cos = 10000.;
+        float dz2_cos = 10000.;
+        
+        if(bothsol == true){
+            dx_cos = Pho_sc_x - averageSolution_x1;
+            dy_cos = Pho_sc_y - averageSolution_y1;
+            dz_cos = Pho_sc_z - averageSolution_z1;
+            dx2_cos = Pho_sc_x - averageSolution_x2;
+            dy2_cos = Pho_sc_y - averageSolution_y2;
+            dz2_cos = Pho_sc_z - averageSolution_z2;
+            dr_cos  = sqrt((dx_cos*dx_cos) + (dy_cos*dy_cos) + (dz_cos*dz_cos));
+            dr2_cos  = sqrt((dx2_cos*dx2_cos) + (dy2_cos*dy2_cos) + (dz2_cos*dz2_cos));
+            if( dr2_cos < dr_min_cos ){
+                dr_min_cos = dr2_cos;
+                dx_min_cos = dx2_cos;
+                dy_min_cos = dy2_cos;
+                dz_min_cos = dz2_cos;
+            }
+            if( dr_cos < dr_min_cos ){
+                dr_min_cos = dr_cos;
+                dx_min_cos = dx_cos;
+                dy_min_cos = dy_cos;
+                dz_min_cos = dz_cos;
+            }
+            
+        }
+        if (singlesol== true){
+            dx_cos = Pho_sc_x - averageSolution_x1;
+            dy_cos = Pho_sc_y - averageSolution_y1;
+            dz_cos = Pho_sc_z - averageSolution_z1;
+            dr_cos  = sqrt((dx_cos*dx_cos) + (dy_cos*dy_cos) + (dz_cos*dz_cos));
+            
+            if( dr_cos < dr_min_cos ){
+                dr_min_cos = dr_cos;
+                dx_min_cos = dx_cos;
+                dy_min_cos = dy_cos;
+                dz_min_cos = dz_cos;
+            }
+        }
+        //cout << "mydrcos: "<< dr_min_cos << endl;
+    }//loop muon
+    
+    return dr_min_cos; 
+    
 }
 
 		
@@ -349,7 +490,7 @@ double NonCollisionBG::h(double z, double& length){
   
 }
 
-// iterations = 100 by default in the .h file
+// iterations = 5 by default in the .h file
 double NonCollisionBG::OuterEBRho(double zprimeprime, int iterations ){
   // zprimeprime is just a funny name for the z location where you would
   // like to know the radius of the outer envelope of the barrel Ecal.
