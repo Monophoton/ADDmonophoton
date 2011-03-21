@@ -1,0 +1,29 @@
+<use   name="root"/>
+<use   name="FWCore/Framework"/>
+<use   name="FWCore/PluginManager"/>
+<use   name="FWCore/ParameterSet"/>
+<use   name="FWCore/ServiceRegistry"/>
+<use   name="DataFormats/Math"/>
+<use   name="DataFormats/PatCandidates"/>
+<use   name="DataFormats/EgammaCandidates"/>
+<use   name="DataFormats/L1GlobalTrigger"/>
+<use   name="DataFormats/TrackReco"/>
+<use   name="DataFormats/HepMCCandidate"/>
+<use   name="RecoEcal/EgammaCoreTools"/>
+<use   name="SimDataFormats/GeneratorProducts"/>
+<use   name="CondFormats/L1TObjects"/>
+<use   name="CondFormats/DataRecord"/>
+<use   name="Geometry/CaloGeometry"/>
+<use   name="PhysicsTools/UtilAlgos"/>
+<use   name="DataFormats/Luminosity"/>
+<use   name="HLTrigger/HLTcore"/>
+<use   name="DataFormats/CSCRecHit"/>
+<use   name="DataFormats/GeometryVector"/>
+<use   name="Geometry/CSCGeometry"/>
+<use   name="Geometry/Records"/>
+<use   name="Geometry/CommonDetUnit"/>
+<use   name="DataFormats/RPCRecHit"/>
+<use   name="Geometry/RPCGeometry"/>
+<flags   EDM_PLUGIN="1"/>
+<export>
+</export>
