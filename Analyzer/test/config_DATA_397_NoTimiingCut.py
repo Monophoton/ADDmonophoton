@@ -40,7 +40,25 @@ readFiles = cms.untracked.vstring()
 secFiles = cms.untracked.vstring()
 
 readFiles.extend( [
-'dcache:/pnfs/cms/WAX/11/store/user/lpcgg/miceli/Photon/PhotonSkim_Run2010B-Nov4ReReco_v1_146240-147829/3c009990a403ffefbef1d67824f3333a/phoskim_88_2_Faz.root'
+#'dcache:/pnfs/cms/WAX/11/store/user/lpcgg/miceli/Photon/PhotonSkim_Run2010B-Nov4ReReco_v1_146240-147829/3c009990a403ffefbef1d67824f3333a/phoskim_88_2_Faz.root'
+        '/store/data/Run2010A/EG/RECO/Dec22ReReco_v1/0027/E8139119-2110-E011-855E-003048C69318.root',
+        '/store/data/Run2010A/EG/RECO/Dec22ReReco_v1/0027/E80A4E9E-1F10-E011-B243-003048D439A8.root',
+        '/store/data/Run2010A/EG/RECO/Dec22ReReco_v1/0027/E6F8E442-2010-E011-B25D-0030487D5EB1.root',
+        '/store/data/Run2010A/EG/RECO/Dec22ReReco_v1/0027/E6D83A9A-1F10-E011-9F55-0030487D5EB1.root',
+        '/store/data/Run2010A/EG/RECO/Dec22ReReco_v1/0027/E4698D2B-2010-E011-89CF-003048C693C8.root',
+        '/store/data/Run2010A/EG/RECO/Dec22ReReco_v1/0027/E299636E-1F10-E011-A71F-0030487D5D7B.root',
+        '/store/data/Run2010A/EG/RECO/Dec22ReReco_v1/0027/E25FD4C8-1F10-E011-98DA-0030487E4EC5.root',
+        '/store/data/Run2010A/EG/RECO/Dec22ReReco_v1/0027/E05C8E7D-1F10-E011-9B13-0030487F1665.root',
+        '/store/data/Run2010A/EG/RECO/Dec22ReReco_v1/0027/E0088F3F-1F10-E011-85E6-003048C693BA.root',
+        '/store/data/Run2010A/EG/RECO/Dec22ReReco_v1/0027/DE243F7E-2010-E011-8A58-003048C6903C.root',
+        '/store/data/Run2010A/EG/RECO/Dec22ReReco_v1/0027/DC8D550F-2110-E011-80B0-003048C69292.root',
+        '/store/data/Run2010A/EG/RECO/Dec22ReReco_v1/0027/DC20AA28-2010-E011-B7BD-0030487D5EB1.root',
+        '/store/data/Run2010A/EG/RECO/Dec22ReReco_v1/0027/DAE6744F-1F10-E011-A3F6-0030487D5DA5.root',
+        '/store/data/Run2010A/EG/RECO/Dec22ReReco_v1/0027/DA222625-2010-E011-A7DC-003048C69318.root',
+        '/store/data/Run2010A/EG/RECO/Dec22ReReco_v1/0027/D8DB462E-2110-E011-A12E-003048C69318.root',
+        '/store/data/Run2010A/EG/RECO/Dec22ReReco_v1/0027/D8BBDFC5-1F10-E011-80A1-003048C693C8.root',
+        '/store/data/Run2010A/EG/RECO/Dec22ReReco_v1/0027/D8484310-2110-E011-8AD5-003048C693D0.root'
+
     ] );
 
 process.source = cms.Source("PoolSource",
@@ -98,7 +116,7 @@ process.demo = cms.EDAnalyzer('Analyzer',
 
 
 process.monoSkim = cms.EDFilter("MonoPhotonSkimmer",
-  phoTag = cms.InputTag("photons::RECO"),
+  phoTag = cms.InputTag("photons"),   # photons::RECO will look for original collection
   selectEE = cms.bool(True),
   selectTrack = cms.bool(False),
   ecalisoOffsetEB = cms.double(5000.),
@@ -119,6 +137,7 @@ process.monoSkim = cms.EDFilter("MonoPhotonSkimmer",
 
 #Remove the time severity flag from cleanedHybridSuperCluster
 process.cleanedHybridSuperClusters.RecHitSeverityToBeExcluded= cms.vint32(4,5)
+
 #For Uncleaned ones
 process.uncleanedHybridSuperClusters.RecHitSeverityToBeExcluded= cms.vint32(999)
 
