@@ -13,7 +13,7 @@
 //
 // Original Author:  Sandhya Jain
 //         Created:  Fri Apr 17 11:00:06 CEST 2009
-// $Id: Analyzer.cc,v 1.36 2010/12/07 14:33:52 miceli Exp $
+// $Id: Analyzer.cc,v 1.37 2011/04/20 13:03:11 schauhan Exp $
 //
 //
 
@@ -172,6 +172,7 @@ Analyzer::Analyzer(const edm::ParameterSet& iConfig):
   rpcLabel_(iConfig.getUntrackedParameter<edm::InputTag>("rpcTag")),
   rechitBLabel_(iConfig.getUntrackedParameter<edm::InputTag>("rechitBTag")),
   rechitELabel_(iConfig.getUntrackedParameter<edm::InputTag>("rechitETag")),
+  hcalrechitLabel_(iConfig.getUntrackedParameter<edm::InputTag>("hcalrechitTag")),
   hlTriggerResults_(iConfig.getUntrackedParameter<edm::InputTag>("HLTriggerResults")),
   Tracks_(iConfig.getUntrackedParameter<edm::InputTag>("Tracks")),
   Vertices_(iConfig.getUntrackedParameter<edm::InputTag>("Vertices")),
@@ -199,6 +200,7 @@ Analyzer::Analyzer(const edm::ParameterSet& iConfig):
   runCSCseg_(iConfig.getUntrackedParameter<bool>("runCSCseg")),
   runBeamHaloSummary_(iConfig.getUntrackedParameter<bool>("runBeamHaloSummary")),
   runRPChit_(iConfig.getUntrackedParameter<bool>("runRPChit")),
+  isAOD_(iConfig.getUntrackedParameter<bool>("isAOD")),
   debug_(iConfig.getUntrackedParameter<bool>("debug")),
   init_(false)
 {
@@ -904,7 +906,8 @@ void Analyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup){
        muon_InnerTrack_OuterPoint_px[x] = 0.;
        muon_InnerTrack_OuterPoint_py[x] = 0.;
        muon_InnerTrack_OuterPoint_pz[x] = 0.;
-  		
+
+
        muon_InnerTrack_isNonnull[x] =   mymuon_container[x].innerTrack().isNonnull();
        muon_OuterTrack_isNonnull[x] =   mymuon_container[x].outerTrack().isNonnull();
        
@@ -992,7 +995,8 @@ void Analyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup){
        cosmicmuon_InnerTrack_OuterPoint_px[x] = 0.;
        cosmicmuon_InnerTrack_OuterPoint_py[x] = 0.;
        cosmicmuon_InnerTrack_OuterPoint_pz[x] = 0.;
-       
+      
+  if(!isAOD_){ 
        cosmicmuon_InnerTrack_isNonnull[x] =   mycosmicmuon_container[x].innerTrack().isNonnull();
        cosmicmuon_OuterTrack_isNonnull[x] =   mycosmicmuon_container[x].outerTrack().isNonnull();
        
@@ -1024,6 +1028,7 @@ void Analyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup){
 	 cosmicmuon_OuterTrack_OuterPoint_py[x] = mycosmicmuon_container[x].outerTrack()->outerMomentum().y();
 	 cosmicmuon_OuterTrack_OuterPoint_pz[x] = mycosmicmuon_container[x].outerTrack()->outerMomentum().z();
        }
+  }//if(!isAOD_)
        CosmicMuon_n++;
      }//end of for loop
    }//if runcosmicmuons_
@@ -1165,7 +1170,7 @@ void Analyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup){
 	 if(runHErechit_ && pho_isEB[x]){
 	   //Store HE rechits
 	   edm::Handle<HBHERecHitCollection> hcalRecHitHandle;
-	   iEvent.getByLabel(edm::InputTag("hbhereco"), hcalRecHitHandle);
+	   iEvent.getByLabel(hcalrechitLabel_, hcalRecHitHandle);
 	   const HBHERecHitCollection *hbhe =  hcalRecHitHandle.product();
 	   
 	   for(HBHERecHitCollection::const_iterator hh = hbhe->begin(); hh != hbhe->end() && HERecHit_subset_n<10000; hh++){
