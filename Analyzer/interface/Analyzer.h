@@ -96,6 +96,7 @@ class Analyzer : public edm::EDAnalyzer {
   edm::InputTag rpcLabel_;
   edm::InputTag rechitBLabel_;
   edm::InputTag rechitELabel_;
+  edm::InputTag hcalrechitLabel_;
   edm::InputTag hlTriggerResults_;  // Input tag for TriggerResults
   edm::InputTag Tracks_;
   edm::InputTag Vertices_;
@@ -122,6 +123,7 @@ class Analyzer : public edm::EDAnalyzer {
   bool runCSCseg_;
   bool runBeamHaloSummary_;      
   bool runRPChit_;
+  bool isAOD_;
   bool debug_;
   bool init_;
   
