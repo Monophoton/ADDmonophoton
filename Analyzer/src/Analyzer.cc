@@ -13,7 +13,7 @@
 //
 // Original Author:  Sandhya Jain
 //         Created:  Fri Apr 17 11:00:06 CEST 2009
-// $Id: Analyzer.cc,v 1.35 2010/11/30 15:06:58 schauhan Exp $
+// $Id: Analyzer.cc,v 1.36 2010/12/07 14:33:52 miceli Exp $
 //
 //
 
@@ -41,6 +41,12 @@
 #include "DataFormats/PatCandidates/interface/Tau.h"
 #include "DataFormats/PatCandidates/interface/Photon.h"
 #include "DataFormats/PatCandidates/interface/MET.h"
+
+#include "DataFormats/MuonReco/interface/Muon.h"
+#include "DataFormats/MuonReco/interface/MuonFwd.h"
+#include "DataFormats/MuonReco/interface/MuonTimeExtra.h"
+#include "DataFormats/METReco/interface/BeamHaloSummary.h"
+
 #include "DataFormats/EgammaCandidates/interface/ConversionFwd.h"
 #include "DataFormats/EgammaCandidates/interface/Conversion.h"
 #include "DataFormats/EgammaCandidates/interface/PhotonFwd.h"
@@ -82,6 +88,9 @@
 #include "Geometry/CommonDetUnit/interface/GeomDet.h"
 #include "DataFormats/RPCRecHit/interface/RPCRecHitCollection.h"
 #include <Geometry/RPCGeometry/interface/RPCGeometry.h>
+#include "DataFormats/JetReco/interface/PFJet.h"
+#include "DataFormats/JetReco/interface/PFJetCollection.h"
+
 
 #include "TString.h"
 #include "TH1D.h"
@@ -153,6 +162,7 @@ Analyzer::Analyzer(const edm::ParameterSet& iConfig):
   muoLabel_(iConfig.getUntrackedParameter<edm::InputTag>("muonTag")),
   cosMuoLabel_(iConfig.getUntrackedParameter<edm::InputTag>("cosMuonTag")),
   jetLabel_(iConfig.getUntrackedParameter<edm::InputTag>("jetTag")),
+  pfjetLabel_(iConfig.getUntrackedParameter<edm::InputTag>("pfjetTag")),
   tauLabel_(iConfig.getUntrackedParameter<edm::InputTag>("tauTag")),
   metLabel_(iConfig.getUntrackedParameter<edm::InputTag>("metTag")),
   PFmetLabel_(iConfig.getUntrackedParameter<edm::InputTag>("PFmetTag")),
@@ -165,6 +175,7 @@ Analyzer::Analyzer(const edm::ParameterSet& iConfig):
   hlTriggerResults_(iConfig.getUntrackedParameter<edm::InputTag>("HLTriggerResults")),
   Tracks_(iConfig.getUntrackedParameter<edm::InputTag>("Tracks")),
   Vertices_(iConfig.getUntrackedParameter<edm::InputTag>("Vertices")),
+  BeamHaloSummaryLabel_(iConfig.getUntrackedParameter<edm::InputTag>("BeamHaloSummary")), 
   outFile_(iConfig.getUntrackedParameter<string>("outFile")),
   rungenParticleCandidates_(iConfig.getUntrackedParameter<bool>("rungenParticleCandidates")),
   runphotons_(iConfig.getUntrackedParameter<bool>("runphotons")),
@@ -176,6 +187,7 @@ Analyzer::Analyzer(const edm::ParameterSet& iConfig):
   runmuons_(iConfig.getUntrackedParameter<bool>("runmuons")),
   runcosmicmuons_(iConfig.getUntrackedParameter<bool>("runcosmicmuons")),
   runjets_(iConfig.getUntrackedParameter<bool>("runjets")),
+  runpfjets_(iConfig.getUntrackedParameter<bool>("runpfjets")),
   runtaus_(iConfig.getUntrackedParameter<bool>("runtaus")),
   runHLT_(iConfig.getUntrackedParameter<bool>("runHLT")),
   runL1_(iConfig.getUntrackedParameter<bool>("runL1")),
@@ -185,6 +197,7 @@ Analyzer::Analyzer(const edm::ParameterSet& iConfig):
   runHErechit_(iConfig.getUntrackedParameter<bool>("runHErechit")),
   runvertex_(iConfig.getUntrackedParameter<bool>("runvertex")),
   runCSCseg_(iConfig.getUntrackedParameter<bool>("runCSCseg")),
+  runBeamHaloSummary_(iConfig.getUntrackedParameter<bool>("runBeamHaloSummary")),
   runRPChit_(iConfig.getUntrackedParameter<bool>("runRPChit")),
   debug_(iConfig.getUntrackedParameter<bool>("debug")),
   init_(false)
@@ -1191,6 +1204,7 @@ void Analyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup){
        }//end of for loop over x
      }//if(myphoton_container.size!=0) 
      
+
      //to get the photon hit information from every crystal of SC
      if(runrechit_){ 
        Handle<EcalRecHitCollection> Brechit;//barrel
@@ -1203,11 +1217,16 @@ void Analyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup){
 
        const EcalRecHitCollection* barrelRecHits= Brechit.product();
        const EcalRecHitCollection* endcapRecHits= Erechit.product();
+
+
        edm::ESHandle<CaloTopology> pTopology;
        iSetup.get<CaloTopologyRecord>().get(theCaloTopo_);
        const CaloTopology *topology = theCaloTopo_.product();
+
        if(myphoton_container.size()!=0){
+
 	 for(unsigned int x=0; x < myphoton_container.size();x++){   
+
 	   std::vector< std::pair<DetId, float> >  PhotonHit_DetIds  = myphoton_container[x].superCluster()->hitsAndFractions();
 	   std::vector<CrystalInfo> crystalinfo_container;
 	   crystalinfo_container.clear();
@@ -1274,9 +1293,11 @@ void Analyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup){
 	     pho_iphi_xtalEB[x][y]           = crystalinfo_container[y].iphi;
 	   }//end of for (unsigned int y =0; y < crystalinfo_container.size();y++
            const reco::BasicCluster& seedClus = *(myphoton_container[x].superCluster()->seed());
+
            edm::ESHandle<CaloGeometry> geoHandle;	       
 	   iSetup.get<CaloGeometryRecord>().get(geoHandle);
 	   const CaloGeometry* caloGeom = geoHandle.product();
+
 	   if(myphoton_container[x].isEB()){
 	     std::vector<float> showershapes_barrel = EcalClusterTools::roundnessBarrelSuperClusters(*(myphoton_container[x].superCluster()),*barrelRecHits,0);
 	     pho_roundness[x]    = (float)showershapes_barrel[0];
@@ -1314,7 +1335,7 @@ void Analyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup){
             pho_SigmaPhiPhi[x]   = sqrt(stdCov[2]);
             pho_SigmaIphiIphi[x] = sqrt(crysCov[2]);
  
-	   }//end of if(myphoton_container[x].isEB())
+	}//end of if(myphoton_container[x].isEB())
 	   else{ 
 	     pho_roundness[x]   = -99.;
 	     pho_angle[x]       = -99.;
@@ -1358,10 +1379,61 @@ void Analyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup){
 
 	   }//end of else (if !EB)
 	 }//end of for loop over x
-       }//if(myphoton_container.size!=0) 
+       }//if(myphoton_container.size!=0)
+
+ 
+    if(runrechit_){
+     edm::ESHandle<CaloGeometry> geoHandle;
+     iSetup.get<CaloGeometryRecord>().get(geoHandle);
+     const CaloGeometry* caloGeom = geoHandle.product();
+
+     int EBRecHit_n =0;
+     int EERecHit_n =0;
+
+     EBRecHit_size= EBRecHit_n;
+     EERecHit_size= EERecHit_n;
+
+     for (EcalRecHitCollection::const_iterator it = barrelRecHits->begin();it!=barrelRecHits->end();++it){
+       EBDetId dit = it->detid();
+
+       const CaloCellGeometry *this_cell = caloGeom->getGeometry(it->id());
+       GlobalPoint position = this_cell->getPosition();
+
+       float ET = it->energy() * sin(position.theta()); 
+       EBRecHit_eta[EBRecHit_n] = position.eta();
+       EBRecHit_phi[EBRecHit_n] = position.phi();
+       EBRecHit_ieta[EBRecHit_n] = dit.ieta();
+       EBRecHit_iphi[EBRecHit_n] = dit.iphi();
+       EBRecHit_e[EBRecHit_n] = it->energy();
+       EBRecHit_et[EBRecHit_n] = ET;
+       EBRecHit_flag[EBRecHit_n] = it->recoFlag();
+       EBRecHit_time[EBRecHit_n] = it->time();
+       EBRecHit_size = EBRecHit_n;
+       EBRecHit_n++;  }
+
+     for (EcalRecHitCollection::const_iterator it = endcapRecHits->begin();it!=endcapRecHits->end();++it){
+       EEDetId dit = it->detid();
+
+       const CaloCellGeometry *this_cell = caloGeom->getGeometry(it->id());
+       GlobalPoint position = this_cell->getPosition();
+
+       float ET = it->energy() * sin(position.theta()); 
+       EERecHit_eta[EERecHit_n] = position.eta();
+       EERecHit_phi[EERecHit_n] = position.phi();
+       EERecHit_ieta[EERecHit_n] = dit.ix();
+       EERecHit_iphi[EERecHit_n] = dit.iy();
+       EERecHit_e[EERecHit_n] = it->energy();
+       EERecHit_et[EERecHit_n] = ET;
+       EERecHit_flag[EERecHit_n] = it->recoFlag();
+       EERecHit_time[EERecHit_n] = it->time();
+       EERecHit_size = EERecHit_n;
+       EERecHit_n++;  }
+      }//if(runforMIP_)    
+ 
      }//if(runrechit_)
      
    }//if(runphotons_)
+
    
    if(runCSCseg_){ //Store CSC segments
      // Get the CSC Geometry :
@@ -1413,7 +1485,69 @@ void Analyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup){
        }
      }// loop over segs
    }// runCSCseg_
+  
+
+ if(runBeamHaloSummary_){
+   // Get BeamHaloSummary
+   edm::Handle<BeamHaloSummary> TheBeamHaloSummary ;
+   iEvent.getByLabel(BeamHaloSummaryLabel_, TheBeamHaloSummary) ;
+    
+ 
+  isBeamHaloIDTightPass    = false;
+  isBeamHaloIDLoosePass    = false;
+     
+  isBeamHaloEcalLoosePass   = false;
+  isBeamHaloHcalLoosePass   = false;
+  isBeamHaloCSCLoosePass    = false;
+  isBeamHaloGlobalLoosePass = false;
+     
+  isBeamHaloEcalTightPass   = false;
+  isBeamHaloHcalTightPass   = false;
+  isBeamHaloCSCTightPass    = false;
+  isBeamHaloGlobalTightPass = false;
+    
+  
+  isSmellsLikeHalo_Tag  = false;
+  isLooseHalo_Tag       = false;
+  isTightHalo_Tag       = false;
+  isExtremeTightHalo_Tag = false;
+ 
+     
+  if(TheBeamHaloSummary.isValid()) {
+   const BeamHaloSummary TheSummary = (*TheBeamHaloSummary.product() );
+     
+        isBeamHaloEcalLoosePass   = TheSummary.EcalLooseHaloId();
+        isBeamHaloHcalLoosePass   = TheSummary.HcalLooseHaloId();
+     
+        isBeamHaloEcalTightPass   = TheSummary.EcalTightHaloId();
+        isBeamHaloHcalTightPass   = TheSummary.HcalTightHaloId();
+     
+        isBeamHaloCSCLoosePass    = TheSummary.CSCLooseHaloId();
+        isBeamHaloCSCTightPass    = TheSummary.CSCTightHaloId();
+     
+        isBeamHaloGlobalLoosePass = TheSummary.GlobalLooseHaloId();
+        isBeamHaloGlobalTightPass = TheSummary.GlobalTightHaloId();
+    
+        isSmellsLikeHalo_Tag = TheSummary.EventSmellsLikeHalo();
+        isLooseHalo_Tag = TheSummary.LooseId();
+        isTightHalo_Tag = TheSummary.TightId();
+        isExtremeTightHalo_Tag = TheSummary.ExtremeTightId();
    
+  
+   if( TheSummary.EcalLooseHaloId()  && TheSummary.HcalLooseHaloId() &&
+       TheSummary.CSCLooseHaloId()   && TheSummary.GlobalLooseHaloId() )
+        isBeamHaloIDLoosePass = true;
+     
+   if( TheSummary.EcalTightHaloId()  && TheSummary.HcalTightHaloId() &&
+       TheSummary.CSCTightHaloId()   && TheSummary.GlobalTightHaloId() )
+        isBeamHaloIDTightPass = true;
+     
+   }//not empty
+     
+     
+ }//if(runBeamHaloSummary_)
+     
+ 
   if(runRPChit_){
      /*
      // Get the RPC Geometry  
@@ -1643,8 +1777,10 @@ void Analyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup){
        myjet_container.push_back(*jet_iter);
      }
      Jet_n = 0;  
+    //  std::cout<<"Jet Container Size = "<<myjet_container.size()<<std::endl;
      if(myjet_container.size()!=0){
        for(unsigned int x=0;x < myjet_container.size();x++){
+     //    if(x==0)std::cout<<"jet pt ="<<myjet_container[x].pt()<<std::endl;
 	 jet_pt[x]  = myjet_container[x].pt();
 	 jet_px[x]  = myjet_container[x].px();
 	 jet_py[x]  = myjet_container[x].py();
@@ -1667,6 +1803,55 @@ void Analyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup){
        }//end of for loop
      }
    }
+
+
+
+   if(runpfjets_){
+     edm::Handle<edm::View<pat::Jet> > pfjetHandle;
+     iEvent.getByLabel(pfjetLabel_,pfjetHandle);
+     const edm::View<pat::Jet> & pfjets = *pfjetHandle;
+  
+     size_t npfjetscounter=0;
+     std::vector<pat::Jet>  mypfjet_container;
+     mypfjet_container.clear();
+
+      for(edm::View<pat::Jet>::const_iterator pfjet_iter = pfjets.begin(); pfjet_iter!=pfjets.end(); ++pfjet_iter){
+       if(pfjet_iter->pt()>30)  npfjetscounter++;
+       mypfjet_container.push_back(*pfjet_iter);
+     }
+
+     pfJet_n = 0;  
+     //std::cout<<" PF Jet Container size "<<mypfjet_container.size()<<std::endl;
+     if(mypfjet_container.size()!=0){
+       for(unsigned int x=0;x < mypfjet_container.size();x++){
+       //  if(x==0)std::cout<<"pfjet pt =--"<<mypfjet_container[x].pt()<<std::endl;
+         pfjet_pt[x]  = mypfjet_container[x].pt();
+         pfjet_px[x]  = mypfjet_container[x].px();
+         pfjet_py[x]  = mypfjet_container[x].py();
+         pfjet_E[x]   = mypfjet_container[x].energy();
+         pfjet_pz[x]  = mypfjet_container[x].pz();
+         pfjet_vx[x]  = mypfjet_container[x].vx();
+         pfjet_vy[x]  = mypfjet_container[x].vy();
+         pfjet_vz[x]  = mypfjet_container[x].vz();
+         pfjet_phi[x] = correct_phi(mypfjet_container[x].phi());
+         pfjet_eta[x] = mypfjet_container[x].eta();
+         /*
+         pfjet_emEnergyFraction[x]= mypfjet_container[x].emEnergyFraction();
+         pfjet_energyFractionHadronic[x] = mypfjet_container[x].energyFractionHadronic();
+         pfjet_hitsInN90[x]= mypfjet_container[x].jetID().hitsInN90;
+         pfjet_n90Hits[x] = mypfjet_container[x].jetID().n90Hits;
+         pfjet_fHPD[x] = (float) mypfjet_container[x].jetID().fHPD;
+         pfjet_fRBX[x] = (float) mypfjet_container[x].jetID().fRBX;
+         pfjet_RHF[x] = (float)(mypfjet_container[x].jetID().fLong - mypfjet_container[x].jetID().fShort)/(mypfjet_container[x].jetID().fLong + mypfjet_container[x].jetID().fShort);
+         pfjet_nTowers[x] = mypfjet_container[x].jetID().nECALTowers + mypfjet_container[x].jetID().nHCALTowers ;
+         */
+         pfJet_n++;
+   
+       }//end of for loop
+     }
+   }
+
+
    if(runelectrons_){
      edm::Handle<edm::View<pat::Electron> > electronHandle;
      iEvent.getByLabel(eleLabel_,electronHandle);
@@ -1810,6 +1995,33 @@ void Analyzer::beginJob(){
     myEvent->Branch("Jet_fRBX",jet_fRBX,"jet_fRBX[Jet_n]/F");
     myEvent->Branch("Jet_RHF",jet_RHF,"jet_RHF[Jet_n]/F");
   }
+
+
+  if (runpfjets_){
+    myEvent->Branch("pfJet_n",&pfJet_n,"pfJet_n/I");
+    myEvent->Branch("pfJet_px",pfjet_px,"pfjet_px[Jet_n]/F");
+    myEvent->Branch("pfJet_py",pfjet_py,"pfjet_py[Jet_n]/F");
+    myEvent->Branch("pfJet_E",pfjet_E,"pfjet_E[Jet_n]/F");
+    myEvent->Branch("pfJet_pz",pfjet_pz,"pfjet_pz[Jet_n]/F");
+    myEvent->Branch("pfJet_vx",pfjet_vx,"pfjet_vx[Jet_n]/F");
+    myEvent->Branch("pfJet_vy",pfjet_vy,"pfjet_vy[Jet_n]/F");
+    myEvent->Branch("pfJet_vz",pfjet_vz,"pfjet_vz[Jet_n]/F");
+    myEvent->Branch("pfJet_pt",pfjet_pt,"pfjet_pt[Jet_n]/F");
+    myEvent->Branch("pfJet_eta",pfjet_eta,"pfjet_eta[Jet_n]/F");
+    myEvent->Branch("pfJet_phi",pfjet_phi,"pfjet_phi[Jet_n]/F");
+    /*
+    myEvent->Branch("pfJet_emEnergyFraction",pfjet_emEnergyFraction,"pfjet_emEnergyFraction[Jet_n]/F");
+    myEvent->Branch("pfJet_energyFractionHadronic",pfjet_energyFractionHadronic,"pfjet_energyFractionHadronic[Jet_n]/F");
+    myEvent->Branch("pfJet_hitsInN90",pfjet_hitsInN90,"pfjet_hitsInN90[Jet_n]/I");
+    myEvent->Branch("pfJet_n90Hits",pfjet_n90Hits,"pfjet_n90Hits[Jet_n]/I");
+    myEvent->Branch("pfJet_nTowers",pfjet_nTowers,"pfjet_nTowers[Jet_n]/I");
+    myEvent->Branch("pfJet_fHPD",pfjet_fHPD,"pfjet_fHPD[Jet_n]/F");
+    myEvent->Branch("pfJet_fRBX",pfjet_fRBX,"pfjet_fRBX[Jet_n]/F");
+    myEvent->Branch("pfJet_RHF",pfjet_RHF,"pfjet_RHF[Jet_n]/F");
+  */
+}
+
+
   
   if (runelectrons_){
     myEvent->Branch("Electron_n",&Electron_n,"Electron_n/I");
@@ -2203,6 +2415,28 @@ void Analyzer::beginJob(){
     }
     
   }//end of if (runphotons_)
+
+  if(runrechit_){
+    myEvent->Branch("EBRecHit_size",&EBRecHit_size,"EBRecHit_size/I");
+    myEvent->Branch("EBRecHit_eta",&EBRecHit_eta,"EBRecHit_eta[EBRecHit_size]/F");
+    myEvent->Branch("EBRecHit_phi",&EBRecHit_phi,"EBRecHit_phi[EBRecHit_size]/F");
+    myEvent->Branch("EBRecHit_ieta",&EBRecHit_ieta,"EBRecHit_ieta[EBRecHit_size]/I");
+    myEvent->Branch("EBRecHit_iphi",&EBRecHit_iphi,"EBRecHit_iphi[EBRecHit_size]/I");
+    myEvent->Branch("EBRecHit_e",&EBRecHit_e,"EBRecHit_e[EBRecHit_size]/F");
+    myEvent->Branch("EBRecHit_et",&EBRecHit_et,"EBRecHit_et[EBRecHit_size]/F");
+    myEvent->Branch("EBRecHit_flag",&EBRecHit_flag,"EBRecHit_flag[EBRecHit_size]/I");
+    myEvent->Branch("EBRecHit_time",&EBRecHit_time,"EBRecHit_time[EBRecHit_size]/F");
+
+    myEvent->Branch("EERecHit_size",&EERecHit_size,"EERecHit_size/I");
+    myEvent->Branch("EERecHit_eta",&EERecHit_eta,"EERecHit_eta[EERecHit_size]/F");
+    myEvent->Branch("EERecHit_phi",&EERecHit_phi,"EERecHit_phi[EERecHit_size]/F");
+    myEvent->Branch("EERecHit_ieta",&EERecHit_ieta,"EERecHit_ieta[EERecHit_size]/I");
+    myEvent->Branch("EERecHit_iphi",&EERecHit_iphi,"EERecHit_iphi[EERecHit_size]/I");
+    myEvent->Branch("EERecHit_e",&EERecHit_e,"EERecHit_e[EERecHit_size]/F");
+    myEvent->Branch("EERecHit_et",&EERecHit_et,"EERecHit_et[EERecHit_size]/F");
+    myEvent->Branch("EERecHit_flag",&EERecHit_flag,"EERecHit_flag[EERecHit_size]/I");
+    myEvent->Branch("EERecHit_time",&EERecHit_time,"EERecHit_time[EERecHit_size]/F");
+  }//end of if(runFroMIP_)
 	
   if(runCSCseg_){
     myEvent->Branch("CSCseg_n", &CSCseg_n, "CSCseg_n/I");
@@ -2215,6 +2449,25 @@ void Analyzer::beginJob(){
     myEvent->Branch("CSCseg_DirectionY", CSCseg_DirectionY, "CSCseg_DirectionY[CSCseg_n]/F");
     myEvent->Branch("CSCseg_DirectionZ", CSCseg_DirectionZ, "CSCseg_DirectionZ[CSCseg_n]/F");
   }// end of runCSCeg_
+
+         
+  if(runBeamHaloSummary_){                                                                                                       
+   myEvent->Branch("isBeamHaloGlobalLoosePass",&isBeamHaloGlobalLoosePass,"isBeamHaloGlobalLoosePass/O");
+   myEvent->Branch("isBeamHaloGlobalTightPass",&isBeamHaloGlobalTightPass,"isBeamHaloGloablTightPass/O");
+   myEvent->Branch("isBeamHaloHcalLoosePass",&isBeamHaloHcalLoosePass,"isBeamHaloHcalLoosePass/O");
+   myEvent->Branch("isBeamHaloHcalTightPass",&isBeamHaloHcalTightPass,"isBeamHaloHcalTightPass/O");
+   myEvent->Branch("isBeamHaloCSCLoosePass",&isBeamHaloCSCLoosePass,"isBeamHaloCSCLoosePass/O");
+   myEvent->Branch("isBeamHaloCSCTightPass",&isBeamHaloCSCTightPass,"isBeamHaloCSCTightPass/O");
+   myEvent->Branch("isBeamHaloEcalLoosePass",&isBeamHaloEcalLoosePass,"isBeamHaloEcalLoosePass/O");
+   myEvent->Branch("isBeamHaloEcalTightPass",&isBeamHaloEcalTightPass,"isBeamHaloEcalTightPass/O");
+   myEvent->Branch("isBeamHaloIDTightPass",&isBeamHaloIDTightPass,"isBeamHaloIDTightPass/O");
+   myEvent->Branch("isBeamHaloIDLoosePass",&isBeamHaloIDLoosePass,"isBeamHaloIDLoosePass/O");
+   myEvent->Branch("isSmellsLikeHalo_Tag",&isSmellsLikeHalo_Tag, "isSmellsLikeHalo_Tag/O");
+   myEvent->Branch("isLooseHalo_Tag",&isLooseHalo_Tag, "isLooseHalo_Tag/O");
+   myEvent->Branch("isTightHalo_Tag",&isTightHalo_Tag, "isTightHalo_Tag/O");
+   myEvent->Branch("isExtremeTightHalo_Tag",&isExtremeTightHalo_Tag, "isExtremeTightHalo_Tag/O");
+  }//if(runBeamHaloSummary_)
+
 
   if(runRPChit_){
     myEvent->Branch("RPChit_n", &RPChit_n, "RPChit_n/I");

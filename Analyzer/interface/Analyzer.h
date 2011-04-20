@@ -68,6 +68,7 @@ class Analyzer : public edm::EDAnalyzer {
   int Electron_n;
   int Track_n;
   int Jet_n;
+  int pfJet_n;
   int HERecHit_subset_n;
   int CSCseg_n;
   int RPChit_n;
@@ -83,7 +84,9 @@ class Analyzer : public edm::EDAnalyzer {
   edm::InputTag eleLabel_;
   edm::InputTag muoLabel_;
   edm::InputTag cosMuoLabel_;
+  edm::InputTag BeamHaloSummaryLabel_; 
   edm::InputTag jetLabel_;
+  edm::InputTag pfjetLabel_;
   edm::InputTag tauLabel_;
   edm::InputTag metLabel_;
   edm::InputTag PFmetLabel_;
@@ -107,6 +110,7 @@ class Analyzer : public edm::EDAnalyzer {
   bool runmuons_;
   bool runcosmicmuons_;
   bool runjets_;
+  bool runpfjets_;
   bool runtaus_;
   bool runHLT_;
   bool runL1_;
@@ -116,6 +120,7 @@ class Analyzer : public edm::EDAnalyzer {
   bool runHErechit_;
   bool runvertex_;
   bool runCSCseg_;
+  bool runBeamHaloSummary_;      
   bool runRPChit_;
   bool debug_;
   bool init_;
@@ -172,7 +177,30 @@ class Analyzer : public edm::EDAnalyzer {
   float jet_fRBX[100];
   float jet_RHF[100];
   int   jet_nTowers[100];
-  
+ 
+
+  //pfjet variables
+  float pfjet_pt[100];
+  float pfjet_px[100];
+  float pfjet_py[100];
+  float pfjet_E[100];
+  float pfjet_pz[100];
+  float pfjet_vx[100];
+  float pfjet_vy[100];
+  float pfjet_vz[100];
+  float pfjet_eta[100];
+  float pfjet_phi[100];
+  /*
+  float pfjet_emEnergyFraction[100];
+  float pfjet_energyFractionHadronic[100];
+  int   pfjet_hitsInN90[100];
+  int   pfjet_n90Hits[100];
+  float pfjet_fHPD[100];
+  float pfjet_fRBX[100];
+  float pfjet_RHF[100];
+  int   pfjet_nTowers[100];
+ */
+ 
   //electron variables
   float electron_pt[100];
   float electron_px[100];
@@ -525,8 +553,31 @@ class Analyzer : public edm::EDAnalyzer {
   float CSCseg_DirectionX[10000];
   float CSCseg_DirectionY[10000];
   float CSCseg_DirectionZ[10000];
-  
+ 
+ //BeamHaloSummary                                                                                                              
+  bool isBeamHaloIDTightPass;
+  bool isBeamHaloIDLoosePass;
+         
+  bool isBeamHaloEcalLoosePass;
+  bool isBeamHaloHcalLoosePass;
+  bool isBeamHaloCSCLoosePass;
+  bool isBeamHaloGlobalLoosePass;
+         
+  bool isBeamHaloEcalTightPass;
+  bool isBeamHaloHcalTightPass;
+  bool isBeamHaloCSCTightPass;
+  bool isBeamHaloGlobalTightPass;
+
+  bool isSmellsLikeHalo_Tag;
+  bool isLooseHalo_Tag;
+  bool isTightHalo_Tag;
+  bool isExtremeTightHalo_Tag;
+
+ 
   //RPChit info
+
+
+
   float RPChit_x[10000];
   float RPChit_y[10000];
   float RPChit_z[10000];
@@ -577,6 +628,32 @@ class Analyzer : public edm::EDAnalyzer {
   float genMetPhi;
   float genMetSumEt;
   float Delta_phiGEN;
+
+  //EBrecHit variables;
+
+  int EBRecHit_size;
+  float EBRecHit_eta[30000];
+  float EBRecHit_phi[30000];
+  int EBRecHit_ieta[30000];
+  int EBRecHit_iphi[30000];
+  float EBRecHit_e[30000];
+  float EBRecHit_et[30000];
+  int EBRecHit_flag[30000];
+  float EBRecHit_time[30000];
+
+  
+
+  //EErecHit variables;
+  int EERecHit_size;
+  float EERecHit_eta[30000];
+  float EERecHit_phi[30000];
+  int EERecHit_ieta[30000];
+  int EERecHit_iphi[30000];
+  float EERecHit_e[30000];
+  float EERecHit_et[30000];
+  int EERecHit_flag[30000];
+  float EERecHit_time[30000];
+
   
 };
 
