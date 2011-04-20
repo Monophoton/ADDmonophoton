@@ -87,6 +87,7 @@ process.demo = cms.EDAnalyzer('Analyzer',
                               rpcTag           = cms.untracked.InputTag("rpcRecHits"),
                               rechitBTag       = cms.untracked.InputTag("ecalRecHit:EcalRecHitsEB"),
                               rechitETag       = cms.untracked.InputTag("ecalRecHit:EcalRecHitsEE"),
+                              hcalrechitTag    = cms.untracked.InputTag("hbhereco"),
                               metTag           = cms.untracked.InputTag("patMETs"),
                               PFmetTag           = cms.untracked.InputTag("patMETsPF"),
                               TCmetTag           = cms.untracked.InputTag("patMETsTC"),
@@ -117,6 +118,7 @@ process.demo = cms.EDAnalyzer('Analyzer',
                               runCSCseg        = cms.untracked.bool(True),
                               runBeamHaloSummary= cms.untracked.bool(True),
                               runRPChit        = cms.untracked.bool(True),
+                              isAOD            = cms.untracked.bool(False),
                               debug            = cms.untracked.bool(False)
                               )
 
