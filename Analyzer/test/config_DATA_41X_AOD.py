@@ -92,7 +92,8 @@ process.demo = cms.EDAnalyzer('Analyzer',
                               Tracks           = cms.untracked.InputTag("generalTracks"),
                               Vertices         = cms.untracked.InputTag("offlinePrimaryVertices","",""),
                               BeamHaloSummary  = cms.untracked.InputTag("BeamHaloSummary"),
-                              outFile          = cms.untracked.string("Histo_Data_AOD_pfjet.root"),
+                              pileup           = cms.untracked.InputTag("PileUpInfo"),
+                              outFile          = cms.untracked.string("Histo_Data_AOD.root"),
                               runphotons       = cms.untracked.bool(True),
                               runHErechit      = cms.untracked.bool(True),
                               runrechit        = cms.untracked.bool(True),
@@ -101,7 +102,7 @@ process.demo = cms.EDAnalyzer('Analyzer',
                               runPFmet         = cms.untracked.bool(True),
                               runTCmet         = cms.untracked.bool(True),
                               runjets          = cms.untracked.bool(True),
-                              runpfjets          = cms.untracked.bool(False),
+                              runpfjets          = cms.untracked.bool(True),
                               runelectrons     = cms.untracked.bool(True),
                               runtaus          = cms.untracked.bool(True),
                               runmuons         = cms.untracked.bool(True),
@@ -116,9 +117,10 @@ process.demo = cms.EDAnalyzer('Analyzer',
                               runCSCseg        = cms.untracked.bool(False),
                               runRPChit        = cms.untracked.bool(False),
                               #---------------
-                              runBeamHaloSummary= cms.untracked.bool(False),
+                              runBeamHaloSummary= cms.untracked.bool(True),
+                              runPileUp         = cms.untracked.bool(True),
                               isAOD             = cms.untracked.bool(True),
-                              debug            = cms.untracked.bool(False)
+                              debug             = cms.untracked.bool(False)
                               )
 
 
