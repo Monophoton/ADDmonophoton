@@ -118,7 +118,7 @@ process.demo = cms.EDAnalyzer('Analyzer',
                               runRPChit        = cms.untracked.bool(False),
                               #---------------
                               runBeamHaloSummary= cms.untracked.bool(True),
-                              runPileUp         = cms.untracked.bool(True),
+                              runPileUp         = cms.untracked.bool(False),
                               isAOD             = cms.untracked.bool(True),
                               debug             = cms.untracked.bool(False)
                               )
@@ -188,4 +188,3 @@ else:
    import rlcompleter
    readline.parse_and_bind("tab: complete")
 
-#print process.dumpPython()
