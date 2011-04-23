@@ -84,7 +84,8 @@ class Analyzer : public edm::EDAnalyzer {
   edm::InputTag eleLabel_;
   edm::InputTag muoLabel_;
   edm::InputTag cosMuoLabel_;
-  edm::InputTag BeamHaloSummaryLabel_; 
+  edm::InputTag BeamHaloSummaryLabel_;
+  edm::InputTag pileupLabel_;
   edm::InputTag jetLabel_;
   edm::InputTag pfjetLabel_;
   edm::InputTag tauLabel_;
@@ -123,6 +124,7 @@ class Analyzer : public edm::EDAnalyzer {
   bool runCSCseg_;
   bool runBeamHaloSummary_;      
   bool runRPChit_;
+  bool runPileUp_;
   bool isAOD_;
   bool debug_;
   bool init_;
@@ -656,6 +658,9 @@ class Analyzer : public edm::EDAnalyzer {
   int EERecHit_flag[30000];
   float EERecHit_time[30000];
 
-  
+ //pileup info
+ int npuVertices;
+ int pubunchCrossing;
+ 
 };
 

@@ -13,7 +13,7 @@
 //
 // Original Author:  Sandhya Jain
 //         Created:  Fri Apr 17 11:00:06 CEST 2009
-// $Id: Analyzer.cc,v 1.37 2011/04/20 13:03:11 schauhan Exp $
+// $Id: Analyzer.cc,v 1.38 2011/04/20 14:41:42 schauhan Exp $
 //
 //
 
@@ -90,6 +90,7 @@
 #include <Geometry/RPCGeometry/interface/RPCGeometry.h>
 #include "DataFormats/JetReco/interface/PFJet.h"
 #include "DataFormats/JetReco/interface/PFJetCollection.h"
+#include "SimDataFormats/PileupSummaryInfo/interface/PileupSummaryInfo.h"
 
 
 #include "TString.h"
@@ -176,7 +177,8 @@ Analyzer::Analyzer(const edm::ParameterSet& iConfig):
   hlTriggerResults_(iConfig.getUntrackedParameter<edm::InputTag>("HLTriggerResults")),
   Tracks_(iConfig.getUntrackedParameter<edm::InputTag>("Tracks")),
   Vertices_(iConfig.getUntrackedParameter<edm::InputTag>("Vertices")),
-  BeamHaloSummaryLabel_(iConfig.getUntrackedParameter<edm::InputTag>("BeamHaloSummary")), 
+  BeamHaloSummaryLabel_(iConfig.getUntrackedParameter<edm::InputTag>("BeamHaloSummary")),
+  pileupLabel_(iConfig.getUntrackedParameter<edm::InputTag>("pileup")), 
   outFile_(iConfig.getUntrackedParameter<string>("outFile")),
   rungenParticleCandidates_(iConfig.getUntrackedParameter<bool>("rungenParticleCandidates")),
   runphotons_(iConfig.getUntrackedParameter<bool>("runphotons")),
@@ -437,9 +439,22 @@ void Analyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup){
   }
   if(debug_) cout<<"DEBUG: start saving stuff"<<endl;
   nevents++;
-  
-  
-  
+ 
+
+ if(runPileUp_){
+   //pile up info from MC only 
+   Handle<std::vector< PileupSummaryInfo > >  PupInfo;
+   iEvent.getByLabel(pileupLabel_, PupInfo);
+                    
+   std::vector<PileupSummaryInfo>::const_iterator PVI;                                                                                               
+   for(PVI = PupInfo->begin(); PVI != PupInfo->end(); ++PVI) {
+    npuVertices = PVI->getPU_NumInteractions();
+    pubunchCrossing   = PVI->getBunchCrossing();
+  if(debug_)std::cout << " Pileup Information: bunchXing, nvtx,: " << PVI->getBunchCrossing() << " " << PVI->getPU_NumInteractions()<< std::endl;
+                    
+   }//loop over pileup infor               
+  }//Run over Pileup
+
   
   //getting handle to generator level information
   if( rungenParticleCandidates_ ){
@@ -907,7 +922,7 @@ void Analyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup){
        muon_InnerTrack_OuterPoint_py[x] = 0.;
        muon_InnerTrack_OuterPoint_pz[x] = 0.;
 
-
+if(!isAOD_){
        muon_InnerTrack_isNonnull[x] =   mymuon_container[x].innerTrack().isNonnull();
        muon_OuterTrack_isNonnull[x] =   mymuon_container[x].outerTrack().isNonnull();
        
@@ -940,6 +955,7 @@ void Analyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup){
 	 muon_OuterTrack_OuterPoint_py[x] = mymuon_container[x].outerTrack()->outerMomentum().y();
 	 muon_OuterTrack_OuterPoint_pz[x] = mymuon_container[x].outerTrack()->outerMomentum().z();
        }
+ }//if(!isAOD_)
        Muon_n++;
      }//end of for loop
    }// if runmuons_
@@ -1966,6 +1982,11 @@ void Analyzer::beginJob(){
     myEvent->Branch("Scraping_numOfTracks",&Scraping_numOfTracks,"Scraping_numOfTracks/I");
     myEvent->Branch("Scraping_fractionOfGoodTracks",&Scraping_fractionOfGoodTracks,"Scraping_fractionOfGoodTracks/F");
   }
+
+ if(runPileUp_){
+    myEvent->Branch("npuVertices",&npuVertices,"npuVertices/I");
+    myEvent->Branch("pubunchCrossing",&pubunchCrossing,"pubunchCrossing/I");
+ }
 	
   if (runtracks_){
     myEvent->Branch("Track_n",&Track_n,"Track_n/I");
