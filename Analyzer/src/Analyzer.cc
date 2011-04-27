@@ -13,7 +13,7 @@
 //
 // Original Author:  Sandhya Jain
 //         Created:  Fri Apr 17 11:00:06 CEST 2009
-// $Id: Analyzer.cc,v 1.39 2011/04/23 23:06:59 schauhan Exp $
+// $Id: Analyzer.cc,v 1.40 2011/04/27 08:06:34 schauhan Exp $
 //
 //
 
@@ -231,6 +231,9 @@ Analyzer::Analyzer(const edm::ParameterSet& iConfig):
   Photon_n         = 0;
   HERecHit_subset_n = 0;
   Jet_n            = 0;
+  pfJet_n          = 0;
+  EBRecHit_size    = 0;
+  EERecHit_size    = 0;  
   Electron_n       = 0; 
   Muon_n           = 0;
   CosmicMuon_n	 = 0;
@@ -2444,24 +2447,24 @@ void Analyzer::beginJob(){
 
   if(runrechit_){
     myEvent->Branch("EBRecHit_size",&EBRecHit_size,"EBRecHit_size/I");
-    myEvent->Branch("EBRecHit_eta",&EBRecHit_eta,"EBRecHit_eta[EBRecHit_size]/F");
-    myEvent->Branch("EBRecHit_phi",&EBRecHit_phi,"EBRecHit_phi[EBRecHit_size]/F");
-    myEvent->Branch("EBRecHit_ieta",&EBRecHit_ieta,"EBRecHit_ieta[EBRecHit_size]/I");
-    myEvent->Branch("EBRecHit_iphi",&EBRecHit_iphi,"EBRecHit_iphi[EBRecHit_size]/I");
-    myEvent->Branch("EBRecHit_e",&EBRecHit_e,"EBRecHit_e[EBRecHit_size]/F");
-    myEvent->Branch("EBRecHit_et",&EBRecHit_et,"EBRecHit_et[EBRecHit_size]/F");
-    myEvent->Branch("EBRecHit_flag",&EBRecHit_flag,"EBRecHit_flag[EBRecHit_size]/I");
-    myEvent->Branch("EBRecHit_time",&EBRecHit_time,"EBRecHit_time[EBRecHit_size]/F");
+    myEvent->Branch("EBRecHit_eta",EBRecHit_eta,"EBRecHit_eta[EBRecHit_size]/F");
+    myEvent->Branch("EBRecHit_phi",EBRecHit_phi,"EBRecHit_phi[EBRecHit_size]/F");
+    myEvent->Branch("EBRecHit_ieta",EBRecHit_ieta,"EBRecHit_ieta[EBRecHit_size]/I");
+    myEvent->Branch("EBRecHit_iphi",EBRecHit_iphi,"EBRecHit_iphi[EBRecHit_size]/I");
+    myEvent->Branch("EBRecHit_e",EBRecHit_e,"EBRecHit_e[EBRecHit_size]/F");
+    myEvent->Branch("EBRecHit_et",EBRecHit_et,"EBRecHit_et[EBRecHit_size]/F");
+    myEvent->Branch("EBRecHit_flag",EBRecHit_flag,"EBRecHit_flag[EBRecHit_size]/I");
+    myEvent->Branch("EBRecHit_time",EBRecHit_time,"EBRecHit_time[EBRecHit_size]/F");
 
     myEvent->Branch("EERecHit_size",&EERecHit_size,"EERecHit_size/I");
-    myEvent->Branch("EERecHit_eta",&EERecHit_eta,"EERecHit_eta[EERecHit_size]/F");
-    myEvent->Branch("EERecHit_phi",&EERecHit_phi,"EERecHit_phi[EERecHit_size]/F");
-    myEvent->Branch("EERecHit_ieta",&EERecHit_ieta,"EERecHit_ieta[EERecHit_size]/I");
-    myEvent->Branch("EERecHit_iphi",&EERecHit_iphi,"EERecHit_iphi[EERecHit_size]/I");
-    myEvent->Branch("EERecHit_e",&EERecHit_e,"EERecHit_e[EERecHit_size]/F");
-    myEvent->Branch("EERecHit_et",&EERecHit_et,"EERecHit_et[EERecHit_size]/F");
-    myEvent->Branch("EERecHit_flag",&EERecHit_flag,"EERecHit_flag[EERecHit_size]/I");
-    myEvent->Branch("EERecHit_time",&EERecHit_time,"EERecHit_time[EERecHit_size]/F");
+    myEvent->Branch("EERecHit_eta",EERecHit_eta,"EERecHit_eta[EERecHit_size]/F");
+    myEvent->Branch("EERecHit_phi",EERecHit_phi,"EERecHit_phi[EERecHit_size]/F");
+    myEvent->Branch("EERecHit_ieta",EERecHit_ieta,"EERecHit_ieta[EERecHit_size]/I");
+    myEvent->Branch("EERecHit_iphi",EERecHit_iphi,"EERecHit_iphi[EERecHit_size]/I");
+    myEvent->Branch("EERecHit_e",EERecHit_e,"EERecHit_e[EERecHit_size]/F");
+    myEvent->Branch("EERecHit_et",EERecHit_et,"EERecHit_et[EERecHit_size]/F");
+    myEvent->Branch("EERecHit_flag",EERecHit_flag,"EERecHit_flag[EERecHit_size]/I");
+    myEvent->Branch("EERecHit_time",EERecHit_time,"EERecHit_time[EERecHit_size]/F");
   }//end of if(runFroMIP_)
 	
   if(runCSCseg_){
