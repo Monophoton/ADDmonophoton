@@ -13,7 +13,7 @@
 //
 // Original Author:  Sandhya Jain
 //         Created:  Fri Apr 17 11:00:06 CEST 2009
-// $Id: Analyzer.cc,v 1.38 2011/04/20 14:41:42 schauhan Exp $
+// $Id: Analyzer.cc,v 1.39 2011/04/23 23:06:59 schauhan Exp $
 //
 //
 
@@ -2025,25 +2025,25 @@ void Analyzer::beginJob(){
 
   if (runpfjets_){
     myEvent->Branch("pfJet_n",&pfJet_n,"pfJet_n/I");
-    myEvent->Branch("pfJet_px",pfjet_px,"pfjet_px[Jet_n]/F");
-    myEvent->Branch("pfJet_py",pfjet_py,"pfjet_py[Jet_n]/F");
-    myEvent->Branch("pfJet_E",pfjet_E,"pfjet_E[Jet_n]/F");
-    myEvent->Branch("pfJet_pz",pfjet_pz,"pfjet_pz[Jet_n]/F");
-    myEvent->Branch("pfJet_vx",pfjet_vx,"pfjet_vx[Jet_n]/F");
-    myEvent->Branch("pfJet_vy",pfjet_vy,"pfjet_vy[Jet_n]/F");
-    myEvent->Branch("pfJet_vz",pfjet_vz,"pfjet_vz[Jet_n]/F");
-    myEvent->Branch("pfJet_pt",pfjet_pt,"pfjet_pt[Jet_n]/F");
-    myEvent->Branch("pfJet_eta",pfjet_eta,"pfjet_eta[Jet_n]/F");
-    myEvent->Branch("pfJet_phi",pfjet_phi,"pfjet_phi[Jet_n]/F");
+    myEvent->Branch("pfJet_px",pfjet_px,"pfjet_px[pfJet_n]/F");
+    myEvent->Branch("pfJet_py",pfjet_py,"pfjet_py[pfJet_n]/F");
+    myEvent->Branch("pfJet_E",pfjet_E,"pfjet_E[pfJet_n]/F");
+    myEvent->Branch("pfJet_pz",pfjet_pz,"pfjet_pz[pfJet_n]/F");
+    myEvent->Branch("pfJet_vx",pfjet_vx,"pfjet_vx[pfJet_n]/F");
+    myEvent->Branch("pfJet_vy",pfjet_vy,"pfjet_vy[pfJet_n]/F");
+    myEvent->Branch("pfJet_vz",pfjet_vz,"pfjet_vz[pfJet_n]/F");
+    myEvent->Branch("pfJet_pt",pfjet_pt,"pfjet_pt[pfJet_n]/F");
+    myEvent->Branch("pfJet_eta",pfjet_eta,"pfjet_eta[pfJet_n]/F");
+    myEvent->Branch("pfJet_phi",pfjet_phi,"pfjet_phi[pfJet_n]/F");
     /*
-    myEvent->Branch("pfJet_emEnergyFraction",pfjet_emEnergyFraction,"pfjet_emEnergyFraction[Jet_n]/F");
-    myEvent->Branch("pfJet_energyFractionHadronic",pfjet_energyFractionHadronic,"pfjet_energyFractionHadronic[Jet_n]/F");
-    myEvent->Branch("pfJet_hitsInN90",pfjet_hitsInN90,"pfjet_hitsInN90[Jet_n]/I");
-    myEvent->Branch("pfJet_n90Hits",pfjet_n90Hits,"pfjet_n90Hits[Jet_n]/I");
-    myEvent->Branch("pfJet_nTowers",pfjet_nTowers,"pfjet_nTowers[Jet_n]/I");
-    myEvent->Branch("pfJet_fHPD",pfjet_fHPD,"pfjet_fHPD[Jet_n]/F");
-    myEvent->Branch("pfJet_fRBX",pfjet_fRBX,"pfjet_fRBX[Jet_n]/F");
-    myEvent->Branch("pfJet_RHF",pfjet_RHF,"pfjet_RHF[Jet_n]/F");
+    myEvent->Branch("pfJet_emEnergyFraction",pfjet_emEnergyFraction,"pfjet_emEnergyFraction[pfJet_n]/F");
+    myEvent->Branch("pfJet_energyFractionHadronic",pfjet_energyFractionHadronic,"pfjet_energyFractionHadronic[pfJet_n]/F");
+    myEvent->Branch("pfJet_hitsInN90",pfjet_hitsInN90,"pfjet_hitsInN90[pfJet_n]/I");
+    myEvent->Branch("pfJet_n90Hits",pfjet_n90Hits,"pfjet_n90Hits[pfJet_n]/I");
+    myEvent->Branch("pfJet_nTowers",pfjet_nTowers,"pfjet_nTowers[pfJet_n]/I");
+    myEvent->Branch("pfJet_fHPD",pfjet_fHPD,"pfjet_fHPD[pfJet_n]/F");
+    myEvent->Branch("pfJet_fRBX",pfjet_fRBX,"pfjet_fRBX[pfJet_n]/F");
+    myEvent->Branch("pfJet_RHF",pfjet_RHF,"pfjet_RHF[pfJet_n]/F");
   */
 }
 
