@@ -13,7 +13,7 @@
 //
 // Original Author:  Sandhya Jain
 //         Created:  Fri Apr 17 11:00:06 CEST 2009
-// $Id: Analyzer.cc,v 1.42 2011/05/01 09:58:14 schauhan Exp $
+// $Id: Analyzer.cc,v 1.43 2011/05/01 20:24:52 schauhan Exp $
 //
 //
 
@@ -1849,7 +1849,8 @@ if(!isAOD_){
          jecUnc->setJetEta(jet_eta[x]);
          jecUnc->setJetPt(jet_pt[x]);
          jet_jecUncer[x] = jecUnc->getUncertainty(true);
-
+         jet_jecCorr[x]  = myjet_container[x].jecFactor("Uncorrected");
+         //cout<<(myjet_container[x].jecFactor("Uncorrected"))<<endl;
  	 Jet_n++;
        }//end of for loop
      }
@@ -1907,7 +1908,7 @@ if(!isAOD_){
          pfjecUnc->setJetEta(pfjet_eta[x]);
          pfjecUnc->setJetPt(pfjet_pt[x]);
          pfjet_jecUncer[x] = pfjecUnc->getUncertainty(true); 
-         
+         pfjet_jecCorr[x]  = mypfjet_container[x].jecFactor("Uncorrected");
          pfJet_n++;
        }//end of for loop
      }
@@ -2063,6 +2064,7 @@ void Analyzer::beginJob(){
     myEvent->Branch("Jet_RHF",jet_RHF,"jet_RHF[Jet_n]/F");
     
     myEvent->Branch("Jet_jecUncer",jet_jecUncer,"jet_jecUncer[Jet_n]/F");
+    myEvent->Branch("Jet_jecCorr",jet_jecCorr,"jet_jecCorr[Jet_n]/F");
   }
 
 
@@ -2090,6 +2092,7 @@ void Analyzer::beginJob(){
   */
    
     myEvent->Branch("pfJet_jecUncer",pfjet_jecUncer,"pfjet_jecUncer[pfJet_n]/F");
+    myEvent->Branch("pfJet_jecCorr",pfjet_jecCorr,"pfjet_jecCorr[pfJet_n]/F");
 }
 
 

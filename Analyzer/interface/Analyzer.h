@@ -182,7 +182,7 @@ class Analyzer : public edm::EDAnalyzer {
   float jet_RHF[100];
   int   jet_nTowers[100];
   float jet_jecUncer[100];
- 
+  float jet_jecCorr[100];
 
   //pfjet variables
   float pfjet_pt[100];
@@ -196,6 +196,7 @@ class Analyzer : public edm::EDAnalyzer {
   float pfjet_eta[100];
   float pfjet_phi[100];
   float pfjet_jecUncer[100];
+  float pfjet_jecCorr[100];
   /*
   float pfjet_emEnergyFraction[100];
   float pfjet_energyFractionHadronic[100];
