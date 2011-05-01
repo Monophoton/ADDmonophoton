@@ -13,7 +13,7 @@
 //
 // Original Author:  Sandhya Jain
 //         Created:  Fri Apr 17 11:00:06 CEST 2009
-// $Id: Analyzer.cc,v 1.40 2011/04/27 08:06:34 schauhan Exp $
+// $Id: Analyzer.cc,v 1.41 2011/04/27 08:19:26 schauhan Exp $
 //
 //
 
@@ -449,10 +449,17 @@ void Analyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup){
    Handle<std::vector< PileupSummaryInfo > >  PupInfo;
    iEvent.getByLabel(pileupLabel_, PupInfo);
                     
-   std::vector<PileupSummaryInfo>::const_iterator PVI;                                                                                               
+   std::vector<PileupSummaryInfo>::const_iterator PVI;   
+    ootnpuVertices =0;
+    npuVertices    =0;            
+                                                                                 
    for(PVI = PupInfo->begin(); PVI != PupInfo->end(); ++PVI) {
-    npuVertices = PVI->getPU_NumInteractions();
-    pubunchCrossing   = PVI->getBunchCrossing();
+      if(PVI->getBunchCrossing()== 0){npuVertices += PVI->getPU_NumInteractions();
+       }
+       else{
+             ootnpuVertices += PVI->getPU_NumInteractions();
+           }
+
   if(debug_)std::cout << " Pileup Information: bunchXing, nvtx,: " << PVI->getBunchCrossing() << " " << PVI->getPU_NumInteractions()<< std::endl;
                     
    }//loop over pileup infor               
@@ -1988,7 +1995,7 @@ void Analyzer::beginJob(){
 
  if(runPileUp_){
     myEvent->Branch("npuVertices",&npuVertices,"npuVertices/I");
-    myEvent->Branch("pubunchCrossing",&pubunchCrossing,"pubunchCrossing/I");
+    myEvent->Branch("ootnpuVertices",&ootnpuVertices,"ootnpuVertices/I");
  }
 	
   if (runtracks_){
