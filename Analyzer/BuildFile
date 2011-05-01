@@ -24,6 +24,8 @@
 <use name=Geometry/CommonDetUnit>
 <use name=DataFormats/RPCRecHit>
 <use name=Geometry/RPCGeometry>
+<use name=JetMETCorrections/Objects>
+<use name=CondFormats/JetMETObjects> 
 <flags EDM_PLUGIN=1>
 <export>
    <use name=root>
@@ -49,4 +51,6 @@
    <use name=Geometry/CommonDetUnit>
    <use name=DataFormats/RPCRecHit>
    <use name=Geometry/RPCGeometry>
+   <use name=JetMETCorrections/Objects>
+   <use name=CondFormats/JetMETObjects>
 </export>
