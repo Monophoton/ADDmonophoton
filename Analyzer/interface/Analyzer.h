@@ -660,7 +660,7 @@ class Analyzer : public edm::EDAnalyzer {
 
  //pileup info
  int npuVertices;
- int pubunchCrossing;
+ int ootnpuVertices;
  
 };
 
