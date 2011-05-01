@@ -13,7 +13,7 @@
 //
 // Original Author:  Sandhya Jain
 //         Created:  Fri Apr 17 11:00:06 CEST 2009
-// $Id: Analyzer.cc,v 1.41 2011/04/27 08:19:26 schauhan Exp $
+// $Id: Analyzer.cc,v 1.42 2011/05/01 09:58:14 schauhan Exp $
 //
 //
 
@@ -91,7 +91,13 @@
 #include "DataFormats/JetReco/interface/PFJet.h"
 #include "DataFormats/JetReco/interface/PFJetCollection.h"
 #include "SimDataFormats/PileupSummaryInfo/interface/PileupSummaryInfo.h"
+#include "CondFormats/JetMETObjects/interface/JetCorrectionUncertainty.h"
 
+
+#include "JetMETCorrections/Objects/interface/JetCorrector.h"
+#include "CondFormats/JetMETObjects/interface/JetCorrectionUncertainty.h"
+#include "JetMETCorrections/Objects/interface/JetCorrectionsRecord.h"
+#include "CondFormats/JetMETObjects/interface/JetCorrectorParameters.h"
 
 #include "TString.h"
 #include "TH1D.h"
@@ -1795,7 +1801,16 @@ if(!isAOD_){
      
    }//end of if(runTCmet_)
 
+
+       edm::ESHandle<JetCorrectorParametersCollection> JetCorParColl;
+
    if(runjets_){
+     //this for jec uncert 
+     iSetup.get<JetCorrectionsRecord>().get("AK5Calo",JetCorParColl); 
+     JetCorrectorParameters const & JetCorPar = (*JetCorParColl)["Uncertainty"];
+     JetCorrectionUncertainty *jecUnc = new JetCorrectionUncertainty(JetCorPar);
+       
+
      edm::Handle<edm::View<pat::Jet> > jetHandle;
      iEvent.getByLabel(jetLabel_,jetHandle);
      const edm::View<pat::Jet> & jets = *jetHandle;
@@ -1830,7 +1845,12 @@ if(!isAOD_){
 	 jet_fRBX[x] = (float) myjet_container[x].jetID().fRBX;
 	 jet_RHF[x] = (float)(myjet_container[x].jetID().fLong - myjet_container[x].jetID().fShort)/(myjet_container[x].jetID().fLong + myjet_container[x].jetID().fShort);
 	 jet_nTowers[x] = myjet_container[x].jetID().nECALTowers + myjet_container[x].jetID().nHCALTowers ;
-	 Jet_n++;
+         //jet energy uncertiany
+         jecUnc->setJetEta(jet_eta[x]);
+         jecUnc->setJetPt(jet_pt[x]);
+         jet_jecUncer[x] = jecUnc->getUncertainty(true);
+
+ 	 Jet_n++;
        }//end of for loop
      }
    }
@@ -1838,6 +1858,13 @@ if(!isAOD_){
 
 
    if(runpfjets_){
+     //for jec uncert
+     edm::ESHandle<JetCorrectorParametersCollection> JetCorParColl;
+     iSetup.get<JetCorrectionsRecord>().get("AK5PF",JetCorParColl); 
+     JetCorrectorParameters const & JetCorPar = (*JetCorParColl)["Uncertainty"];
+     JetCorrectionUncertainty *pfjecUnc = new JetCorrectionUncertainty(JetCorPar);
+
+
      edm::Handle<edm::View<pat::Jet> > pfjetHandle;
      iEvent.getByLabel(pfjetLabel_,pfjetHandle);
      const edm::View<pat::Jet> & pfjets = *pfjetHandle;
@@ -1876,8 +1903,12 @@ if(!isAOD_){
          pfjet_RHF[x] = (float)(mypfjet_container[x].jetID().fLong - mypfjet_container[x].jetID().fShort)/(mypfjet_container[x].jetID().fLong + mypfjet_container[x].jetID().fShort);
          pfjet_nTowers[x] = mypfjet_container[x].jetID().nECALTowers + mypfjet_container[x].jetID().nHCALTowers ;
          */
+         //jet energy uncertiany
+         pfjecUnc->setJetEta(pfjet_eta[x]);
+         pfjecUnc->setJetPt(pfjet_pt[x]);
+         pfjet_jecUncer[x] = pfjecUnc->getUncertainty(true); 
+         
          pfJet_n++;
-   
        }//end of for loop
      }
    }
@@ -1996,7 +2027,7 @@ void Analyzer::beginJob(){
  if(runPileUp_){
     myEvent->Branch("npuVertices",&npuVertices,"npuVertices/I");
     myEvent->Branch("ootnpuVertices",&ootnpuVertices,"ootnpuVertices/I");
- }
+  }
 	
   if (runtracks_){
     myEvent->Branch("Track_n",&Track_n,"Track_n/I");
@@ -2030,6 +2061,8 @@ void Analyzer::beginJob(){
     myEvent->Branch("Jet_fHPD",jet_fHPD,"jet_fHPD[Jet_n]/F");
     myEvent->Branch("Jet_fRBX",jet_fRBX,"jet_fRBX[Jet_n]/F");
     myEvent->Branch("Jet_RHF",jet_RHF,"jet_RHF[Jet_n]/F");
+    
+    myEvent->Branch("Jet_jecUncer",jet_jecUncer,"jet_jecUncer[Jet_n]/F");
   }
 
 
@@ -2055,6 +2088,8 @@ void Analyzer::beginJob(){
     myEvent->Branch("pfJet_fRBX",pfjet_fRBX,"pfjet_fRBX[pfJet_n]/F");
     myEvent->Branch("pfJet_RHF",pfjet_RHF,"pfjet_RHF[pfJet_n]/F");
   */
+   
+    myEvent->Branch("pfJet_jecUncer",pfjet_jecUncer,"pfjet_jecUncer[pfJet_n]/F");
 }
 
 
