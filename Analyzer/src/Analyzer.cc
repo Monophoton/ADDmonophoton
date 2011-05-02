@@ -13,7 +13,7 @@
 //
 // Original Author:  Sandhya Jain
 //         Created:  Fri Apr 17 11:00:06 CEST 2009
-// $Id: Analyzer.cc,v 1.43 2011/05/01 20:24:52 schauhan Exp $
+// $Id: Analyzer.cc,v 1.44 2011/05/01 22:20:24 schauhan Exp $
 //
 //
 
@@ -119,6 +119,13 @@ using namespace ROOT::Math::VectorUtil ;
 float correct_phi(float phi);
 float Theta(float eta);
 float Pl(float P,float Pt);
+
+
+//myEcalSeverityLevelAlgo.cc function prototypes ---- for calculating e2e9                                                                            
+float recHitE( const DetId id, const EcalRecHitCollection &recHits );
+float recHitE( const DetId id, const EcalRecHitCollection & recHits, int dEta, int dPhi );
+float recHitApproxEt( const DetId id, const EcalRecHitCollection &recHits );
+
 
 //
 // class decleration
@@ -1351,17 +1358,8 @@ if(!isAOD_){
 
                if( it != rechits.end() ){swissCross = EcalSeverityLevelAlgo::swissCross( id, rechits, 0.08, true);}
                pho_swissCross[x]=swissCross;
-             
-            /*
-	     pho_swissCross[x]   = EcalClusterTools::eTop( *(myphoton_container[x].superCluster()->seed()), 
-							   &(*barrelRecHits), &(*topology))+ 
-	                           EcalClusterTools::eBottom( *(myphoton_container[x].superCluster()->seed()), 
-							   &(*barrelRecHits), &(*topology))+ 
-	                           EcalClusterTools::eLeft( *(myphoton_container[x].superCluster()->seed()), 
-							   &(*barrelRecHits), &(*topology)) + 
-	                           EcalClusterTools::eRight( *(myphoton_container[x].superCluster()->seed()), 
-							   &(*barrelRecHits), &(*topology));
-            */
+               pho_e2e9[x]      = -99.;
+               pho_e2e9[x]      = GetE2OverE9(id,rechits);
 	     if(debug_ && 1-pho_swissCross[x]/pho_maxEnergyXtal[x] > 0.95) 
 	       cout<<"This photon candidate is an ECAL spike identified by Swiss Cross algorithm."<<endl;
 
@@ -1388,19 +1386,9 @@ if(!isAOD_){
 
             if( it != rechits.end() ) {swissCross = EcalSeverityLevelAlgo::swissCross( id, rechits, 0.08, true);}
 
-            pho_swissCross[x]=swissCross;
-            
-
-            /*// Old way to get SwissX  
-	     pho_swissCross[x]   = EcalClusterTools::eTop( *(myphoton_container[x].superCluster()->seed()), 
-							   &(*endcapRecHits), &(*topology))+ 
-	                           EcalClusterTools::eBottom( *(myphoton_container[x].superCluster()->seed()), 
-							   &(*endcapRecHits), &(*topology)) + 
-	                           EcalClusterTools::eLeft( *(myphoton_container[x].superCluster()->seed()), 
-							   &(*endcapRecHits), &(*topology)) + 
-	                           EcalClusterTools::eRight( *(myphoton_container[x].superCluster()->seed()), 
-							   &(*endcapRecHits), &(*topology));
-            */
+            pho_swissCross[x]= swissCross;
+            pho_e2e9[x]      = -99.;
+            pho_e2e9[x]      = GetE2OverE9(id,rechits); 
 
 	     if(debug_ && 1-pho_swissCross[x]/pho_maxEnergyXtal[x] > 0.95) {
 	       cout<<"This photon candidate is an ECAL spike identified by Swiss Cross algorithm." << endl;
@@ -1414,7 +1402,8 @@ if(!isAOD_){
              pho_SigmaPhiPhi[x]   = sqrt(stdCov[2]);
              pho_SigmaIphiIphi[x] = sqrt(crysCov[2]);
 
-	   }//end of else (if !EB)
+	   }//end of else (if !EB)i
+
 	 }//end of for loop over x
        }//if(myphoton_container.size!=0)
 
@@ -2418,6 +2407,7 @@ void Analyzer::beginJob(){
     myEvent->Branch("Photon_isEBGap",pho_isEBGap,"pho_isEBGap[Photon_n]/O");
     myEvent->Branch("Photon_isEEGap",pho_isEEGap,"pho_isEEGap[Photon_n]/O");
     myEvent->Branch("Photon_isEBEEGap",pho_isEBEEGap,"pho_isEBEEGap[Photon_n]/O");
+    myEvent->Branch("Photon_e2e9",pho_e2e9,"pho_e2e9[Photon_n]/F");
     
     myEvent->Branch("Photon_HoE",pho_HoE,"pho_HoE[Photon_n]/F");
     myEvent->Branch("Photon_px",pho_px,"pho_px[Photon_n]/F");
@@ -2613,5 +2603,124 @@ void Analyzer::endJob() {
   delete myEvent;
 }
 
+double Analyzer::GetE2OverE9( const DetId id, const EcalRecHitCollection & recHits)
+{ ///////////start calculating e2/e9
+  ////http://cmslxr.fnal.gov/lxr/source/RecoLocalCalo/EcalRecAlgos/src/EcalSeverityLevelAlgo.cc#240
+  // compute e2overe9
+  //   | | | |
+  //   +-+-+-+
+  //   | |1|2|
+  //   +-+-+-+
+  //   | | | |
+  //   1 - input hit,  2 - highest energy hit in a 3x3 around 1
+//   rechit 1 must have E_t > recHitEtThreshold
+//   rechit 2 must have E_t > recHitEtThreshold2
+//   function returns value of E2/E9 centered around 1 (E2=energy of hits 1+2) if energy of 1>2
+//   if energy of 2>1 and KillSecondHit is set to true, function returns value of E2/E9 centered around 2
+//   *provided* that 1 is the highest energy hit in a 3x3 centered around 2, otherwise, function returns 0
+
+
+float recHitEtThreshold = 10.0; 
+float recHitEtThreshold2 = 1.0;
+bool avoidIeta85=false;
+bool KillSecondHit=true;
+
+if ( id.subdetId() == EcalBarrel ) {
+  EBDetId ebId( id );
+  // avoid recHits at |eta|=85 where one side of the neighbours is missing
+  if ( abs(ebId.ieta())==85 && avoidIeta85) return 0;
+  // select recHits with Et above recHitEtThreshold
+  float e1 = recHitE( id, recHits );
+  float ete1=recHitApproxEt( id, recHits );
+  // check that rechit E_t is above threshold
+  if (ete1 < std::min(recHitEtThreshold,recHitEtThreshold2) ) return 0;
+  if (ete1 < recHitEtThreshold && !KillSecondHit ) return 0;
+  
+  float e2=-1;
+  float ete2=0;
+  float s9 = 0;
+  // coordinates of 2nd hit relative to central hit
+  int e2eta=0;
+  int e2phi=0;
+
+  // LOOP OVER 3x3 ARRAY CENTERED AROUND HIT 1
+  for ( int deta = -1; deta <= +1; ++deta ) {
+    for ( int dphi = -1; dphi <= +1; ++dphi ) {
+      // compute 3x3 energy 
+      float etmp=recHitE( id, recHits, deta, dphi );
+      s9 += etmp;
+      EBDetId idtmp=EBDetId::offsetBy(id,deta,dphi);
+      float eapproxet=recHitApproxEt( idtmp, recHits );
+      // remember 2nd highest energy deposit (above threshold) in 3x3 array
+      if (etmp>e2 && eapproxet>recHitEtThreshold2 && !(deta==0 && dphi==0)) {
+	e2=etmp;
+	ete2=eapproxet;
+	e2eta=deta;
+	e2phi=dphi;
+      }
+    }
+  }
+
+  if ( e1 == 0 )  return 0;
+  // return 0 if 2nd hit is below threshold
+  if ( e2 == -1 ) return 0;
+  // compute e2/e9 centered around 1st hit
+  float e2nd=e1+e2;
+  float e2e9=0;
+
+  if (s9!=0) e2e9=e2nd/s9;
+  // if central hit has higher energy than 2nd hit
+  //  return e2/e9 if 1st hit is above E_t threshold
+  if (e1 > e2 && ete1>recHitEtThreshold) return e2e9;
+  // if second hit has higher energy than 1st hit
+  if ( e2 > e1 ) {
+    // return 0 if user does not want to flag 2nd hit, or
+    // hits are below E_t thresholds - note here we
+    // now assume the 2nd hit to be the leading hit.
+    
+    if (!KillSecondHit || ete2<recHitEtThreshold || ete1<recHitEtThreshold2) {
+      return 0;
+    }
+    else {
+      // LOOP OVER 3x3 ARRAY CENTERED AROUND HIT 2 
+      float s92nd=0;
+      float e2nd_prime=0;
+      int e2prime_eta=0;
+      int e2prime_phi=0;
+
+      EBDetId secondid=EBDetId::offsetBy(id,e2eta,e2phi);
+
+      for ( int deta = -1; deta <= +1; ++deta ) {
+	for ( int dphi = -1; dphi <= +1; ++dphi ) {
+
+	  // compute 3x3 energy
+	  float etmp=recHitE( secondid, recHits, deta, dphi );
+	  s92nd += etmp;
+
+	  if (etmp>e2nd_prime && !(deta==0 && dphi==0)) {
+	    e2nd_prime=etmp;
+	    e2prime_eta=deta;
+	    e2prime_phi=dphi;
+	  }
+	}
+      }
+      // if highest energy hit around E2 is not the same as the input hit, return 0;
+      if (!(e2prime_eta==-e2eta && e2prime_phi==-e2phi))
+	{
+	  return 0;
+	}
+      // compute E2/E9 around second hit 
+      float e2e9_2=0;
+      if (s92nd!=0) e2e9_2=e2nd/s92nd;
+      //   return the value of E2/E9 calculated around 2nd hit
+      return e2e9_2;
+    }
+  }
+ } else if ( id.subdetId() == EcalEndcap ) {
+  // only used for EB at the moment 
+  return 0;
+ }
+return 0;
+}
 //define this as a plug-in
 DEFINE_FWK_MODULE(Analyzer);

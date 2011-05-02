@@ -24,7 +24,8 @@ class Analyzer : public edm::EDAnalyzer {
   virtual void beginRun(const edm::Run& , const edm::EventSetup&);
   virtual void analyze(const edm::Event&, const edm::EventSetup&);
   virtual void endJob() ;
-  
+
+ double GetE2OverE9(const DetId id, const EcalRecHitCollection & recHits); 
   
   HLTConfigProvider hltConfig_;
   std::vector<std::string> photon_triggers_in_run;
@@ -539,6 +540,7 @@ class Analyzer : public edm::EDAnalyzer {
   int   pho_iphi_xtalEB[100][100];
   float pho_rookFraction[100];
   float pho_s9[100];
+  float pho_e2e9[100];
   
   //HErechit information
   unsigned int HERecHit_subset_detid[10000];
