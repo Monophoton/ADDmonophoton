@@ -15,7 +15,9 @@
 #include <sstream>
 #include <TH1F.h>
 #include <TH2F.h>
+#include <TProfile.h>
 using namespace std;
+
 float absDeltaPhi(float phi1, float phi2){
   float dPhi = fabs(phi1 - phi2);
   if(dPhi > TMath::Pi()) dPhi = 2.*TMath::Pi() - dPhi;
@@ -54,6 +56,8 @@ bool isCSCHalo(float photonSCphi, int nAllCSCSegments, float CSCSegmentX[], floa
   }// loop over CSC segments
   return false;
 }
+
+
 Float_t dRCalc(Float_t etaC, Float_t phiC, Float_t etaCrys, Float_t phiCrys, bool debug=false){
     //   Float_t ClusPhi = 0;
     //   if (phiC>0) ClusPhi = phiC;
@@ -80,7 +84,7 @@ Float_t dRCalc(Float_t etaC, Float_t phiC, Float_t etaCrys, Float_t phiCrys, boo
     
 }
 
-void CandidatePlotter(void){
+void BHPlotter_timecut_sigcut(void){
     TChain *fChain = new TChain("myEvent");
 
 fChain->Add("dcap://cmsgridftp.fnal.gov:24125/pnfs/fnal.gov/usr/cms/WAX/11/store/user/sushil/MonoPhoton/397_Ntuples_V26/Data_A_New/Histo_Data_A_1000_1_J5W.root");
@@ -2975,11 +2979,9 @@ fChain->Add("dcap://cmsgridftp.fnal.gov:24125/pnfs/fnal.gov/usr/cms/WAX/11/store
    fChain->SetBranchAddress("TCMetSumEt", TCMetSumEt);
    fChain->SetBranchAddress("Delta_phiTC", &Delta_phiTC);
 
-    
-    TFile *aa = new TFile("/uscms_data/d2/askew/MONOPLOTS/CMSSW_3_8_7/src/output/CandidatePlots.root","RECREATE");
+    TFile *aa = new TFile("/uscms_data/d2/askew/MONOPLOTS/CMSSW_3_8_7/src/output/BHPlots_timecut_sigcut.root","RECREATE");
     TH1F *SCEta = new TH1F("SCEta","Supercluster Eta",300,-1.5,1.5);
     TH2F *SCEtaVsTime = new TH2F("SCEtaVsTime","Supercluster Eta Vs. Time",300,-1.5,1.5,100,-25,25);
-    TH2F *SCEtaSCPhi = new TH2F("SCEtaVsSCPhi","#eta/#phi map",100,-1.5,1.5,100,0,TMath::Pi()*2.);
     TH1F *NAddCrys = new TH1F("NAddCrys","Number of additional crystals E>1 GeV",100,0,100);
     TH1F *SigIetaIeta = new TH1F("SigIetaIeta","Width",75,0,0.025);
     TH1F *Timing =new TH1F("Timing","Time",400,-50,50);
@@ -2990,7 +2992,32 @@ fChain->Add("dcap://cmsgridftp.fnal.gov:24125/pnfs/fnal.gov/usr/cms/WAX/11/store
     TH1F *SeedEH = new TH1F("SeedEH","Seed Energy",200,0,200);
     TH2F *TimeVsTime = new TH2F("TimeVsTime","Time vs. Time",100,-50,50,100,-50,50);
     TH1F *TcMET = new TH1F("TcMET","TcMET",200,0,100);
+    TProfile *WidVsET = new TProfile("WidVsET","Average Width vs. ET",20,0,200);
+    TH2F *WidVsETPlots = new TH2F("WidVsETPlots","Width Vs ET",75,0,0.025,20,0,200);
+    TH2F *SCEtaSCPhi = new TH2F("EtaVsPhi","Eta Vs. Phi",100,-1.5,1.5,100,0,TMath::Pi()*2.);
     TH1F *Round = new TH1F("Round","Roundness",100,0,1);
+
+
+    TH1F *SCEtaC = new TH1F("SCEtaC","Supercluster Eta",300,-1.5,1.5);
+    TH2F *SCEtaVsTimeC = new TH2F("SCEtaVsTimeC","Supercluster Eta Vs. Time",300,-1.5,1.5,100,-25,25);
+    TH1F *NAddCrysC = new TH1F("NAddCrysC","Number of additional crystals E>1 GeV",100,0,100);
+    TH1F *SigIetaIetaC = new TH1F("SigIetaIetaC","Width",75,0,0.025);
+    TH1F *TimingC =new TH1F("TimingC","Time",400,-50,50);
+    TH1F *ClusterTimeDiffC = new TH1F("ClusterTimeDiffC","LICTD",100,-50,50);
+    TH2F *WidthVsTimeC = new TH2F("WidthVsTimeC","Width Versus Time",100,-50,50,150,0,0.03);
+    TH2F *WidthVsTimeDiffC = new TH2F("WidthVsTimeDiffC","Width Versus TimeDiff",100,-50,50,150,0,0.03);
+    TH1F *PhotonETC = new TH1F("PhotonETC","Photon transverse energy",1000,0,1000);
+    TH1F *SeedEHC = new TH1F("SeedEHC","Seed Energy",200,0,200);
+    TH2F *TimeVsTimeC = new TH2F("TimeVsTimeC","Time vs. Time",100,-50,50,100,-50,50);
+    TH1F *TcMETC = new TH1F("TcMETC","TcMET",200,0,100);
+    TProfile *WidVsETC = new TProfile("WidVsETC","Average Width vs. ET",20,0,200);
+    TH2F *WidVsETPlotsC = new TH2F("WidVsETPlotsC","Width Vs ET",75,0,0.025,20,0,200);
+    TH2F *SCEtaSCPhiC = new TH2F("EtaVsPhiC","Eta Vs. Phi",100,-1.5,1.5,100,0,TMath::Pi()*2.);
+
+    TH2F *DPhiDRhoCosMu = new TH2F("DPhiDRhoCosMu","Delta-phi vs. Delta Rho, cosmic muons",200,0, 400, 100, 0, TMath::Pi());
+    TH2F *CosMuEtaPhi = new TH2F("CosMuEtaPhi","Eta Vs. Phi",250,-2.5,2.5,100,0,TMath::Pi()*2.);
+    TH1F *RoundC = new TH1F("RoundC","Roundness",100,0,1);
+    TH1F *dRMuPhoton = new TH1F("dRMuPhoton","sep to photon",700,0,7);
 
     Float_t nentries = fChain->GetEntries();
     cout << "nentries: " << nentries << endl;
@@ -3012,7 +3039,7 @@ fChain->Add("dcap://cmsgridftp.fnal.gov:24125/pnfs/fnal.gov/usr/cms/WAX/11/store
       string bl5("HLT_MET80_v1");
       //TriggerList.push_back(bl5);
 
-      for (int jet=0;jet<ntriggers && jet<triggernames->size();++jet){
+      for (int jet=0;jet<ntriggers && jet<int(triggernames->size());++jet){
 	string trig = (*triggernames)[jet];
 	if ( (*ifTriggerpassed)[jet]==1){
 	  //cout << "trig: " << trig << endl;
@@ -3023,7 +3050,6 @@ fChain->Add("dcap://cmsgridftp.fnal.gov:24125/pnfs/fnal.gov/usr/cms/WAX/11/store
 	}
       }
       if (!kTriggerPassed) continue;
-
       Int_t ngoodV=0;
       for (int vj=0;vj<Vertex_n;vj++){
 	if (Vertex_ndof[vj]>4
@@ -3032,8 +3058,7 @@ fChain->Add("dcap://cmsgridftp.fnal.gov:24125/pnfs/fnal.gov/usr/cms/WAX/11/store
 	    && Vertex_isFake[vj]!=kTRUE)
 	  ngoodV++;
       }
-      if (ngoodV==0) continue;
-
+      //      if (ngoodV>0) continue;
       Bool_t WriteEvent = kFALSE;
       int NumCandidateElectrons=0;
       int NumCandidatePhotons=0;
@@ -3054,29 +3079,31 @@ fChain->Add("dcap://cmsgridftp.fnal.gov:24125/pnfs/fnal.gov/usr/cms/WAX/11/store
 	  nEle++;
 	}
       }
-      if (nEle>0){
-      
-     
-	Float_t highET=-999;
-	Int_t idxHigh =-1;
-	for (int j=0;j<nEle;++j){
-	  Int_t IdxA = IEle[j];
-	  if (Photon_pt[IdxA] > highET){
-	    highET = Photon_pt[IdxA];
-	    idxHigh = IdxA;
-	  }
-	}
-	Int_t EleA = idxHigh;
-	
-	
+      // if (TCMetPt[0]<20) continue;
+       if (nEle>0){
+
+
+       }
+       //if (nEle>1) continue;
+	//}
+      for (int j=0;j<nEle;++j){
+
+	Int_t EleA = IEle[j];
+
 	//	Bool_t hasCosTag = isCSCHalo(Photon_sc_phi[EleA], CSCseg_n, CSCseg_x, CSCseg_y, CSCseg_time);
 
 	Bool_t hasCosMuon=kFALSE;
 	Bool_t hasCosTag=kFALSE;
+	Int_t nBHMu=0;
+	Int_t nCosMu=0;
+	Int_t BHMuIdx[100];
+	Int_t CosMuIdx[100];
 	for (int kk=0;kk<CosmicMuon_n;++kk){
 	  if (CosmicMuon_OuterTrack_isNonnull[kk]==1 && CosmicMuon_isStandAloneMuon[kk]==1){
 	    
 	    hasCosMuon=kTRUE;
+	    CosMuIdx[nCosMu] = kk;
+	    nCosMu++;
 	    Float_t cosRho = sqrt( CosmicMuon_OuterTrack_InnerPoint_x[kk]*CosmicMuon_OuterTrack_InnerPoint_x[kk]
 				   + CosmicMuon_OuterTrack_InnerPoint_y[kk]*CosmicMuon_OuterTrack_InnerPoint_y[kk]);
 	    Float_t tempPhi = atan2(CosmicMuon_OuterTrack_InnerPoint_y[kk], CosmicMuon_OuterTrack_InnerPoint_x[kk]);
@@ -3084,91 +3111,199 @@ fChain->Add("dcap://cmsgridftp.fnal.gov:24125/pnfs/fnal.gov/usr/cms/WAX/11/store
 
 	    //	    Float_t cosDphi = dRCalc(0,Photon_sc_phi[EleA],0,CosmicMuon_phi[kk]);
 	    Float_t cosDphi = dRCalc(0,Photon_sc_phi[EleA],0,tempPhi);
-	    // DPhiDRhoCosMu->Fill(cosRho, cosDphi);
+	    DPhiDRhoCosMu->Fill(cosRho, cosDphi);
 	    if (cosRho>115 && cosRho<200
-		&& cosDphi<0.2)
+		&& cosDphi<0.2){
 	      hasCosTag=kTRUE;
-	  }
-	}
-
-	if (hasCosTag || hasCosMuon) continue;
-	
-	Float_t SeedTime=-999;
-	Float_t SeedE = -999;
-	Int_t crysIdx=-1;
-	for (int k=0;k<Photon_ncrys[EleA]&&k<100;++k){
-	  Float_t crysE = Photon_energy_xtal[EleA][k];
-	  if (crysE > SeedE){
-	    SeedE = crysE;
-	    SeedTime = Photon_timing_xtal[EleA][k];
-	    crysIdx = k;
-	  }
-	}
-	//if (fabs(SeedTime)>3) continue;
-	Float_t LICTD =0;
-	Int_t crysCrys=-1;
-	Int_t crysThresh=0;
-	for (int k=0;k<Photon_ncrys[EleA]&&k<100;++k){
-	  if (crysIdx==k) continue;
-	  Float_t crysE = Photon_energy_xtal[EleA][k];
-	  if (crysE > 1.){
-	    crysThresh++;
-	    Float_t tdiff = Photon_timing_xtal[EleA][crysIdx] -
-	      Photon_timing_xtal[EleA][k];
-	    if (fabs(tdiff) > fabs(LICTD)){
-	      LICTD = tdiff;
-	      crysCrys=k;
+	      BHMuIdx[nBHMu]=kk;
+	      nBHMu++;
 	    }
 	  }
 	}
-	Float_t SecondTime = Photon_timing_xtal[EleA][crysCrys];
-	ClusterTimeDiff->Fill(LICTD);
-	Float_t METMET = TCMetPt[0];
-	Float_t METPhi = TCMetPhi[0];
-	Float_t METX = METMET * cos(METPhi);
-	Float_t METY = METMET * sin(METPhi);
-	if (fabs(SeedTime)>3){
-	  METX-=Photon_pt[EleA]*cos(Photon_phi[EleA]);
-	  METY-=Photon_pt[EleA]*sin(Photon_phi[EleA]);
-	}
-	METMET = sqrt(METX*METX + METY*METY);
-	if (METMET < 30) continue;
-	if (//kTRUE
-	    fabs(LICTD)<5
-	    //&& fabs(SeedTime)<3
-	    && Photon_SigmaIetaIeta[EleA]>0.001 
-	    //&& Photon_SigmaIphiIphi[EleA]>0.001
-	    //&& (fabs(SeedTime)<3||fabs(SecondTime)<3) 
-	    ){
-	  if (SeedTime < 5)
-	    SCEtaVsTime->Fill(Photon_sc_eta[EleA], SeedTime);
-	  else SCEtaVsTime->Fill(Photon_sc_eta[EleA], SeedTime-25);
-	  // 	  if (SeedTime>-1){
-	  // 	    cout << "Run: " << run << " Event: " << event << endl;
-	  // 	    for (int k=0;k<Photon_ncrys[EleA]&&k<100;++k){
-	  // 	      cout << "IEta: " << Photon_ieta_xtalEB[EleA][k];
-	  // 	      cout << " IPhi: " << Photon_iphi_xtalEB[EleA][k];
-	  // 	      cout << " Energy: " << Photon_energy_xtal[EleA][k];
-	  // 	      cout << " Time: " << Photon_timing_xtal[EleA][k] << endl;
-	  // 	    }
-	  // 	  }
-	  Round->Fill(Photon_Roundness[EleA]);
+	if (hasCosTag){
+	
+	  Float_t SeedTime=-999;
+	  Float_t SeedE = -999;
+	  Int_t crysIdx=-1;
+	  for (int k=0;k<Photon_ncrys[EleA]&&k<100;++k){
+	    Float_t crysE = Photon_energy_xtal[EleA][k];
+	    if (crysE > SeedE){
+	      SeedE = crysE;
+	      SeedTime = Photon_timing_xtal[EleA][k];
+	      crysIdx = k;
+	    }
+	  }
+	  //	if (fabs(SeedTime)>3) continue;
+	  Float_t LICTD =0;
+	  Int_t crysCrys=-1;
+	  Int_t crysThresh=0;
+	  for (int k=0;k<Photon_ncrys[EleA]&&k<100;++k){
+	    if (crysIdx==k) continue;
+	    Float_t crysE = Photon_energy_xtal[EleA][k];
+	    if (crysE > 1.){
+	      crysThresh++;
+	      Float_t tdiff = Photon_timing_xtal[EleA][crysIdx] -
+		Photon_timing_xtal[EleA][k];
+	      if (fabs(tdiff) > fabs(LICTD)){
+		LICTD = tdiff;
+		crysCrys=k;
+	      }
+	    }
+	  }
+	  Float_t SecondTime = Photon_timing_xtal[EleA][crysCrys];
+	  ClusterTimeDiff->Fill(LICTD);
+	  Float_t METMET = TCMetPt[0];
+	  Float_t METPhi = TCMetPhi[0];
+	  Float_t METX = METMET * cos(METPhi);
+	  Float_t METY = METMET * sin(METPhi);
+	  if (fabs(SeedTime)>3){
+	    METX-=Photon_pt[EleA]*cos(Photon_phi[EleA]);
+	    METY-=Photon_pt[EleA]*sin(Photon_phi[EleA]);
+	  }
+	  METMET = sqrt(METX*METX + METY*METY);
+	  if (METMET < 30) continue;
+	  
 
-	  SCEtaSCPhi->Fill(Photon_sc_eta[EleA], Photon_sc_phi[EleA]);
-	  TimeVsTime->Fill(SeedTime, Photon_timing_xtal[EleA][crysCrys]);
-	  NAddCrys->Fill(crysThresh);
-	  SeedEH->Fill(SeedE);
-	  SigIetaIeta->Fill(Photon_SigmaIetaIeta[EleA]);
-	  Timing->Fill(SeedTime);
-	  WidthVsTime->Fill(SeedTime, Photon_SigmaIetaIeta[EleA]);
-	  WidthVsTimeDiff->Fill(LICTD, Photon_SigmaIetaIeta[EleA]);
-	  PhotonET->Fill(Photon_pt[EleA]);
-	  TcMET->Fill(METMET);
-	  SCEta->Fill(Photon_sc_eta[EleA]);
+
+	  if (//kTRUE
+	      fabs(LICTD)<5
+	      && Photon_SigmaIetaIeta[EleA]>0.001 
+	      && Photon_SigmaIetaIeta[EleA]<0.013
+	      //&& Photon_SigmaIphiIphi[EleA]>0.001
+	      && (fabs(SeedTime))<3
+	      ){
+	    if (SeedTime < 5)
+	      SCEtaVsTime->Fill(Photon_sc_eta[EleA], SeedTime);
+	    else SCEtaVsTime->Fill(Photon_sc_eta[EleA], SeedTime-25);
+	    // 	  if (SeedTime>-1){
+	    // 	    cout << "Run: " << run << " Event: " << event << endl;
+	    // 	    for (int k=0;k<Photon_ncrys[EleA]&&k<100;++k){
+	    // 	      cout << "IEta: " << Photon_ieta_xtalEB[EleA][k];
+	    // 	      cout << " IPhi: " << Photon_iphi_xtalEB[EleA][k];
+	    // 	      cout << " Energy: " << Photon_energy_xtal[EleA][k];
+	    // 	      cout << " Time: " << Photon_timing_xtal[EleA][k] << endl;
+	    // 	    }
+	    // 	  }
+	    //if (Photon_SigmaIetaIeta[EleA]<0.013)
+	    SCEtaSCPhi->Fill(Photon_sc_eta[EleA], Photon_sc_phi[EleA]);
+	    WidVsET->Fill(Photon_pt[EleA], Photon_SigmaIetaIeta[EleA]);
+	    WidVsETPlots->Fill(Photon_SigmaIetaIeta[EleA], Photon_pt[EleA]);
+	    TimeVsTime->Fill(SeedTime, Photon_timing_xtal[EleA][crysCrys]);
+	    NAddCrys->Fill(crysThresh);
+	    SeedEH->Fill(SeedE);
+	    SigIetaIeta->Fill(Photon_SigmaIetaIeta[EleA]);
+	    Timing->Fill(SeedTime);
+	    WidthVsTime->Fill(SeedTime, Photon_SigmaIetaIeta[EleA]);
+	    WidthVsTimeDiff->Fill(LICTD, Photon_SigmaIetaIeta[EleA]);
+	    PhotonET->Fill(Photon_pt[EleA]);
+	    TcMET->Fill(METMET);
+	    SCEta->Fill(Photon_sc_eta[EleA]);
+	    Round->Fill(Photon_Roundness[EleA]);
+	  }
+	}
+	if (!hasCosTag && hasCosMuon && ngoodV==0){
+	
+	  Float_t SeedTime=-999;
+	  Float_t SeedE = -999;
+	  Int_t crysIdx=-1;
+	  for (int k=0;k<Photon_ncrys[EleA]&&k<100;++k){
+	    Float_t crysE = Photon_energy_xtal[EleA][k];
+	    if (crysE > SeedE){
+	      SeedE = crysE;
+	      SeedTime = Photon_timing_xtal[EleA][k];
+	      crysIdx = k;
+	    }
+	  }
+	  //	if (fabs(SeedTime)>3) continue;
+	  Float_t LICTD =0;
+	  Int_t crysCrys=-1;
+	  Int_t crysThresh=0;
+	  for (int k=0;k<Photon_ncrys[EleA]&&k<100;++k){
+	    if (crysIdx==k) continue;
+	    Float_t crysE = Photon_energy_xtal[EleA][k];
+	    if (crysE > 1.){
+	      crysThresh++;
+	      Float_t tdiff = Photon_timing_xtal[EleA][crysIdx] -
+		Photon_timing_xtal[EleA][k];
+	      if (fabs(tdiff) > fabs(LICTD)){
+		LICTD = tdiff;
+		crysCrys=k;
+	      }
+	    }
+	  }
+	  Float_t SecondTime = Photon_timing_xtal[EleA][crysCrys];
+	  ClusterTimeDiffC->Fill(LICTD);
+	  Float_t METMET = TCMetPt[0];
+	  Float_t METPhi = TCMetPhi[0];
+	  Float_t METX = METMET * cos(METPhi);
+	  Float_t METY = METMET * sin(METPhi);
+	  if (fabs(SeedTime)>3){
+	    METX-=Photon_pt[EleA]*cos(Photon_phi[EleA]);
+	    METY-=Photon_pt[EleA]*sin(Photon_phi[EleA]);
+	  }
+	  METMET = sqrt(METX*METX + METY*METY);
+	  if (METMET < 30) continue;
+	  
+	  if (//kTRUE
+	      fabs(LICTD)<5
+	      && Photon_SigmaIetaIeta[EleA]>0.001
+	      && Photon_SigmaIetaIeta[EleA]<0.013
+	      //&& Photon_SigmaIphiIphi[EleA]>0.001
+	      && (fabs(SeedTime))<3
+	      ){
+	    if (SeedTime < 5)
+	      SCEtaVsTimeC->Fill(Photon_sc_eta[EleA], SeedTime);
+	    else SCEtaVsTimeC->Fill(Photon_sc_eta[EleA], SeedTime-25);
+	    // 	  if (SeedTime>-1){
+	    // 	    cout << "Run: " << run << " Event: " << event << endl;
+	    // 	    for (int k=0;k<Photon_ncrys[EleA]&&k<100;++k){
+	    // 	      cout << "IEta: " << Photon_ieta_xtalEB[EleA][k];
+	    // 	      cout << " IPhi: " << Photon_iphi_xtalEB[EleA][k];
+	    // 	      cout << " Energy: " << Photon_energy_xtal[EleA][k];
+	    // 	      cout << " Time: " << Photon_timing_xtal[EleA][k] << endl;
+	    // 	    }
+	    // 	  }
+	    //if (Photon_SigmaIetaIeta[EleA]<0.013)
+	    Bool_t isCos=kFALSE;
+	    for (int ikk=0;ikk<nCosMu;++ikk){
+	      Int_t idx = CosMuIdx[ikk];
+	      Float_t tempPhi = atan2(CosmicMuon_OuterTrack_InnerPoint_y[idx], CosmicMuon_OuterTrack_InnerPoint_x[idx]);
+	      if (tempPhi<0) tempPhi+=TMath::Pi()*2.;
+	      Float_t tempPerp = sqrt(CosmicMuon_OuterTrack_InnerPoint_y[idx]*CosmicMuon_OuterTrack_InnerPoint_y[idx] + CosmicMuon_OuterTrack_InnerPoint_x[idx]*CosmicMuon_OuterTrack_InnerPoint_x[idx]);
+	      Float_t tempTheta = atan2(tempPerp, CosmicMuon_OuterTrack_InnerPoint_z[idx]);
+	      if (tempTheta<0) tempTheta+=TMath::Pi()*2.;
+	      Float_t tempEta = -1. * log(tan(tempTheta/2.));
+	      CosMuEtaPhi->Fill(tempEta, tempPhi);
+	      Float_t tsep = dRCalc(Photon_sc_eta[EleA],Photon_sc_phi[EleA],tempEta,tempPhi);
+	      dRMuPhoton->Fill(tsep);
+	      
+	      if (fabs(tempEta)<1.5) isCos=kTRUE; 
+	    }
+	    if (isCos){
+	      RoundC->Fill(Photon_Roundness[EleA]);
+	      
+	      SCEtaSCPhiC->Fill(Photon_sc_eta[EleA], Photon_sc_phi[EleA]);
+	      WidVsETC->Fill(Photon_pt[EleA], Photon_SigmaIetaIeta[EleA]);
+	      WidVsETPlotsC->Fill(Photon_SigmaIetaIeta[EleA], Photon_pt[EleA]);
+	      TimeVsTimeC->Fill(SeedTime, Photon_timing_xtal[EleA][crysCrys]);
+	      NAddCrysC->Fill(crysThresh);
+	      SeedEHC->Fill(SeedE);
+	      SigIetaIetaC->Fill(Photon_SigmaIetaIeta[EleA]);
+	      TimingC->Fill(SeedTime);
+	      WidthVsTimeC->Fill(SeedTime, Photon_SigmaIetaIeta[EleA]);
+	      WidthVsTimeDiffC->Fill(LICTD, Photon_SigmaIetaIeta[EleA]);
+	      PhotonETC->Fill(Photon_pt[EleA]);
+	      TcMETC->Fill(METMET);
+	      SCEtaC->Fill(Photon_sc_eta[EleA]);
+	    }
+	  }
 	}
       }
     }
+    dRMuPhoton->Write();
     SCEtaSCPhi->Write();
+    WidVsETPlots->Write();
+    WidVsET->Write();
     SCEta->Write();
     SCEtaVsTime->Write();
     TcMET->Write();
@@ -3182,6 +3317,25 @@ fChain->Add("dcap://cmsgridftp.fnal.gov:24125/pnfs/fnal.gov/usr/cms/WAX/11/store
     WidthVsTimeDiff->Write();
     PhotonET->Write();
     Round->Write();
+
+    SCEtaSCPhiC->Write();
+    WidVsETPlotsC->Write();
+    WidVsETC->Write();
+    SCEtaC->Write();
+    SCEtaVsTimeC->Write();
+    TcMETC->Write();
+    TimeVsTimeC->Write();
+    NAddCrysC->Write();
+    ClusterTimeDiffC->Write();
+    SeedEHC->Write();
+    TimingC->Write();
+    SigIetaIetaC->Write();
+    WidthVsTimeC->Write();
+    WidthVsTimeDiffC->Write();
+    PhotonETC->Write();
+    DPhiDRhoCosMu->Write();
+    CosMuEtaPhi->Write();
+    RoundC->Write();
     aa->Close();
 }
 

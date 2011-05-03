@@ -15,7 +15,9 @@
 #include <sstream>
 #include <TH1F.h>
 #include <TH2F.h>
+#include <TProfile.h>
 using namespace std;
+
 float absDeltaPhi(float phi1, float phi2){
   float dPhi = fabs(phi1 - phi2);
   if(dPhi > TMath::Pi()) dPhi = 2.*TMath::Pi() - dPhi;
@@ -54,6 +56,8 @@ bool isCSCHalo(float photonSCphi, int nAllCSCSegments, float CSCSegmentX[], floa
   }// loop over CSC segments
   return false;
 }
+
+
 Float_t dRCalc(Float_t etaC, Float_t phiC, Float_t etaCrys, Float_t phiCrys, bool debug=false){
     //   Float_t ClusPhi = 0;
     //   if (phiC>0) ClusPhi = phiC;
@@ -80,8 +84,10 @@ Float_t dRCalc(Float_t etaC, Float_t phiC, Float_t etaCrys, Float_t phiCrys, boo
     
 }
 
-void CandidatePlotter(void){
+void SpikePlotter_timecut_sigcut(void){
     TChain *fChain = new TChain("myEvent");
+
+
 
 fChain->Add("dcap://cmsgridftp.fnal.gov:24125/pnfs/fnal.gov/usr/cms/WAX/11/store/user/sushil/MonoPhoton/397_Ntuples_V26/Data_A_New/Histo_Data_A_1000_1_J5W.root");
 fChain->Add("dcap://cmsgridftp.fnal.gov:24125/pnfs/fnal.gov/usr/cms/WAX/11/store/user/sushil/MonoPhoton/397_Ntuples_V26/Data_A_New/Histo_Data_A_1001_1_03M.root");
@@ -2975,11 +2981,12 @@ fChain->Add("dcap://cmsgridftp.fnal.gov:24125/pnfs/fnal.gov/usr/cms/WAX/11/store
    fChain->SetBranchAddress("TCMetSumEt", TCMetSumEt);
    fChain->SetBranchAddress("Delta_phiTC", &Delta_phiTC);
 
-    
-    TFile *aa = new TFile("/uscms_data/d2/askew/MONOPLOTS/CMSSW_3_8_7/src/output/CandidatePlots.root","RECREATE");
+
+     
+    TFile *aa = new TFile("/uscms_data/d2/askew/MONOPLOTS/CMSSW_3_8_7/src/output/SpikePlots_timecut_sigcut.root","RECREATE");
     TH1F *SCEta = new TH1F("SCEta","Supercluster Eta",300,-1.5,1.5);
+    TH2F *SCEtaSCPhi = new TH2F("SCEtaSCPhi","#eta/#phi map",100,-1.5,1.5,100,0, 2.*TMath::Pi());
     TH2F *SCEtaVsTime = new TH2F("SCEtaVsTime","Supercluster Eta Vs. Time",300,-1.5,1.5,100,-25,25);
-    TH2F *SCEtaSCPhi = new TH2F("SCEtaVsSCPhi","#eta/#phi map",100,-1.5,1.5,100,0,TMath::Pi()*2.);
     TH1F *NAddCrys = new TH1F("NAddCrys","Number of additional crystals E>1 GeV",100,0,100);
     TH1F *SigIetaIeta = new TH1F("SigIetaIeta","Width",75,0,0.025);
     TH1F *Timing =new TH1F("Timing","Time",400,-50,50);
@@ -2990,7 +2997,26 @@ fChain->Add("dcap://cmsgridftp.fnal.gov:24125/pnfs/fnal.gov/usr/cms/WAX/11/store
     TH1F *SeedEH = new TH1F("SeedEH","Seed Energy",200,0,200);
     TH2F *TimeVsTime = new TH2F("TimeVsTime","Time vs. Time",100,-50,50,100,-50,50);
     TH1F *TcMET = new TH1F("TcMET","TcMET",200,0,100);
+    TProfile *WidVsET = new TProfile("WidVsET","Width Vs. ET",20,0,200);
+
     TH1F *Round = new TH1F("Round","Roundness",100,0,1);
+
+    TH1F *SCEtaC = new TH1F("SCEtaC","Supercluster Eta",300,-1.5,1.5);
+    TH2F *SCEtaSCPhiC = new TH2F("SCEtaSCPhiC","#eta/#phi map",100,-1.5,1.5,100,0, 2.*TMath::Pi());
+    TH2F *SCEtaVsTimeC = new TH2F("SCEtaVsTimeC","Supercluster Eta Vs. Time",300,-1.5,1.5,100,-25,25);
+    TH1F *NAddCrysC = new TH1F("NAddCrysC","Number of additional crystals E>1 GeV",100,0,100);
+    TH1F *SigIetaIetaC = new TH1F("SigIetaIetaC","Width",75,0,0.025);
+    TH1F *TimingC =new TH1F("TimingC","Time",400,-50,50);
+    TH1F *ClusterTimeDiffC = new TH1F("ClusterTimeDiffC","LICTD",100,-50,50);
+    TH2F *WidthVsTimeC = new TH2F("WidthVsTimeC","Width Versus Time",100,-50,50,150,0,0.03);
+    TH2F *WidthVsTimeDiffC = new TH2F("WidthVsTimeDiffC","Width Versus TimeDiff",100,-50,50,150,0,0.03);
+    TH1F *PhotonETC = new TH1F("PhotonETC","Photon transverse energy",1000,0,1000);
+    TH1F *SeedEHC = new TH1F("SeedEHC","Seed Energy",200,0,200);
+    TH2F *TimeVsTimeC = new TH2F("TimeVsTimeC","Time vs. Time",100,-50,50,100,-50,50);
+    TH1F *TcMETC = new TH1F("TcMETC","TcMET",200,0,100);
+    TProfile *WidVsETC = new TProfile("WidVsETC","Width Vs. ET",20,0,200);
+
+    TH1F *RoundC = new TH1F("RoundC","Roundness",100,0,1);
 
     Float_t nentries = fChain->GetEntries();
     cout << "nentries: " << nentries << endl;
@@ -3006,7 +3032,7 @@ fChain->Add("dcap://cmsgridftp.fnal.gov:24125/pnfs/fnal.gov/usr/cms/WAX/11/store
       string bl2("HLT_Photon30_Isol_EBOnly_Cleaned_L1R_v1");
       TriggerList.push_back(bl2);
       string bl3("HLT_Photon35_Isol_Cleaned_L1R_v1");
-      //      TriggerList.push_back(bl3);
+      //TriggerList.push_back(bl3);
       string bl4("HLT_Photon30_L1R");
       TriggerList.push_back(bl4);
       string bl5("HLT_MET80_v1");
@@ -3023,7 +3049,6 @@ fChain->Add("dcap://cmsgridftp.fnal.gov:24125/pnfs/fnal.gov/usr/cms/WAX/11/store
 	}
       }
       if (!kTriggerPassed) continue;
-
       Int_t ngoodV=0;
       for (int vj=0;vj<Vertex_n;vj++){
 	if (Vertex_ndof[vj]>4
@@ -3033,7 +3058,6 @@ fChain->Add("dcap://cmsgridftp.fnal.gov:24125/pnfs/fnal.gov/usr/cms/WAX/11/store
 	  ngoodV++;
       }
       if (ngoodV==0) continue;
-
       Bool_t WriteEvent = kFALSE;
       int NumCandidateElectrons=0;
       int NumCandidatePhotons=0;
@@ -3048,27 +3072,22 @@ fChain->Add("dcap://cmsgridftp.fnal.gov:24125/pnfs/fnal.gov/usr/cms/WAX/11/store
 	   && Photon_HoE[pho] < 0.05
 	   && Photon_trkSumPtHollowConeDR04[pho] < 2.0+0.001*Photon_pt[pho]
 	   && Photon_hasPixelSeed[pho]==0//pixel veto
-	   //&& TCMetPt[0]>30
+	   //&& CaloMetPt[0]>30
 	   ){
 	  IEle[nEle] = pho;
 	  nEle++;
 	}
       }
-      if (nEle>0){
-      
-     
-	Float_t highET=-999;
-	Int_t idxHigh =-1;
-	for (int j=0;j<nEle;++j){
-	  Int_t IdxA = IEle[j];
-	  if (Photon_pt[IdxA] > highET){
-	    highET = Photon_pt[IdxA];
-	    idxHigh = IdxA;
-	  }
-	}
-	Int_t EleA = idxHigh;
-	
-	
+      // if (TCMetPt[0]<20) continue;
+       if (nEle>0){
+
+
+       }
+
+	//}
+      for (int j=0;j<nEle;++j){
+
+	Int_t EleA = IEle[j];
 	//	Bool_t hasCosTag = isCSCHalo(Photon_sc_phi[EleA], CSCseg_n, CSCseg_x, CSCseg_y, CSCseg_time);
 
 	Bool_t hasCosMuon=kFALSE;
@@ -3084,15 +3103,15 @@ fChain->Add("dcap://cmsgridftp.fnal.gov:24125/pnfs/fnal.gov/usr/cms/WAX/11/store
 
 	    //	    Float_t cosDphi = dRCalc(0,Photon_sc_phi[EleA],0,CosmicMuon_phi[kk]);
 	    Float_t cosDphi = dRCalc(0,Photon_sc_phi[EleA],0,tempPhi);
-	    // DPhiDRhoCosMu->Fill(cosRho, cosDphi);
+	    //  DPhiDRhoCosMu->Fill(cosRho, cosDphi);
 	    if (cosRho>115 && cosRho<200
 		&& cosDphi<0.2)
 	      hasCosTag=kTRUE;
 	  }
 	}
 
-	if (hasCosTag || hasCosMuon) continue;
-	
+	if (hasCosTag||hasCosMuon) continue;
+
 	Float_t SeedTime=-999;
 	Float_t SeedE = -999;
 	Int_t crysIdx=-1;
@@ -3133,13 +3152,15 @@ fChain->Add("dcap://cmsgridftp.fnal.gov:24125/pnfs/fnal.gov/usr/cms/WAX/11/store
 	}
 	METMET = sqrt(METX*METX + METY*METY);
 	if (METMET < 30) continue;
-	if (//kTRUE
-	    fabs(LICTD)<5
-	    //&& fabs(SeedTime)<3
-	    && Photon_SigmaIetaIeta[EleA]>0.001 
+
+	if (
+	    //fabs(LICTD)>5
+	    Photon_SigmaIetaIeta[EleA]<0.001 
+	    && fabs(SeedTime) < 3
 	    //&& Photon_SigmaIphiIphi[EleA]>0.001
 	    //&& (fabs(SeedTime)<3||fabs(SecondTime)<3) 
 	    ){
+	  SCEtaSCPhi->Fill(Photon_sc_eta[EleA], Photon_sc_phi[EleA]);
 	  if (SeedTime < 5)
 	    SCEtaVsTime->Fill(Photon_sc_eta[EleA], SeedTime);
 	  else SCEtaVsTime->Fill(Photon_sc_eta[EleA], SeedTime-25);
@@ -3152,9 +3173,8 @@ fChain->Add("dcap://cmsgridftp.fnal.gov:24125/pnfs/fnal.gov/usr/cms/WAX/11/store
 	  // 	      cout << " Time: " << Photon_timing_xtal[EleA][k] << endl;
 	  // 	    }
 	  // 	  }
+	  
 	  Round->Fill(Photon_Roundness[EleA]);
-
-	  SCEtaSCPhi->Fill(Photon_sc_eta[EleA], Photon_sc_phi[EleA]);
 	  TimeVsTime->Fill(SeedTime, Photon_timing_xtal[EleA][crysCrys]);
 	  NAddCrys->Fill(crysThresh);
 	  SeedEH->Fill(SeedE);
@@ -3165,9 +3185,47 @@ fChain->Add("dcap://cmsgridftp.fnal.gov:24125/pnfs/fnal.gov/usr/cms/WAX/11/store
 	  PhotonET->Fill(Photon_pt[EleA]);
 	  TcMET->Fill(METMET);
 	  SCEta->Fill(Photon_sc_eta[EleA]);
+	  WidVsET->Fill(Photon_pt[EleA], Photon_SigmaIetaIeta[EleA]);
+	}
+	if (
+	    fabs(LICTD)>5
+	    && Photon_SigmaIetaIeta[EleA]>0.001 
+	    && Photon_SigmaIetaIeta[EleA]<0.013
+	    && fabs(SeedTime)<3
+	    //&& SeedTime < -3
+	    //&& Photon_SigmaIphiIphi[EleA]>0.001
+	    //&& (fabs(SeedTime)<3||fabs(SecondTime)<3) 
+	    ){
+	  SCEtaSCPhiC->Fill(Photon_sc_eta[EleA], Photon_sc_phi[EleA]);
+	  if (SeedTime < 5)
+	    SCEtaVsTimeC->Fill(Photon_sc_eta[EleA], SeedTime);
+	  else SCEtaVsTimeC->Fill(Photon_sc_eta[EleA], SeedTime-25);
+	  // 	  if (SeedTime>-1){
+	  // 	    cout << "Run: " << run << " Event: " << event << endl;
+	  // 	    for (int k=0;k<Photon_ncrys[EleA]&&k<100;++k){
+	  // 	      cout << "IEta: " << Photon_ieta_xtalEB[EleA][k];
+	  // 	      cout << " IPhi: " << Photon_iphi_xtalEB[EleA][k];
+	  // 	      cout << " Energy: " << Photon_energy_xtal[EleA][k];
+	  // 	      cout << " Time: " << Photon_timing_xtal[EleA][k] << endl;
+	  // 	    }
+	  // 	  }
+	  
+	  RoundC->Fill(Photon_Roundness[EleA]);
+	  TimeVsTimeC->Fill(SeedTime, Photon_timing_xtal[EleA][crysCrys]);
+	  NAddCrysC->Fill(crysThresh);
+	  SeedEHC->Fill(SeedE);
+	  SigIetaIetaC->Fill(Photon_SigmaIetaIeta[EleA]);
+	  TimingC->Fill(SeedTime);
+	  WidthVsTimeC->Fill(SeedTime, Photon_SigmaIetaIeta[EleA]);
+	  WidthVsTimeDiffC->Fill(LICTD, Photon_SigmaIetaIeta[EleA]);
+	  PhotonETC->Fill(Photon_pt[EleA]);
+	  TcMETC->Fill(METMET);
+	  SCEtaC->Fill(Photon_sc_eta[EleA]);
+	  WidVsETC->Fill(Photon_pt[EleA], Photon_SigmaIetaIeta[EleA]);
 	}
       }
     }
+    WidVsET->Write();
     SCEtaSCPhi->Write();
     SCEta->Write();
     SCEtaVsTime->Write();
@@ -3182,6 +3240,23 @@ fChain->Add("dcap://cmsgridftp.fnal.gov:24125/pnfs/fnal.gov/usr/cms/WAX/11/store
     WidthVsTimeDiff->Write();
     PhotonET->Write();
     Round->Write();
+
+    WidVsETC->Write();
+    SCEtaSCPhiC->Write();
+    SCEtaC->Write();
+    SCEtaVsTimeC->Write();
+    TcMETC->Write();
+    TimeVsTimeC->Write();
+    NAddCrysC->Write();
+    ClusterTimeDiffC->Write();
+    SeedEHC->Write();
+    TimingC->Write();
+    SigIetaIetaC->Write();
+    WidthVsTimeC->Write();
+    WidthVsTimeDiffC->Write();
+    PhotonETC->Write();
+    RoundC->Write();
+
     aa->Close();
 }
 

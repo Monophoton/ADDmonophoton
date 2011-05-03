@@ -80,7 +80,7 @@ Float_t dRCalc(Float_t etaC, Float_t phiC, Float_t etaCrys, Float_t phiCrys, boo
     
 }
 
-void CandidatePlotter(void){
+void CandidatePlotter_timecut(void){
     TChain *fChain = new TChain("myEvent");
 
 fChain->Add("dcap://cmsgridftp.fnal.gov:24125/pnfs/fnal.gov/usr/cms/WAX/11/store/user/sushil/MonoPhoton/397_Ntuples_V26/Data_A_New/Histo_Data_A_1000_1_J5W.root");
@@ -2976,7 +2976,7 @@ fChain->Add("dcap://cmsgridftp.fnal.gov:24125/pnfs/fnal.gov/usr/cms/WAX/11/store
    fChain->SetBranchAddress("Delta_phiTC", &Delta_phiTC);
 
     
-    TFile *aa = new TFile("/uscms_data/d2/askew/MONOPLOTS/CMSSW_3_8_7/src/output/CandidatePlots.root","RECREATE");
+    TFile *aa = new TFile("/uscms_data/d2/askew/MONOPLOTS/CMSSW_3_8_7/src/output/CandidatePlots_timecut.root","RECREATE");
     TH1F *SCEta = new TH1F("SCEta","Supercluster Eta",300,-1.5,1.5);
     TH2F *SCEtaVsTime = new TH2F("SCEtaVsTime","Supercluster Eta Vs. Time",300,-1.5,1.5,100,-25,25);
     TH2F *SCEtaSCPhi = new TH2F("SCEtaVsSCPhi","#eta/#phi map",100,-1.5,1.5,100,0,TMath::Pi()*2.);
@@ -3135,7 +3135,7 @@ fChain->Add("dcap://cmsgridftp.fnal.gov:24125/pnfs/fnal.gov/usr/cms/WAX/11/store
 	if (METMET < 30) continue;
 	if (//kTRUE
 	    fabs(LICTD)<5
-	    //&& fabs(SeedTime)<3
+	    && fabs(SeedTime)<3
 	    && Photon_SigmaIetaIeta[EleA]>0.001 
 	    //&& Photon_SigmaIphiIphi[EleA]>0.001
 	    //&& (fabs(SeedTime)<3||fabs(SecondTime)<3) 
