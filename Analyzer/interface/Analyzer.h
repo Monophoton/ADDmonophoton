@@ -188,6 +188,16 @@ class Analyzer : public edm::EDAnalyzer {
   float jet_jecUncer[200];
   float jet_jecCorr[200];
 
+   //some uncorrected jet infor
+  float ucjet_pt[200];
+  float ucjet_px[200];
+  float ucjet_py[200];
+  float ucjet_pz[200];
+  float ucjet_E[200];
+  float ucjet_eta[200];
+  float ucjet_phi[200];
+
+
   //pfjet variables
   float pfjet_pt[200];
   float pfjet_px[200];
@@ -212,6 +222,16 @@ class Analyzer : public edm::EDAnalyzer {
   int   pfjet_nTowers[100];
  */
  
+   //some uncorrected jet infor
+  float ucpfjet_pt[200];
+  float ucpfjet_px[200];
+  float ucpfjet_py[200];
+  float ucpfjet_pz[200];
+  float ucpfjet_E[200];
+  float ucpfjet_eta[200];
+  float ucpfjet_phi[200];
+
+
   //electron variables
   float electron_pt[200];
   float electron_px[200];

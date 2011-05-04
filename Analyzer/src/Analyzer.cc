@@ -13,7 +13,7 @@
 //
 // Original Author:  Sandhya Jain
 //         Created:  Fri Apr 17 11:00:06 CEST 2009
-// $Id: Analyzer.cc,v 1.45 2011/05/02 14:47:16 schauhan Exp $
+// $Id: Analyzer.cc,v 1.46 2011/05/04 07:41:52 schauhan Exp $
 //
 //
 
@@ -1862,8 +1862,21 @@ if(!isAOD_){
          jecUnc->setJetEta(jet_eta[x]);
          jecUnc->setJetPt(jet_pt[x]);
          jet_jecUncer[x] = jecUnc->getUncertainty(true);
-         jet_jecCorr[x]  = myjet_container[x].jecFactor("Uncorrected");
-         //cout<<(myjet_container[x].jecFactor("Uncorrected"))<<endl;
+         if(myjet_container[x].jecFactor("Uncorrected") != 0 )
+             {jet_jecCorr[x] = 1./(myjet_container[x].jecFactor("Uncorrected")); 
+              }  
+               else{jet_jecCorr[x] =0.;}
+
+         //get the uncorrected jet and fill them
+         pat::Jet uncjet = myjet_container[x].correctedJet("Uncorrected");
+         ucjet_pt[x] = uncjet.pt();
+         ucjet_px[x] = uncjet.px();
+         ucjet_py[x] = uncjet.py();
+         ucjet_pz[x] = uncjet.pz();
+         ucjet_E[x]   = uncjet.energy();
+         ucjet_eta[x] = uncjet.eta();
+         ucjet_phi[x] = uncjet.phi();
+
  	 Jet_n++;
        }//end of for loop
      }
@@ -1906,6 +1919,12 @@ if(!isAOD_){
          pfjet_vz[x]  = mypfjet_container[x].vz();
          pfjet_phi[x] = correct_phi(mypfjet_container[x].phi());
          pfjet_eta[x] = mypfjet_container[x].eta();
+         
+        if(mypfjet_container[x].jecFactor("Uncorrected")!= 0)
+         {pfjet_jecCorr[x]  = (1.0/mypfjet_container[x].jecFactor("Uncorrected")); 
+         }
+         else{pfjet_jecCorr[x] =0.;}
+
          /*
          pfjet_emEnergyFraction[x]= mypfjet_container[x].emEnergyFraction();
          pfjet_energyFractionHadronic[x] = mypfjet_container[x].energyFractionHadronic();
@@ -1919,8 +1938,17 @@ if(!isAOD_){
          //jet energy uncertiany
          pfjecUnc->setJetEta(pfjet_eta[x]);
          pfjecUnc->setJetPt(pfjet_pt[x]);
-         pfjet_jecUncer[x] = pfjecUnc->getUncertainty(true); 
-         pfjet_jecCorr[x]  = mypfjet_container[x].jecFactor("Uncorrected");
+         pfjet_jecUncer[x] = pfjecUnc->getUncertainty(true);
+         //get the uncorrected jet and fill them
+         pat::Jet uncpfjet = mypfjet_container[x].correctedJet("Uncorrected");
+         ucpfjet_pt[x] = uncpfjet.pt();
+         ucpfjet_px[x] = uncpfjet.px();
+         ucpfjet_py[x] = uncpfjet.py();
+         ucpfjet_pz[x] = uncpfjet.pz();
+         ucpfjet_E[x]  = uncpfjet.energy();
+         ucpfjet_eta[x]= uncpfjet.eta();
+         ucpfjet_phi[x]= uncpfjet.phi();
+ 
          pfJet_n++;
        }//end of for loop
      }
@@ -2074,9 +2102,16 @@ void Analyzer::beginJob(){
     myEvent->Branch("Jet_fHPD",jet_fHPD,"jet_fHPD[Jet_n]/F");
     myEvent->Branch("Jet_fRBX",jet_fRBX,"jet_fRBX[Jet_n]/F");
     myEvent->Branch("Jet_RHF",jet_RHF,"jet_RHF[Jet_n]/F");
-    
     myEvent->Branch("Jet_jecUncer",jet_jecUncer,"jet_jecUncer[Jet_n]/F");
     myEvent->Branch("Jet_jecCorr",jet_jecCorr,"jet_jecCorr[Jet_n]/F");
+   //uncorrected jet infor
+    myEvent->Branch("ucJet_px",ucjet_px,"ucjet_px[Jet_n]/F");
+    myEvent->Branch("ucJet_py",ucjet_py,"ucjet_py[Jet_n]/F");
+    myEvent->Branch("ucJet_E",ucjet_E,"ucjet_E[Jet_n]/F");
+    myEvent->Branch("ucJet_pz",ucjet_pz,"ucjet_pz[Jet_n]/F");
+    myEvent->Branch("ucJet_pt",ucjet_pt,"ucjet_pt[Jet_n]/F");
+    myEvent->Branch("ucJet_eta",ucjet_eta,"ucjet_eta[Jet_n]/F");
+    myEvent->Branch("ucJet_phi",ucjet_phi,"ucjet_phi[Jet_n]/F");
   }
 
 
@@ -2102,9 +2137,16 @@ void Analyzer::beginJob(){
     myEvent->Branch("pfJet_fRBX",pfjet_fRBX,"pfjet_fRBX[pfJet_n]/F");
     myEvent->Branch("pfJet_RHF",pfjet_RHF,"pfjet_RHF[pfJet_n]/F");
   */
-   
     myEvent->Branch("pfJet_jecUncer",pfjet_jecUncer,"pfjet_jecUncer[pfJet_n]/F");
     myEvent->Branch("pfJet_jecCorr",pfjet_jecCorr,"pfjet_jecCorr[pfJet_n]/F");
+    //uncorrected jet info
+    myEvent->Branch("ucpfJet_px",ucpfjet_px,"ucpfjet_px[pfJet_n]/F");
+    myEvent->Branch("ucpfJet_py",ucpfjet_py,"ucpfjet_py[pfJet_n]/F");
+    myEvent->Branch("ucpfJet_E",ucpfjet_E,"ucpfjet_E[pfJet_n]/F");
+    myEvent->Branch("ucpfJet_pz",ucpfjet_pz,"ucpfjet_pz[pfJet_n]/F");
+    myEvent->Branch("ucpfJet_pt",ucpfjet_pt,"ucpfjet_pt[pfJet_n]/F");
+    myEvent->Branch("ucpfJet_eta",ucpfjet_eta,"ucpfjet_eta[pfJet_n]/F");
+    myEvent->Branch("ucpfJet_phi",ucpfjet_phi,"ucpfjet_phi[pfJet_n]/F");
 }
 
 
