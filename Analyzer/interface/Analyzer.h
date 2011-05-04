@@ -74,7 +74,9 @@ class Analyzer : public edm::EDAnalyzer {
   int CSCseg_n;
   int RPChit_n;
   //HLT
-  
+
+  size_t MaxN;
+
   edm::TriggerNames triggerNames_;  // TriggerNames class
  
   std::map<std::string,int> HLT_chosen;
@@ -85,8 +87,6 @@ class Analyzer : public edm::EDAnalyzer {
   edm::InputTag eleLabel_;
   edm::InputTag muoLabel_;
   edm::InputTag cosMuoLabel_;
-  edm::InputTag BeamHaloSummaryLabel_;
-  edm::InputTag pileupLabel_;
   edm::InputTag jetLabel_;
   edm::InputTag pfjetLabel_;
   edm::InputTag tauLabel_;
@@ -101,7 +101,10 @@ class Analyzer : public edm::EDAnalyzer {
   edm::InputTag hcalrechitLabel_;
   edm::InputTag hlTriggerResults_;  // Input tag for TriggerResults
   edm::InputTag Tracks_;
+  edm::InputTag BeamHaloSummaryLabel_;
   edm::InputTag Vertices_;
+  edm::InputTag pileupLabel_;
+
   std::string outFile_;
   bool rungenParticleCandidates_;
   bool runphotons_;
@@ -138,14 +141,14 @@ class Analyzer : public edm::EDAnalyzer {
   //variables to be filled in the tree
   
   //vertex variables
-  float vx[10];
-  float vy[10];
-  float vz[10];
-  float chi2[10];
-  int vtracksize[10];
-  int vndof[10];
-  bool  v_isFake[10];
-  float v_d0[10];
+  float vx[200];
+  float vy[200];
+  float vz[200];
+  float chi2[200];
+  int vtracksize[200];
+  int vndof[200];
+  bool  v_isFake[200];
+  float v_d0[200];
   
   //scraping variables
   bool  Scraping_isScrapingEvent;
@@ -164,40 +167,40 @@ class Analyzer : public edm::EDAnalyzer {
   float trk_phi[200];
   
   //jet variables
-  float jet_pt[100];
-  float jet_px[100];
-  float jet_py[100];
-  float jet_E[100];
-  float jet_pz[100];
-  float jet_vx[100];
-  float jet_vy[100];
-  float jet_vz[100];
-  float jet_eta[100];
-  float jet_phi[100];
-  float jet_emEnergyFraction[100];
-  float jet_energyFractionHadronic[100];
-  int   jet_hitsInN90[100];
-  int   jet_n90Hits[100];
-  float jet_fHPD[100];
-  float jet_fRBX[100];
-  float jet_RHF[100];
-  int   jet_nTowers[100];
-  float jet_jecUncer[100];
-  float jet_jecCorr[100];
+  float jet_pt[200];
+  float jet_px[200];
+  float jet_py[200];
+  float jet_E[200];
+  float jet_pz[200];
+  float jet_vx[200];
+  float jet_vy[200];
+  float jet_vz[200];
+  float jet_eta[200];
+  float jet_phi[200];
+  float jet_emEnergyFraction[200];
+  float jet_energyFractionHadronic[200];
+  int   jet_hitsInN90[200];
+  int   jet_n90Hits[200];
+  float jet_fHPD[200];
+  float jet_fRBX[200];
+  float jet_RHF[200];
+  int   jet_nTowers[200];
+  float jet_jecUncer[200];
+  float jet_jecCorr[200];
 
   //pfjet variables
-  float pfjet_pt[100];
-  float pfjet_px[100];
-  float pfjet_py[100];
-  float pfjet_E[100];
-  float pfjet_pz[100];
-  float pfjet_vx[100];
-  float pfjet_vy[100];
-  float pfjet_vz[100];
-  float pfjet_eta[100];
-  float pfjet_phi[100];
-  float pfjet_jecUncer[100];
-  float pfjet_jecCorr[100];
+  float pfjet_pt[200];
+  float pfjet_px[200];
+  float pfjet_py[200];
+  float pfjet_E[200];
+  float pfjet_pz[200];
+  float pfjet_vx[200];
+  float pfjet_vy[200];
+  float pfjet_vz[200];
+  float pfjet_eta[200];
+  float pfjet_phi[200];
+  float pfjet_jecUncer[200];
+  float pfjet_jecCorr[200];
   /*
   float pfjet_emEnergyFraction[100];
   float pfjet_energyFractionHadronic[100];
@@ -210,123 +213,130 @@ class Analyzer : public edm::EDAnalyzer {
  */
  
   //electron variables
-  float electron_pt[100];
-  float electron_px[100];
-  float electron_py[100];
-  float electron_pz[100];
-  float electron_vx[100];
-  float electron_vy[100];
-  float electron_vz[100];
-  float electron_energy[100];
-  float electron_charge[100];
-  float electron_eta[100];
-  float electron_phi[100];
-  float electron_trkIso[100];
-  float electron_ecalIso[100];
-  float electron_hcalIso[100];
-  float electron_HoE[100];
-  float electron_SigmaIetaIeta[100];
-  float electron_dEtaIn[100];
-  float electron_dPhiIn[100];
-  float electron_sc_energy[100];
-  float electron_sc_eta[100];
-  float electron_sc_phi[100];
+  float electron_pt[200];
+  float electron_px[200];
+  float electron_py[200];
+  float electron_pz[200];
+  float electron_vx[200];
+  float electron_vy[200];
+  float electron_vz[200];
+  float electron_energy[200];
+  float electron_charge[200];
+  float electron_eta[200];
+  float electron_phi[200];
+  float electron_trkIso[200];
+  float electron_ecalIso[200];
+  float electron_hcalIso[200];
+  float electron_HoE[200];
+  float electron_SigmaIetaIeta[200];
+  float electron_dEtaIn[200];
+  float electron_dPhiIn[200];
+  float electron_sc_energy[200];
+  float electron_sc_eta[200];
+  float electron_sc_phi[200];
   
   //muon variables
-  float muon_pt[100];
-  float muon_px[100];
-  float muon_py[100];
-  float muon_pz[100];
-  float muon_vx[100];
-  float muon_vy[100];
-  float muon_vz[100];
-  float muon_energy[100];
-  float muon_charge[100];
-  float muon_eta[100];
-  float muon_phi[100];
-  bool  muon_isGlobalMuon[100];
-  bool  muon_isTrackerMuon[100];
-  bool  muon_isStandAloneMuon[100];
-  bool  muon_InnerTrack_isNonnull[100];
-  bool  muon_OuterTrack_isNonnull[100];
+  float muon_pt[200];
+  float muon_px[200];
+  float muon_py[200];
+  float muon_pz[200];
+  float muon_vx[200];
+  float muon_vy[200];
+  float muon_vz[200];
+  float muon_energy[200];
+  float muon_charge[200];
+  float muon_eta[200];
+  float muon_phi[200];
+  bool  muon_isGlobalMuon[200];
+  bool  muon_isTrackerMuon[200];
+  bool  muon_isStandAloneMuon[200];
+  bool  muon_InnerTrack_isNonnull[200];
+  bool  muon_OuterTrack_isNonnull[200];
   
-  float muon_OuterTrack_InnerPoint_x[100];
-  float muon_OuterTrack_InnerPoint_y[100];
-  float muon_OuterTrack_InnerPoint_z[100];
-  float muon_OuterTrack_InnerPoint_px[100];
-  float muon_OuterTrack_InnerPoint_py[100];
-  float muon_OuterTrack_InnerPoint_pz[100];
-  float muon_OuterTrack_OuterPoint_x[100];
-  float muon_OuterTrack_OuterPoint_y[100];
-  float muon_OuterTrack_OuterPoint_z[100];
-  float muon_OuterTrack_OuterPoint_px[100];
-  float muon_OuterTrack_OuterPoint_py[100];
-  float muon_OuterTrack_OuterPoint_pz[100];
-  float muon_InnerTrack_InnerPoint_x[100];
-  float muon_InnerTrack_InnerPoint_y[100];
-  float muon_InnerTrack_InnerPoint_z[100];
-  float muon_InnerTrack_InnerPoint_px[100];
-  float muon_InnerTrack_InnerPoint_py[100];
-  float muon_InnerTrack_InnerPoint_pz[100];
-  float muon_InnerTrack_OuterPoint_x[100];
-  float muon_InnerTrack_OuterPoint_y[100];
-  float muon_InnerTrack_OuterPoint_z[100];
-  float muon_InnerTrack_OuterPoint_px[100];
-  float muon_InnerTrack_OuterPoint_py[100];
-  float muon_InnerTrack_OuterPoint_pz[100];
+  float muon_OuterTrack_InnerPoint_x[200];
+  float muon_OuterTrack_InnerPoint_y[200];
+  float muon_OuterTrack_InnerPoint_z[200];
+  float muon_OuterTrack_InnerPoint_px[200];
+  float muon_OuterTrack_InnerPoint_py[200];
+  float muon_OuterTrack_InnerPoint_pz[200];
+  float muon_OuterTrack_OuterPoint_x[200];
+  float muon_OuterTrack_OuterPoint_y[200];
+  float muon_OuterTrack_OuterPoint_z[200];
+  float muon_OuterTrack_OuterPoint_px[200];
+  float muon_OuterTrack_OuterPoint_py[200];
+  float muon_OuterTrack_OuterPoint_pz[200];
+  float muon_InnerTrack_InnerPoint_x[200];
+  float muon_InnerTrack_InnerPoint_y[200];
+  float muon_InnerTrack_InnerPoint_z[200];
+  float muon_InnerTrack_InnerPoint_px[200];
+  float muon_InnerTrack_InnerPoint_py[200];
+  float muon_InnerTrack_InnerPoint_pz[200];
+  float muon_InnerTrack_OuterPoint_x[200];
+  float muon_InnerTrack_OuterPoint_y[200];
+  float muon_InnerTrack_OuterPoint_z[200];
+  float muon_InnerTrack_OuterPoint_px[200];
+  float muon_InnerTrack_OuterPoint_py[200];
+  float muon_InnerTrack_OuterPoint_pz[200];
   
   //cosmicmuon variables
-  float cosmicmuon_pt[100];
-  float cosmicmuon_px[100];
-  float cosmicmuon_py[100];
-  float cosmicmuon_pz[100];
-  float cosmicmuon_energy[100];
-  float cosmicmuon_charge[100];
-  float cosmicmuon_eta[100];
-  float cosmicmuon_phi[100];
-  bool  cosmicmuon_isGlobalMuon[100];
-  bool  cosmicmuon_isTrackerMuon[100];
-  bool  cosmicmuon_isStandAloneMuon[100];
-  bool  cosmicmuon_InnerTrack_isNonnull[100];
-  bool  cosmicmuon_OuterTrack_isNonnull[100];
+  float cosmicmuon_pt[200];
+  float cosmicmuon_px[200];
+  float cosmicmuon_py[200];
+  float cosmicmuon_pz[200];
+  float cosmicmuon_energy[200];
+  float cosmicmuon_charge[200];
+  float cosmicmuon_eta[200];
+  float cosmicmuon_phi[200];
+  bool  cosmicmuon_isGlobalMuon[200];
+  bool  cosmicmuon_isTrackerMuon[200];
+  bool  cosmicmuon_isStandAloneMuon[200];
+  bool  cosmicmuon_InnerTrack_isNonnull[200];
+  bool  cosmicmuon_OuterTrack_isNonnull[200];
   
-  float cosmicmuon_OuterTrack_InnerPoint_x[100];
-  float cosmicmuon_OuterTrack_InnerPoint_y[100];
-  float cosmicmuon_OuterTrack_InnerPoint_z[100];
-  float cosmicmuon_OuterTrack_InnerPoint_px[100];
-  float cosmicmuon_OuterTrack_InnerPoint_py[100];
-  float cosmicmuon_OuterTrack_InnerPoint_pz[100];
-  float cosmicmuon_OuterTrack_OuterPoint_x[100];
-  float cosmicmuon_OuterTrack_OuterPoint_y[100];
-  float cosmicmuon_OuterTrack_OuterPoint_z[100];
-  float cosmicmuon_OuterTrack_OuterPoint_px[100];
-  float cosmicmuon_OuterTrack_OuterPoint_py[100];
-  float cosmicmuon_OuterTrack_OuterPoint_pz[100];
-  float cosmicmuon_InnerTrack_InnerPoint_x[100];
-  float cosmicmuon_InnerTrack_InnerPoint_y[100];
-  float cosmicmuon_InnerTrack_InnerPoint_z[100];
-  float cosmicmuon_InnerTrack_InnerPoint_px[100];
-  float cosmicmuon_InnerTrack_InnerPoint_py[100];
-  float cosmicmuon_InnerTrack_InnerPoint_pz[100];
-  float cosmicmuon_InnerTrack_OuterPoint_x[100];
-  float cosmicmuon_InnerTrack_OuterPoint_y[100];
-  float cosmicmuon_InnerTrack_OuterPoint_z[100];
-  float cosmicmuon_InnerTrack_OuterPoint_px[100];
-  float cosmicmuon_InnerTrack_OuterPoint_py[100];
-  float cosmicmuon_InnerTrack_OuterPoint_pz[100];
-  
+  float cosmicmuon_OuterTrack_InnerPoint_x[200];
+  float cosmicmuon_OuterTrack_InnerPoint_y[200];
+  float cosmicmuon_OuterTrack_InnerPoint_z[200];
+  float cosmicmuon_OuterTrack_InnerPoint_px[200];
+  float cosmicmuon_OuterTrack_InnerPoint_py[200];
+  float cosmicmuon_OuterTrack_InnerPoint_pz[200];
+  float cosmicmuon_OuterTrack_OuterPoint_x[200];
+  float cosmicmuon_OuterTrack_OuterPoint_y[200];
+  float cosmicmuon_OuterTrack_OuterPoint_z[200];
+  float cosmicmuon_OuterTrack_OuterPoint_px[200];
+  float cosmicmuon_OuterTrack_OuterPoint_py[200];
+  float cosmicmuon_OuterTrack_OuterPoint_pz[200];
+  float cosmicmuon_InnerTrack_InnerPoint_x[200];
+  float cosmicmuon_InnerTrack_InnerPoint_y[200];
+  float cosmicmuon_InnerTrack_InnerPoint_z[200];
+  float cosmicmuon_InnerTrack_InnerPoint_px[200];
+  float cosmicmuon_InnerTrack_InnerPoint_py[200];
+  float cosmicmuon_InnerTrack_InnerPoint_pz[200];
+  float cosmicmuon_InnerTrack_OuterPoint_x[200];
+  float cosmicmuon_InnerTrack_OuterPoint_y[200];
+  float cosmicmuon_InnerTrack_OuterPoint_z[200];
+  float cosmicmuon_InnerTrack_OuterPoint_px[200];
+  float cosmicmuon_InnerTrack_OuterPoint_py[200];
+  float cosmicmuon_InnerTrack_OuterPoint_pz[200];
+ 
+  //FOR AOD only
+  float cosmicmuon_OuterPoint_x[200];
+  float cosmicmuon_OuterPoint_y[200];
+  float cosmicmuon_OuterPoint_z[200];
+
+
+ 
   //tau variables
-  float tau_pt[100];
-  float tau_px[100];
-  float tau_py[100];
-  float tau_pz[100];
-  float tau_vx[100];
-  float tau_vy[100];
-  float tau_vz[100];
-  float tau_energy[100];
-  float tau_charge[100];
-  float tau_eta[100];
-  float tau_phi[100];
+  float tau_pt[200];
+  float tau_px[200];
+  float tau_py[200];
+  float tau_pz[200];
+  float tau_vx[200];
+  float tau_vy[200];
+  float tau_vz[200];
+  float tau_energy[200];
+  float tau_charge[200];
+  float tau_eta[200];
+  float tau_phi[200];
   
   //gen level variables
   float gen_pho_pt[1000];
@@ -436,111 +446,111 @@ class Analyzer : public edm::EDAnalyzer {
   int gen_tauDaughter_status[3];
   int gen_tauDaughter_ID[3];
   
-  float pho_E[100];
-  float pho_pt[100];
-  float pho_eta[100];
-  float pho_phi[100];
-  float pho_px[100];
-  float pho_py[100];
-  float pho_pz[100];
-  float pho_vx[100];
-  float pho_vy[100];
-  float pho_vz[100];
-  float pho_r9[100];
-  bool  pho_isEB[100];
-  bool  pho_isEE[100];
-  bool  pho_isEBGap[100];
-  bool  pho_isEEGap[100];
-  bool  pho_isEBEEGap[100];
-  float pho_e1x5[100];
-  float pho_e2x5[100];
-  float pho_e3x3[100];
-  float pho_e5x5[100];
-  float pho_r1x5[100];
-  float pho_r2x5[100];
-  float pho_SigmaEtaEta[100];
-  float pho_SigmaIetaIeta[100];
-  float pho_SigmaEtaPhi[100];
-  float pho_SigmaIetaIphi[100];
-  float pho_SigmaPhiPhi[100];
-  float pho_SigmaIphiIphi[100];
-  float pho_roundness[100];
-  float pho_angle[100];
-  float pho_maxEnergyXtal[100];
-  float pho_theta[100];
-  float pho_et[100];
-  float pho_swissCross[100];
-  bool  pho_isConverted[100];
-  bool  pho_hasConvTrk[100]; 
+  float pho_E[200];
+  float pho_pt[200];
+  float pho_eta[200];
+  float pho_phi[200];
+  float pho_px[200];
+  float pho_py[200];
+  float pho_pz[200];
+  float pho_vx[200];
+  float pho_vy[200];
+  float pho_vz[200];
+  float pho_r9[200];
+  bool  pho_isEB[200];
+  bool  pho_isEE[200];
+  bool  pho_isEBGap[200];
+  bool  pho_isEEGap[200];
+  bool  pho_isEBEEGap[200];
+  float pho_e1x5[200];
+  float pho_e2x5[200];
+  float pho_e3x3[200];
+  float pho_e5x5[200];
+  float pho_r1x5[200];
+  float pho_r2x5[200];
+  float pho_SigmaEtaEta[200];
+  float pho_SigmaIetaIeta[200];
+  float pho_SigmaEtaPhi[200];
+  float pho_SigmaIetaIphi[200];
+  float pho_SigmaPhiPhi[200];
+  float pho_SigmaIphiIphi[200];
+  float pho_roundness[200];
+  float pho_angle[200];
+  float pho_maxEnergyXtal[200];
+  float pho_theta[200];
+  float pho_et[200];
+  float pho_swissCross[200];
+  bool  pho_isConverted[200];
+  bool  pho_hasConvTrk[200]; 
  
   //isolation variables
-  float pho_ecalRecHitSumEtConeDR03[100];
-  float pho_hcalTowerSumEtConeDR03[100];
-  float pho_hcalDepth1TowerSumEtConeDR03[100];
-  float pho_hcalDepth2TowerSumEtConeDR03[100];
-  float pho_trkSumPtSolidConeDR03[100];
-  float pho_trkSumPtHollowConeDR03[100];
-  int   pho_nTrkSolidConeDR03[100];
-  int   pho_nTrkHollowConeDR03[100];
-  float pho_ecalRecHitSumEtConeDR04[100];
-  float pho_hcalTowerSumEtConeDR04[100];
-  float pho_hcalDepth1TowerSumEtConeDR04[100];
-  float pho_hcalDepth2TowerSumEtConeDR04[100];
-  float pho_trkSumPtSolidConeDR04[100];
-  float pho_trkSumPtHollowConeDR04[100];
-  int   pho_nTrkSolidConeDR04[100];
-  int   pho_nTrkHollowConeDR04[100];
-  float pho_HoE[100];
-  bool  pho_hasPixelSeed[100];   
+  float pho_ecalRecHitSumEtConeDR03[200];
+  float pho_hcalTowerSumEtConeDR03[200];
+  float pho_hcalDepth1TowerSumEtConeDR03[200];
+  float pho_hcalDepth2TowerSumEtConeDR03[200];
+  float pho_trkSumPtSolidConeDR03[200];
+  float pho_trkSumPtHollowConeDR03[200];
+  int   pho_nTrkSolidConeDR03[200];
+  int   pho_nTrkHollowConeDR03[200];
+  float pho_ecalRecHitSumEtConeDR04[200];
+  float pho_hcalTowerSumEtConeDR04[200];
+  float pho_hcalDepth1TowerSumEtConeDR04[200];
+  float pho_hcalDepth2TowerSumEtConeDR04[200];
+  float pho_trkSumPtSolidConeDR04[200];
+  float pho_trkSumPtHollowConeDR04[200];
+  int   pho_nTrkSolidConeDR04[200];
+  int   pho_nTrkHollowConeDR04[200];
+  float pho_HoE[200];
+  bool  pho_hasPixelSeed[200];   
   
   //SC variables
-  float pho_sc_energy[100];
-  int   pho_size[100];
-  float pho_sc_eta[100];
-  float pho_sc_phi[100];
-  float pho_sc_etaWidth[100];
-  float pho_sc_phiWidth[100];
-  float pho_sc_et[100];
-  float pho_sc_x[100];
-  float pho_sc_y[100];
-  float pho_sc_z[100];
+  float pho_sc_energy[200];
+  int   pho_size[200];
+  float pho_sc_eta[200];
+  float pho_sc_phi[200];
+  float pho_sc_etaWidth[200];
+  float pho_sc_phiWidth[200];
+  float pho_sc_et[200];
+  float pho_sc_x[200];
+  float pho_sc_y[200];
+  float pho_sc_z[200];
   //gen matched photon 
-  float matchpho_E[100];
-  float matchpho_pt[100];
-  float matchpho_eta[100];
-  float matchpho_phi[100];
-  float matchpho_px[100];
-  float matchpho_py[100];
-  float matchpho_pz[100];
-  bool  ismatchedpho[100];
+  float matchpho_E[200];
+  float matchpho_pt[200];
+  float matchpho_eta[200];
+  float matchpho_phi[200];
+  float matchpho_px[200];
+  float matchpho_py[200];
+  float matchpho_pz[200];
+  bool  ismatchedpho[200];
   
   //converted photon variabes
-  unsigned int pho_nTracks[100];
-  float pho_pairInvariantMass[100];
-  float pho_pairCotThetaSeparation[100];
-  float pho_pairMomentum_x[100];
-  float pho_pairMomentum_y[100];
-  float pho_pairMomentum_z[100];
-  float pho_EoverP[100];
-  float pho_conv_vx[100];
-  float pho_conv_vy[100];
-  float pho_conv_vz[100];
-  float pho_zOfPrimaryVertex[100];
-  float pho_distOfMinimumApproach[100];
-  float pho_dPhiTracksAtVtx[100];      
-  float pho_dPhiTracksAtEcal[100];     
-  float pho_dEtaTracksAtEcal[100];     
+  unsigned int pho_nTracks[200];
+  float pho_pairInvariantMass[200];
+  float pho_pairCotThetaSeparation[200];
+  float pho_pairMomentum_x[200];
+  float pho_pairMomentum_y[200];
+  float pho_pairMomentum_z[200];
+  float pho_EoverP[200];
+  float pho_conv_vx[200];
+  float pho_conv_vy[200];
+  float pho_conv_vz[200];
+  float pho_zOfPrimaryVertex[200];
+  float pho_distOfMinimumApproach[200];
+  float pho_dPhiTracksAtVtx[200];      
+  float pho_dPhiTracksAtEcal[200];     
+  float pho_dEtaTracksAtEcal[200];     
   
   //rechit information
-  int ncrysPhoton[100];
-  float pho_timing_xtal[100][100];
-  float pho_timingavg_xtal[100];
-  float pho_energy_xtal[100][100];
-  int   pho_ieta_xtalEB[100][100];
-  int   pho_iphi_xtalEB[100][100];
-  float pho_rookFraction[100];
-  float pho_s9[100];
-  float pho_e2e9[100];
+  int ncrysPhoton[200];
+  float pho_timing_xtal[200][100];
+  float pho_timingavg_xtal[200];
+  float pho_energy_xtal[200][100];
+  int   pho_ieta_xtalEB[200][100];
+  int   pho_iphi_xtalEB[200][100];
+  float pho_rookFraction[200];
+  float pho_s9[200];
+  float pho_e2e9[200];
   
   //HErechit information
   unsigned int HERecHit_subset_detid[10000];
@@ -641,27 +651,27 @@ class Analyzer : public edm::EDAnalyzer {
   //EBrecHit variables;
 
   int EBRecHit_size;
-  float EBRecHit_eta[30000];
-  float EBRecHit_phi[30000];
-  int EBRecHit_ieta[30000];
-  int EBRecHit_iphi[30000];
-  float EBRecHit_e[30000];
-  float EBRecHit_et[30000];
-  int EBRecHit_flag[30000];
-  float EBRecHit_time[30000];
+  float EBRecHit_eta[10000];
+  float EBRecHit_phi[10000];
+  int EBRecHit_ieta[10000];
+  int EBRecHit_iphi[10000];
+  float EBRecHit_e[10000];
+  float EBRecHit_et[10000];
+  int EBRecHit_flag[10000];
+  float EBRecHit_time[10000];
 
   
 
   //EErecHit variables;
   int EERecHit_size;
-  float EERecHit_eta[30000];
-  float EERecHit_phi[30000];
-  int EERecHit_ieta[30000];
-  int EERecHit_iphi[30000];
-  float EERecHit_e[30000];
-  float EERecHit_et[30000];
-  int EERecHit_flag[30000];
-  float EERecHit_time[30000];
+  float EERecHit_eta[10000];
+  float EERecHit_phi[10000];
+  int EERecHit_ieta[10000];
+  int EERecHit_iphi[10000];
+  float EERecHit_e[10000];
+  float EERecHit_et[10000];
+  int EERecHit_flag[10000];
+  float EERecHit_time[10000];
 
  //pileup info
  int npuVertices;

@@ -13,7 +13,7 @@
 //
 // Original Author:  Sandhya Jain
 //         Created:  Fri Apr 17 11:00:06 CEST 2009
-// $Id: Analyzer.cc,v 1.44 2011/05/01 22:20:24 schauhan Exp $
+// $Id: Analyzer.cc,v 1.45 2011/05/02 14:47:16 schauhan Exp $
 //
 //
 
@@ -189,8 +189,8 @@ Analyzer::Analyzer(const edm::ParameterSet& iConfig):
   hcalrechitLabel_(iConfig.getUntrackedParameter<edm::InputTag>("hcalrechitTag")),
   hlTriggerResults_(iConfig.getUntrackedParameter<edm::InputTag>("HLTriggerResults")),
   Tracks_(iConfig.getUntrackedParameter<edm::InputTag>("Tracks")),
-  Vertices_(iConfig.getUntrackedParameter<edm::InputTag>("Vertices")),
   BeamHaloSummaryLabel_(iConfig.getUntrackedParameter<edm::InputTag>("BeamHaloSummary")),
+  Vertices_(iConfig.getUntrackedParameter<edm::InputTag>("Vertices")),
   pileupLabel_(iConfig.getUntrackedParameter<edm::InputTag>("pileup")), 
   outFile_(iConfig.getUntrackedParameter<string>("outFile")),
   rungenParticleCandidates_(iConfig.getUntrackedParameter<bool>("rungenParticleCandidates")),
@@ -273,6 +273,9 @@ Analyzer::beginRun(const edm::Run& iRun, const edm::EventSetup& iSetup){
     cout<<"----------------------------------------------------------------------------------------------------------------"<<endl;
     cout<<"BEGIN NEW RUN: "<<iRun.run()<<endl;
   }
+
+   MaxN=200;
+
   bool changed(true);
   if(hltConfig_.init(iRun,iSetup,"HLT",changed)){  // HLTlabel_ is grabbed from the cfg file
     // if init returns TRUE, initialisation has succeeded!
@@ -819,7 +822,7 @@ void Analyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup){
        my_vertices.push_back(*v);
      }
      Vertex_n = 0;  
-     for (unsigned int y = 0; y <  my_vertices.size();y++){
+     for (unsigned int y = 0; y < min(my_vertices.size(),MaxN);y++){
        vx[y]     = my_vertices[y].x();
        vy[y]     = my_vertices[y].y();
        vz[y]     = my_vertices[y].z();
@@ -867,7 +870,7 @@ void Analyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup){
      std::vector<reco::Track>  myTrack_container;
      myTrack_container.clear();
      for(reco::TrackCollection::const_iterator Track_iter = tracks->begin();
-	 Track_iter != tracks->end();++Track_iter) {
+	 Track_iter != tracks->end(); ++Track_iter) {
        if(Track_iter->pt()>5.){
 	 myTrack_container.push_back(*Track_iter);
        }
@@ -877,7 +880,7 @@ void Analyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup){
      if(myTrack_container.size()>1)
        std::sort(myTrack_container.begin(),myTrack_container.end(),PtSortCriterium3());
      Track_n = 0;
-     for(unsigned int x=0;x < myTrack_container.size();x++){
+     for(unsigned int x=0;x < min(myTrack_container.size(),MaxN); x++){
        trk_pt[x]  = myTrack_container[x].pt();
        trk_px[x]  = myTrack_container[x].px();
        trk_py[x]  = myTrack_container[x].py();
@@ -902,7 +905,7 @@ void Analyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup){
        mymuon_container.push_back(*muon);
      }
      Muon_n = 0;
-     for(unsigned int x=0;x < mymuon_container.size();x++){
+     for(unsigned int x=0;x < min(mymuon_container.size(),MaxN); x++){
        muon_pt[x]  = mymuon_container[x].pt();
        muon_energy[x]  = mymuon_container[x].energy();
        muon_px[x]  = mymuon_container[x].px();
@@ -991,11 +994,12 @@ if(!isAOD_){
      vector <reco::Muon> mycosmicmuon_container;
      
      for(reco::MuonCollection::const_iterator cosmuon = cosmicmuons.begin(); cosmuon!=cosmicmuons.end(); ++cosmuon){
-       //if(muon->isGlobalMuon())
        mycosmicmuon_container.push_back(*cosmuon);
      }
+
      CosmicMuon_n = 0;
-     for(unsigned int x=0;x < mycosmicmuon_container.size();x++){
+     for(unsigned int x=0;x < min(mycosmicmuon_container.size(),MaxN);x++){
+ 
        cosmicmuon_pt[x]  = mycosmicmuon_container[x].pt();
        cosmicmuon_energy[x]  = mycosmicmuon_container[x].energy();
        cosmicmuon_px[x]  = mycosmicmuon_container[x].px();
@@ -1034,6 +1038,23 @@ if(!isAOD_){
        cosmicmuon_InnerTrack_OuterPoint_px[x] = 0.;
        cosmicmuon_InnerTrack_OuterPoint_py[x] = 0.;
        cosmicmuon_InnerTrack_OuterPoint_pz[x] = 0.;
+
+
+   if(isAOD_){
+    reco::TrackRef cmoTrkref = mycosmicmuon_container[x].outerTrack();
+
+    cosmicmuon_OuterPoint_x[x]=0.0;
+    cosmicmuon_OuterPoint_y[x]=0.0;
+    cosmicmuon_OuterPoint_z[x]=0.0;
+    // standalone muon variables
+    cosmicmuon_OuterPoint_x[x]= cmoTrkref->referencePoint().x();
+    cosmicmuon_OuterPoint_y[x]= cmoTrkref->referencePoint().y();
+    cosmicmuon_OuterPoint_z[x]= cmoTrkref->referencePoint().z();
+    //cout<<"x ="<<cmoTrkref->referencePoint().x()<<endl;
+    //cout<<"y ="<<cmoTrkref->referencePoint().y()<<endl;
+    //cout<<"z ="<<cmoTrkref->referencePoint().z()<<endl;
+
+   }//if(AOD_)
       
   if(!isAOD_){ 
        cosmicmuon_InnerTrack_isNonnull[x] =   mycosmicmuon_container[x].innerTrack().isNonnull();
@@ -1070,7 +1091,7 @@ if(!isAOD_){
   }//if(!isAOD_)
        CosmicMuon_n++;
      }//end of for loop
-   }//if runcosmicmuons_
+  }//if runcosmicmuons_
     
    // declare outside of runphotons_ so that we can use this container inside other "bools_"
    std::vector<pat::Photon> myphoton_container;
@@ -1088,7 +1109,7 @@ if(!isAOD_){
      }
      Photon_n = 0;
      if(myphoton_container.size()!=0){
-       for(unsigned int x=0; x < myphoton_container.size();x++){
+       for(unsigned int x=0; x < min(myphoton_container.size(), MaxN);x++){
 	 pho_E[x]                     =  myphoton_container[x].energy();
 	 pho_pt[x]                    =  myphoton_container[x].pt();
 	 pho_px[x]                    =  myphoton_container[x].px();
@@ -1330,7 +1351,7 @@ if(!isAOD_){
 	     pho_ieta_xtalEB[x][y]           = -99;
 	     pho_iphi_xtalEB[x][y]           = -99;
 	   }//end of for (unsigned int y =0; y < crystalinfo_container.size();y++)
-	   for (unsigned int y =0; y < crystalinfo_container.size();y++){
+	   for (unsigned int y =0; y < crystalinfo_container.size() && y < 100;y++){ 
 	     pho_timing_xtal[x][y]         = crystalinfo_container[y].time;
 	     pho_energy_xtal[x][y]         = crystalinfo_container[y].energy;
 	     pho_ieta_xtalEB[x][y]           = crystalinfo_container[y].ieta;
@@ -1422,10 +1443,11 @@ if(!isAOD_){
      for (EcalRecHitCollection::const_iterator it = barrelRecHits->begin();it!=barrelRecHits->end();++it){
        EBDetId dit = it->detid();
 
+       if(EBRecHit_n>=10000)continue; 
+
        const CaloCellGeometry *this_cell = caloGeom->getGeometry(it->id());
        GlobalPoint position = this_cell->getPosition();
-
-       float ET = it->energy() * sin(position.theta()); 
+       float ET = (it->energy()*sin(position.theta())); 
        EBRecHit_eta[EBRecHit_n] = position.eta();
        EBRecHit_phi[EBRecHit_n] = position.phi();
        EBRecHit_ieta[EBRecHit_n] = dit.ieta();
@@ -1440,10 +1462,12 @@ if(!isAOD_){
      for (EcalRecHitCollection::const_iterator it = endcapRecHits->begin();it!=endcapRecHits->end();++it){
        EEDetId dit = it->detid();
 
+       if(EERecHit_n>=10000)continue;
+
        const CaloCellGeometry *this_cell = caloGeom->getGeometry(it->id());
        GlobalPoint position = this_cell->getPosition();
 
-       float ET = it->energy() * sin(position.theta()); 
+       float ET = (it->energy()*sin(position.theta())); 
        EERecHit_eta[EERecHit_n] = position.eta();
        EERecHit_phi[EERecHit_n] = position.phi();
        EERecHit_ieta[EERecHit_n] = dit.ix();
@@ -1454,7 +1478,7 @@ if(!isAOD_){
        EERecHit_time[EERecHit_n] = it->time();
        EERecHit_size = EERecHit_n;
        EERecHit_n++;  }
-      }//if(runforMIP_)    
+      }//if(runrechit_)    
  
      }//if(runrechit_)
      
@@ -1542,22 +1566,22 @@ if(!isAOD_){
   if(TheBeamHaloSummary.isValid()) {
    const BeamHaloSummary TheSummary = (*TheBeamHaloSummary.product() );
      
-        isBeamHaloEcalLoosePass   = TheSummary.EcalLooseHaloId();
-        isBeamHaloHcalLoosePass   = TheSummary.HcalLooseHaloId();
+        if(TheSummary.EcalLooseHaloId())isBeamHaloEcalLoosePass   = true;
+        if(TheSummary.HcalLooseHaloId())isBeamHaloHcalLoosePass   = true;
      
-        isBeamHaloEcalTightPass   = TheSummary.EcalTightHaloId();
-        isBeamHaloHcalTightPass   = TheSummary.HcalTightHaloId();
+        if(TheSummary.EcalTightHaloId())isBeamHaloEcalTightPass   = true;
+        if(TheSummary.HcalTightHaloId())isBeamHaloHcalTightPass   = true;
      
-        isBeamHaloCSCLoosePass    = TheSummary.CSCLooseHaloId();
-        isBeamHaloCSCTightPass    = TheSummary.CSCTightHaloId();
+        if(TheSummary.CSCLooseHaloId())isBeamHaloCSCLoosePass    = true;
+        if(TheSummary.CSCTightHaloId())isBeamHaloCSCTightPass    = true;
      
-        isBeamHaloGlobalLoosePass = TheSummary.GlobalLooseHaloId();
-        isBeamHaloGlobalTightPass = TheSummary.GlobalTightHaloId();
+        if(TheSummary.GlobalLooseHaloId())isBeamHaloGlobalLoosePass = true;
+        if(TheSummary.GlobalTightHaloId())isBeamHaloGlobalTightPass = true;
     
-        isSmellsLikeHalo_Tag = TheSummary.EventSmellsLikeHalo();
-        isLooseHalo_Tag = TheSummary.LooseId();
-        isTightHalo_Tag = TheSummary.TightId();
-        isExtremeTightHalo_Tag = TheSummary.ExtremeTightId();
+        if(TheSummary.EventSmellsLikeHalo())isSmellsLikeHalo_Tag = true;
+        if(TheSummary.LooseId())isLooseHalo_Tag = true;
+        if(TheSummary.TightId())isTightHalo_Tag = true;
+        if(TheSummary.ExtremeTightId())isExtremeTightHalo_Tag = true;
    
   
    if( TheSummary.EcalLooseHaloId()  && TheSummary.HcalLooseHaloId() &&
@@ -1814,7 +1838,7 @@ if(!isAOD_){
      Jet_n = 0;  
     //  std::cout<<"Jet Container Size = "<<myjet_container.size()<<std::endl;
      if(myjet_container.size()!=0){
-       for(unsigned int x=0;x < myjet_container.size();x++){
+       for(unsigned int x=0;x < min(myjet_container.size(),MaxN);x++){
      //    if(x==0)std::cout<<"jet pt ="<<myjet_container[x].pt()<<std::endl;
 	 jet_pt[x]  = myjet_container[x].pt();
 	 jet_px[x]  = myjet_container[x].px();
@@ -1870,9 +1894,8 @@ if(!isAOD_){
 
      pfJet_n = 0;  
      //std::cout<<" PF Jet Container size "<<mypfjet_container.size()<<std::endl;
-     if(mypfjet_container.size()!=0){
-       for(unsigned int x=0;x < mypfjet_container.size();x++){
-       //  if(x==0)std::cout<<"pfjet pt =--"<<mypfjet_container[x].pt()<<std::endl;
+     if(mypfjet_container.size()!=0){ 
+       for(unsigned int x=0;x < min(mypfjet_container.size(), MaxN); x++){
          pfjet_pt[x]  = mypfjet_container[x].pt();
          pfjet_px[x]  = mypfjet_container[x].px();
          pfjet_py[x]  = mypfjet_container[x].py();
@@ -1914,7 +1937,7 @@ if(!isAOD_){
        myelectron_container.push_back(*electron);
      }
      Electron_n = 0;
-     for(unsigned int x=0;x < myelectron_container.size();x++){
+     for(unsigned int x=0;x < min(myelectron_container.size(),MaxN);x++){
        electron_pt[x]       = myelectron_container[x].pt();
        electron_energy[x]   = myelectron_container[x].energy();
        electron_px[x]       = myelectron_container[x].px();
@@ -1950,7 +1973,7 @@ if(!isAOD_){
        mytau_container.push_back(*tau);
      }
      Tau_n = 0;
-     for(unsigned int x=0;x < mytau_container.size();x++){
+     for(unsigned int x=0;x < min(mytau_container.size(), MaxN);x++){
        tau_pt[x]  = mytau_container[x].pt();
        tau_energy[x]  = mytau_container[x].energy();
        tau_px[x]  = mytau_container[x].px();
@@ -2196,7 +2219,12 @@ void Analyzer::beginJob(){
     myEvent->Branch("CosmicMuon_InnerTrack_OuterPoint_px",cosmicmuon_InnerTrack_OuterPoint_px,"cosmicmuon_InnerTrack_OuterPoint_px[CosmicMuon_n]/F");
     myEvent->Branch("CosmicMuon_InnerTrack_OuterPoint_py",cosmicmuon_InnerTrack_OuterPoint_py,"cosmicmuon_InnerTrack_OuterPoint_py[CosmicMuon_n]/F");
     myEvent->Branch("CosmicMuon_InnerTrack_OuterPoint_pz",cosmicmuon_InnerTrack_OuterPoint_pz,"cosmicmuon_InnerTrack_OuterPoint_pz[CosmicMuon_n]/F");
-    
+   
+  if(isAOD_){
+    myEvent->Branch("CosmicMuon_OuterPoint_x",cosmicmuon_OuterPoint_x,"cosmicmuon_OuterPoint_x[CosmicMuon_n]/F");
+    myEvent->Branch("CosmicMuon_OuterPoint_y",cosmicmuon_OuterPoint_y,"cosmicmuon_OuterPoint_y[CosmicMuon_n]/F");
+    myEvent->Branch("CosmicMuon_OuterPoint_z",cosmicmuon_OuterPoint_z,"cosmicmuon_OuterPoint_z[CosmicMuon_n]/F");
+    }//AOD_
   }
   
   if (runtaus_){
