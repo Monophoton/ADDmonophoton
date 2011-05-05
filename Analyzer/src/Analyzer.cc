@@ -13,7 +13,7 @@
 //
 // Original Author:  Sandhya Jain
 //         Created:  Fri Apr 17 11:00:06 CEST 2009
-// $Id: Analyzer.cc,v 1.46 2011/05/04 07:41:52 schauhan Exp $
+// $Id: Analyzer.cc,v 1.47 2011/05/04 13:44:34 schauhan Exp $
 //
 //
 
@@ -74,6 +74,7 @@
 #include "DataFormats/EcalRecHit/interface/EcalRecHitCollections.h"
 #include "RecoLocalCalo/EcalRecAlgos/interface/EcalSeverityLevelAlgo.h"
 #include "RecoEcal/EgammaCoreTools/interface/EcalClusterLazyTools.h"
+//#include "RecoEcal/EgammaCoreTools/interface/EcalTools.h"
 #include <DataFormats/CSCRecHit/interface/CSCSegmentCollection.h>
 #include "DataFormats/GeometryVector/interface/GlobalPoint.h"
 #include "DataFormats/GeometryVector/interface/GlobalVector.h"
@@ -177,6 +178,7 @@ Analyzer::Analyzer(const edm::ParameterSet& iConfig):
   cosMuoLabel_(iConfig.getUntrackedParameter<edm::InputTag>("cosMuonTag")),
   jetLabel_(iConfig.getUntrackedParameter<edm::InputTag>("jetTag")),
   pfjetLabel_(iConfig.getUntrackedParameter<edm::InputTag>("pfjetTag")),
+  genjetLabel_(iConfig.getUntrackedParameter<edm::InputTag>("genjetTag")),
   tauLabel_(iConfig.getUntrackedParameter<edm::InputTag>("tauTag")),
   metLabel_(iConfig.getUntrackedParameter<edm::InputTag>("metTag")),
   PFmetLabel_(iConfig.getUntrackedParameter<edm::InputTag>("PFmetTag")),
@@ -204,6 +206,7 @@ Analyzer::Analyzer(const edm::ParameterSet& iConfig):
   runcosmicmuons_(iConfig.getUntrackedParameter<bool>("runcosmicmuons")),
   runjets_(iConfig.getUntrackedParameter<bool>("runjets")),
   runpfjets_(iConfig.getUntrackedParameter<bool>("runpfjets")),
+  rungenjets_(iConfig.getUntrackedParameter<bool>("rungenjets")),
   runtaus_(iConfig.getUntrackedParameter<bool>("runtaus")),
   runHLT_(iConfig.getUntrackedParameter<bool>("runHLT")),
   runL1_(iConfig.getUntrackedParameter<bool>("runL1")),
@@ -249,8 +252,9 @@ Analyzer::Analyzer(const edm::ParameterSet& iConfig):
   EERecHit_size    = 0;  
   Electron_n       = 0; 
   Muon_n           = 0;
-  CosmicMuon_n	 = 0;
+  CosmicMuon_n	   = 0;
   Tau_n            = 0;
+  genJet_n         = 0;
 }
 
 
@@ -948,6 +952,39 @@ void Analyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup){
        muon_InnerTrack_OuterPoint_py[x] = 0.;
        muon_InnerTrack_OuterPoint_pz[x] = 0.;
 
+   if(isAOD_){
+   //FIXME: Seems needed  top and bottom referene point, but not sure how to do that !!!
+      reco::TrackRef moTrkref;
+     if((muon_isGlobalMuon[x]) || (muon_isTrackerMuon[x])){
+        moTrkref = mymuon_container[x].innerTrack();
+        muon_InnerTrack_isNonnull[x] = mymuon_container[x].innerTrack().isNonnull();
+        }
+        else{   
+            moTrkref = mymuon_container[x].outerTrack();
+            muon_OuterTrack_isNonnull[x] =   mymuon_container[x].outerTrack().isNonnull();
+         }
+    //For StandAlone
+    muon_OuterPoint_x[x]=0.0;
+    muon_OuterPoint_y[x]=0.0;
+    muon_OuterPoint_z[x]=0.0;
+    //For Global,Tracker
+    muon_InnerPoint_x[x]=0.0;
+    muon_InnerPoint_y[x]=0.0;
+    muon_InnerPoint_z[x]=0.0;
+
+  if((muon_OuterTrack_isNonnull[x])){//stand-alone
+    muon_OuterPoint_x[x]= moTrkref->referencePoint().x();
+    muon_OuterPoint_y[x]= moTrkref->referencePoint().y();
+    muon_OuterPoint_z[x]= moTrkref->referencePoint().z();
+    }
+   if(muon_InnerTrack_isNonnull[x]){//global,tracker
+    muon_InnerPoint_x[x]= moTrkref->referencePoint().x();
+    muon_InnerPoint_y[x]= moTrkref->referencePoint().y();
+    muon_InnerPoint_z[x]= moTrkref->referencePoint().z();
+    }
+   }//if(AOD_)
+     
+
 if(!isAOD_){
        muon_InnerTrack_isNonnull[x] =   mymuon_container[x].innerTrack().isNonnull();
        muon_OuterTrack_isNonnull[x] =   mymuon_container[x].outerTrack().isNonnull();
@@ -960,7 +997,7 @@ if(!isAOD_){
 	 muon_InnerTrack_InnerPoint_px[x] = mymuon_container[x].innerTrack()->innerMomentum().x();
 	 muon_InnerTrack_InnerPoint_py[x] = mymuon_container[x].innerTrack()->innerMomentum().y();
 	 muon_InnerTrack_InnerPoint_pz[x] = mymuon_container[x].innerTrack()->innerMomentum().z();
-	 muon_InnerTrack_OuterPoint_x[x] = mymuon_container[x].innerTrack()->innerPosition().x();
+	 muon_InnerTrack_OuterPoint_x[x] = mymuon_container[x].innerTrack()->outerPosition().x();
 	 muon_InnerTrack_OuterPoint_y[x] = mymuon_container[x].innerTrack()->outerPosition().y();
 	 muon_InnerTrack_OuterPoint_z[x] = mymuon_container[x].innerTrack()->outerPosition().z();
 	 muon_InnerTrack_OuterPoint_px[x] = mymuon_container[x].innerTrack()->outerMomentum().x();
@@ -974,7 +1011,7 @@ if(!isAOD_){
 	 muon_OuterTrack_InnerPoint_px[x] = mymuon_container[x].outerTrack()->innerMomentum().x();
 	 muon_OuterTrack_InnerPoint_py[x] = mymuon_container[x].outerTrack()->innerMomentum().y();
 	 muon_OuterTrack_InnerPoint_pz[x] = mymuon_container[x].outerTrack()->innerMomentum().z();
-	 muon_OuterTrack_OuterPoint_x[x] = mymuon_container[x].outerTrack()->innerPosition().x();
+	 muon_OuterTrack_OuterPoint_x[x] = mymuon_container[x].outerTrack()->outerPosition().x();
 	 muon_OuterTrack_OuterPoint_y[x] = mymuon_container[x].outerTrack()->outerPosition().y();
 	 muon_OuterTrack_OuterPoint_z[x] = mymuon_container[x].outerTrack()->outerPosition().z();
 	 muon_OuterTrack_OuterPoint_px[x] = mymuon_container[x].outerTrack()->outerMomentum().x();
@@ -1042,18 +1079,16 @@ if(!isAOD_){
 
    if(isAOD_){
     reco::TrackRef cmoTrkref = mycosmicmuon_container[x].outerTrack();
-
+    cosmicmuon_OuterTrack_isNonnull[x] = mycosmicmuon_container[x].outerTrack().isNonnull();    
+ 
     cosmicmuon_OuterPoint_x[x]=0.0;
     cosmicmuon_OuterPoint_y[x]=0.0;
     cosmicmuon_OuterPoint_z[x]=0.0;
     // standalone muon variables
+    if(cosmicmuon_OuterTrack_isNonnull[x]){
     cosmicmuon_OuterPoint_x[x]= cmoTrkref->referencePoint().x();
     cosmicmuon_OuterPoint_y[x]= cmoTrkref->referencePoint().y();
-    cosmicmuon_OuterPoint_z[x]= cmoTrkref->referencePoint().z();
-    //cout<<"x ="<<cmoTrkref->referencePoint().x()<<endl;
-    //cout<<"y ="<<cmoTrkref->referencePoint().y()<<endl;
-    //cout<<"z ="<<cmoTrkref->referencePoint().z()<<endl;
-
+    cosmicmuon_OuterPoint_z[x]= cmoTrkref->referencePoint().z();}
    }//if(AOD_)
       
   if(!isAOD_){ 
@@ -1067,7 +1102,7 @@ if(!isAOD_){
 	 cosmicmuon_InnerTrack_InnerPoint_px[x] = mycosmicmuon_container[x].innerTrack()->innerMomentum().x();
 	 cosmicmuon_InnerTrack_InnerPoint_py[x] = mycosmicmuon_container[x].innerTrack()->innerMomentum().y();
 	 cosmicmuon_InnerTrack_InnerPoint_pz[x] = mycosmicmuon_container[x].innerTrack()->innerMomentum().z();
-	 cosmicmuon_InnerTrack_OuterPoint_x[x] = mycosmicmuon_container[x].innerTrack()->innerPosition().x();
+	 cosmicmuon_InnerTrack_OuterPoint_x[x] = mycosmicmuon_container[x].innerTrack()->outerPosition().x();
 	 cosmicmuon_InnerTrack_OuterPoint_y[x] = mycosmicmuon_container[x].innerTrack()->outerPosition().y();
 	 cosmicmuon_InnerTrack_OuterPoint_z[x] = mycosmicmuon_container[x].innerTrack()->outerPosition().z();
 	 cosmicmuon_InnerTrack_OuterPoint_px[x] = mycosmicmuon_container[x].innerTrack()->outerMomentum().x();
@@ -1081,7 +1116,7 @@ if(!isAOD_){
 	 cosmicmuon_OuterTrack_InnerPoint_px[x] = mycosmicmuon_container[x].outerTrack()->innerMomentum().x();
 	 cosmicmuon_OuterTrack_InnerPoint_py[x] = mycosmicmuon_container[x].outerTrack()->innerMomentum().y();
 	 cosmicmuon_OuterTrack_InnerPoint_pz[x] = mycosmicmuon_container[x].outerTrack()->innerMomentum().z();
-	 cosmicmuon_OuterTrack_OuterPoint_x[x] = mycosmicmuon_container[x].outerTrack()->innerPosition().x();
+	 cosmicmuon_OuterTrack_OuterPoint_x[x] = mycosmicmuon_container[x].outerTrack()->outerPosition().x();
 	 cosmicmuon_OuterTrack_OuterPoint_y[x] = mycosmicmuon_container[x].outerTrack()->outerPosition().y();
 	 cosmicmuon_OuterTrack_OuterPoint_z[x] = mycosmicmuon_container[x].outerTrack()->outerPosition().z();
 	 cosmicmuon_OuterTrack_OuterPoint_px[x] = mycosmicmuon_container[x].outerTrack()->outerMomentum().x();
@@ -1815,7 +1850,7 @@ if(!isAOD_){
    }//end of if(runTCmet_)
 
 
-       edm::ESHandle<JetCorrectorParametersCollection> JetCorParColl;
+    edm::ESHandle<JetCorrectorParametersCollection> JetCorParColl;
 
    if(runjets_){
      //this for jec uncert 
@@ -1954,6 +1989,37 @@ if(!isAOD_){
      }
    }
 
+//--------------
+
+if(rungenjets_){
+
+         Handle<GenJetCollection>  GenJetHandle;
+         iEvent.getByLabel(genjetLabel_,GenJetHandle);
+         reco::GenJetCollection::const_iterator genjet_itr;
+
+         std::vector<reco::GenJet> genJet_container;
+         genJet_container.clear();
+
+      for(reco::GenJetCollection::const_iterator genjet_itr =GenJetHandle->begin();genjet_itr !=GenJetHandle->end();++genjet_itr){
+          genJet_container.push_back(*genjet_itr);
+          }
+
+        genJet_n=0; 
+        for(unsigned int y=0; y<min(genJet_container.size(),MaxN); y++)
+         {
+           genjet_pt[y]  =genJet_container[y].pt();
+           genjet_E[y]   =genJet_container[y].energy();
+           genjet_eta[y] =genJet_container[y].eta();
+           genjet_phi[y] =genJet_container[y].phi();
+           genjet_px[y]  =genJet_container[y].px();
+           genjet_py[y]  =genJet_container[y].py();
+           genjet_pz[y]  =genJet_container[y].pz();
+           genJet_n++;
+         }//for(y=0....)
+
+
+}//if(rungenJet_)
+//-------------
 
    if(runelectrons_){
      edm::Handle<edm::View<pat::Electron> > electronHandle;
@@ -2150,6 +2216,21 @@ void Analyzer::beginJob(){
 }
 
 
+
+
+  if(rungenjets_){
+    myEvent->Branch("genJet_n",&genJet_n,"genJet_n/I");
+    myEvent->Branch("genJet_px",genjet_px,"genjet_px[genJet_n]/F");
+    myEvent->Branch("genJet_py",genjet_py,"genjet_py[genJet_n]/F");
+    myEvent->Branch("genJet_E",genjet_E,"genjet_E[genJet_n]/F");
+    myEvent->Branch("genJet_pz",genjet_pz,"genjet_pz[genJet_n]/F");
+    myEvent->Branch("genJet_pt",genjet_pt,"genjet_pt[genJet_n]/F");
+    myEvent->Branch("genJet_eta",genjet_eta,"genjet_eta[genJet_n]/F");
+    myEvent->Branch("genJet_phi",genjet_phi,"genjet_phi[genJet_n]/F");
+  }
+
+
+
   
   if (runelectrons_){
     myEvent->Branch("Electron_n",&Electron_n,"Electron_n/I");
@@ -2219,6 +2300,18 @@ void Analyzer::beginJob(){
     myEvent->Branch("Muon_InnerTrack_OuterPoint_px",muon_InnerTrack_OuterPoint_px,"muon_InnerTrack_OuterPoint_px[Muon_n]/F");
     myEvent->Branch("Muon_InnerTrack_OuterPoint_py",muon_InnerTrack_OuterPoint_py,"muon_InnerTrack_OuterPoint_py[Muon_n]/F");
     myEvent->Branch("Muon_InnerTrack_OuterPoint_pz",muon_InnerTrack_OuterPoint_pz,"muon_InnerTrack_OuterPoint_pz[Muon_n]/F");  
+  
+      
+  if(isAOD_){
+    myEvent->Branch("Muon_OuterPoint_x",muon_OuterPoint_x,"muon_OuterPoint_x[Muon_n]/F");
+    myEvent->Branch("Muon_OuterPoint_y",muon_OuterPoint_y,"muon_OuterPoint_y[Muon_n]/F");
+    myEvent->Branch("Muon_OuterPoint_z",muon_OuterPoint_z,"muon_OuterPoint_z[Muon_n]/F");
+     //for Global,Tracker muon 
+    myEvent->Branch("Muon_InnerPoint_x",muon_InnerPoint_x,"muon_InnerPoint_x[Muon_n]/F");
+    myEvent->Branch("Muon_InnerPoint_y",muon_InnerPoint_y,"muon_InnerPoint_y[Muon_n]/F");
+    myEvent->Branch("Muon_InnerPoint_z",muon_InnerPoint_z,"muon_InnerPoint_z[Muon_n]/F");
+
+    }//isAOD_
   }
   
   if (runcosmicmuons_){

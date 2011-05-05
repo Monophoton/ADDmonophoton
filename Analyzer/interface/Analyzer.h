@@ -73,8 +73,10 @@ class Analyzer : public edm::EDAnalyzer {
   int HERecHit_subset_n;
   int CSCseg_n;
   int RPChit_n;
+  int genJet_n;
   //HLT
 
+  //maximum size to be filled in tree branches
   size_t MaxN;
 
   edm::TriggerNames triggerNames_;  // TriggerNames class
@@ -89,6 +91,7 @@ class Analyzer : public edm::EDAnalyzer {
   edm::InputTag cosMuoLabel_;
   edm::InputTag jetLabel_;
   edm::InputTag pfjetLabel_;
+  edm::InputTag genjetLabel_;
   edm::InputTag tauLabel_;
   edm::InputTag metLabel_;
   edm::InputTag PFmetLabel_;
@@ -117,6 +120,7 @@ class Analyzer : public edm::EDAnalyzer {
   bool runcosmicmuons_;
   bool runjets_;
   bool runpfjets_;
+  bool rungenjets_;
   bool runtaus_;
   bool runHLT_;
   bool runL1_;
@@ -222,7 +226,7 @@ class Analyzer : public edm::EDAnalyzer {
   int   pfjet_nTowers[100];
  */
  
-   //some uncorrected jet infor
+  //some uncorrected jet infor
   float ucpfjet_pt[200];
   float ucpfjet_px[200];
   float ucpfjet_py[200];
@@ -230,6 +234,17 @@ class Analyzer : public edm::EDAnalyzer {
   float ucpfjet_E[200];
   float ucpfjet_eta[200];
   float ucpfjet_phi[200];
+
+  
+  //ak5GenJets
+  float genjet_pt[200];
+  float genjet_px[200];
+  float genjet_py[200];
+  float genjet_pz[200];
+  float genjet_E[200];
+  float genjet_eta[200];
+  float genjet_phi[200];
+ 
 
 
   //electron variables
@@ -298,6 +313,15 @@ class Analyzer : public edm::EDAnalyzer {
   float muon_InnerTrack_OuterPoint_py[200];
   float muon_InnerTrack_OuterPoint_pz[200];
   
+  //FOR AOD only
+  float muon_OuterPoint_x[200];
+  float muon_OuterPoint_y[200];
+  float muon_OuterPoint_z[200];
+  float muon_InnerPoint_x[200];
+  float muon_InnerPoint_y[200];
+  float muon_InnerPoint_z[200];
+
+ 
   //cosmicmuon variables
   float cosmicmuon_pt[200];
   float cosmicmuon_px[200];
