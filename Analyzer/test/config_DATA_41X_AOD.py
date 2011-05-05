@@ -33,7 +33,7 @@ addTcMET(process,"TC")
 from PhysicsTools.PatAlgos.tools.trigTools import switchOnTrigger
 
 # Select calo jets
-process.patJetCorrFactors.levels = cms.vstring(['L2Relative','L3Absolute','L5Flavor', 'L7Parton','L2L3Residual'])
+process.patJetCorrFactors.levels = cms.vstring(['L1Offset','L2Relative','L3Absolute','L5Flavor', 'L7Parton','L2L3Residual'])
 process.selectedPatJets.cut = cms.string('pt > 10 & abs(eta) < 3.0')
 
 # Add PF jets
@@ -42,7 +42,7 @@ addJetCollection(process,cms.InputTag('ak5PFJets'),
                  'AK5', 'PF',
                  doJTA        = True,
                  doBTagging   = True,
-                 jetCorrLabel = ('AK5PF', cms.vstring(['L2Relative', 'L3Absolute','L5Flavor','L7Parton','L2L3Residual'])),
+                 jetCorrLabel = ('AK5PF', cms.vstring(['L1Offset','L2Relative', 'L3Absolute','L5Flavor','L7Parton','L2L3Residual'])),
                  doType1MET    = True,
                  doL1Cleaning  = True,
                  doL1Counters  = False,
@@ -79,6 +79,7 @@ process.demo = cms.EDAnalyzer('Analyzer',
                               cosMuonTag       = cms.untracked.InputTag("muonsFromCosmics"),
                               jetTag           = cms.untracked.InputTag("selectedPatJets"),
                               pfjetTag         = cms.untracked.InputTag("selectedPatJetsAK5PF"),
+                              genjetTag        = cms.untracked.InputTag("ak5GenJets"),
                               photonTag        = cms.untracked.InputTag("selectedPatPhotons"),
                               cscTag           = cms.untracked.InputTag("cscSegments"),
                               rpcTag           = cms.untracked.InputTag("rpcRecHits"),
@@ -102,7 +103,8 @@ process.demo = cms.EDAnalyzer('Analyzer',
                               runPFmet         = cms.untracked.bool(True),
                               runTCmet         = cms.untracked.bool(True),
                               runjets          = cms.untracked.bool(True),
-                              runpfjets          = cms.untracked.bool(True),
+                              runpfjets        = cms.untracked.bool(True),
+                              rungenjets       = cms.untracked.bool(False),
                               runelectrons     = cms.untracked.bool(True),
                               runtaus          = cms.untracked.bool(True),
                               runmuons         = cms.untracked.bool(True),
