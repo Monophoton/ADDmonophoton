@@ -13,7 +13,7 @@
 //
 // Original Author:  Sandhya Jain
 //         Created:  Fri Apr 17 11:00:06 CEST 2009
-// $Id: Analyzer.cc,v 1.47 2011/05/04 13:44:34 schauhan Exp $
+// $Id: Analyzer.cc,v 1.48 2011/05/05 12:38:38 schauhan Exp $
 //
 //
 
@@ -510,7 +510,7 @@ void Analyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup){
     is_isr_photon_event = false;
     Handle<GenParticleCollection> genParticles;
     iEvent.getByLabel("genParticles", genParticles); 
-    std::vector<genPho>            mygenphoton_container;
+    std::vector<genPho>  mygenphoton_container;
     mygenphoton_container.clear();
     genPho genphoton;
     int ii =0;
@@ -1127,7 +1127,13 @@ if(!isAOD_){
        CosmicMuon_n++;
      }//end of for loop
   }//if runcosmicmuons_
-    
+   
+
+    edm::ESHandle<CaloGeometry> geoHandle;
+    iSetup.get<CaloGeometryRecord>().get(geoHandle);
+    const CaloGeometry* caloGeom = geoHandle.product();                                                                                                                         
+                            
+ 
    // declare outside of runphotons_ so that we can use this container inside other "bools_"
    std::vector<pat::Photon> myphoton_container;
    myphoton_container.clear();
@@ -1219,7 +1225,7 @@ if(!isAOD_){
 	   matchpho_py[x]               = -99.;
 	   matchpho_pz[x]               = -99.;
 	 }
-	 ismatchedpho[x]                         =  myphoton_container[x].genParticleRef().isNonnull();
+	 ismatchedpho[x]                =  myphoton_container[x].genParticleRef().isNonnull();
 
 	 pho_nTracks[x]                    = 9999;
 	 pho_isConverted[x]                = false;
@@ -1272,8 +1278,8 @@ if(!isAOD_){
 	     HcalDetId id(hh->detid());
 	     if (id.subdet()==2){
 	       edm::ESHandle<CaloGeometry> geoHandle;	       
-	       iSetup.get<CaloGeometryRecord>().get(geoHandle);
-	       const CaloGeometry* caloGeom = geoHandle.product();
+	       //iSetup.get<CaloGeometryRecord>().get(geoHandle);
+	       //const CaloGeometry* caloGeom = geoHandle.product();
 	       const CaloCellGeometry *hbhe_cell = caloGeom->getGeometry(hh->id());
 	       Global3DPoint hbhe_position = hbhe_cell->getPosition();
 	       
@@ -1394,9 +1400,9 @@ if(!isAOD_){
 	   }//end of for (unsigned int y =0; y < crystalinfo_container.size();y++
            const reco::BasicCluster& seedClus = *(myphoton_container[x].superCluster()->seed());
 
-           edm::ESHandle<CaloGeometry> geoHandle;	       
-	   iSetup.get<CaloGeometryRecord>().get(geoHandle);
-	   const CaloGeometry* caloGeom = geoHandle.product();
+           //edm::ESHandle<CaloGeometry> geoHandle;	       
+	   //iSetup.get<CaloGeometryRecord>().get(geoHandle);
+	   //const CaloGeometry* caloGeom = geoHandle.product();
 
 	   if(myphoton_container[x].isEB()){
 	     std::vector<float> showershapes_barrel = EcalClusterTools::roundnessBarrelSuperClusters(*(myphoton_container[x].superCluster()),*barrelRecHits,0);
@@ -1465,9 +1471,9 @@ if(!isAOD_){
 
  
     if(runrechit_){
-     edm::ESHandle<CaloGeometry> geoHandle;
-     iSetup.get<CaloGeometryRecord>().get(geoHandle);
-     const CaloGeometry* caloGeom = geoHandle.product();
+     //edm::ESHandle<CaloGeometry> geoHandle;
+     //iSetup.get<CaloGeometryRecord>().get(geoHandle);
+     //const CaloGeometry* caloGeom = geoHandle.product();
 
      int EBRecHit_n =0;
      int EERecHit_n =0;
@@ -1989,7 +1995,6 @@ if(!isAOD_){
      }
    }
 
-//--------------
 
 if(rungenjets_){
 
@@ -2019,7 +2024,6 @@ if(rungenjets_){
 
 
 }//if(rungenJet_)
-//-------------
 
    if(runelectrons_){
      edm::Handle<edm::View<pat::Electron> > electronHandle;
