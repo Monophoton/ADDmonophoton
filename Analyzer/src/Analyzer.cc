@@ -13,7 +13,7 @@
 //
 // Original Author:  Sandhya Jain
 //         Created:  Fri Apr 17 11:00:06 CEST 2009
-// $Id: Analyzer.cc,v 1.48 2011/05/05 12:38:38 schauhan Exp $
+// $Id: Analyzer.cc,v 1.49 2011/05/06 20:55:30 schauhan Exp $
 //
 //
 
@@ -1277,7 +1277,7 @@ if(!isAOD_){
 	   for(HBHERecHitCollection::const_iterator hh = hbhe->begin(); hh != hbhe->end() && HERecHit_subset_n<10000; hh++){
 	     HcalDetId id(hh->detid());
 	     if (id.subdet()==2){
-	       edm::ESHandle<CaloGeometry> geoHandle;	       
+	       //edm::ESHandle<CaloGeometry> geoHandle;	       
 	       //iSetup.get<CaloGeometryRecord>().get(geoHandle);
 	       //const CaloGeometry* caloGeom = geoHandle.product();
 	       const CaloCellGeometry *hbhe_cell = caloGeom->getGeometry(hh->id());
