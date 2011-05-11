@@ -26,6 +26,7 @@
 <use   name="Geometry/RPCGeometry"/>
 <use   name="JetMETCorrections/Objects"/>
 <use   name="CondFormats/JetMETObjects"/>
+<use   name="RecoLocalCalo/EcalRecAlgos"/>
 <flags   EDM_PLUGIN="1"/>
 <export>
 </export>
