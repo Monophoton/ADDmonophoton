@@ -160,15 +160,15 @@ class Analyzer : public edm::EDAnalyzer {
   float Scraping_fractionOfGoodTracks;
   
   //track variables
-  float trk_pt[200];
-  float trk_px[200];
-  float trk_py[200];
-  float trk_pz[200];
-  float trk_vx[200];
-  float trk_vy[200];
-  float trk_vz[200];
-  float trk_eta[200];
-  float trk_phi[200];
+  float trk_pt[400];
+  float trk_px[400];
+  float trk_py[400];
+  float trk_pz[400];
+  float trk_vx[400];
+  float trk_vy[400];
+  float trk_vz[400];
+  float trk_eta[400];
+  float trk_phi[400];
   
   //jet variables
   float jet_pt[200];

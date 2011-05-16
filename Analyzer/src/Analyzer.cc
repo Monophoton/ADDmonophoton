@@ -13,7 +13,7 @@
 //
 // Original Author:  Sandhya Jain
 //         Created:  Fri Apr 17 11:00:06 CEST 2009
-// $Id: Analyzer.cc,v 1.49 2011/05/06 20:55:30 schauhan Exp $
+// $Id: Analyzer.cc,v 1.50 2011/05/06 20:59:31 schauhan Exp $
 //
 //
 
@@ -875,7 +875,7 @@ void Analyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup){
      myTrack_container.clear();
      for(reco::TrackCollection::const_iterator Track_iter = tracks->begin();
 	 Track_iter != tracks->end(); ++Track_iter) {
-       if(Track_iter->pt()>5.){
+       if(Track_iter->pt()>1.){
 	 myTrack_container.push_back(*Track_iter);
        }
      }
@@ -884,7 +884,7 @@ void Analyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup){
      if(myTrack_container.size()>1)
        std::sort(myTrack_container.begin(),myTrack_container.end(),PtSortCriterium3());
      Track_n = 0;
-     for(unsigned int x=0;x < min(myTrack_container.size(),MaxN); x++){
+     for(unsigned int x=0;x < min(myTrack_container.size(),(2*MaxN)); x++){
        trk_pt[x]  = myTrack_container[x].pt();
        trk_px[x]  = myTrack_container[x].px();
        trk_py[x]  = myTrack_container[x].py();
