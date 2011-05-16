@@ -50,7 +50,16 @@ addJetCollection(process,cms.InputTag('ak5PFJets'),
                  doJetID       = True,
                  jetIdLabel    = "ak5"
                 )
+
 process.selectedPatJetsAK5PF.cut = cms.string('pt > 10')
+
+##-------------Not sure if these are needed here with GT, twiki did not say anything explicitely-------
+#process.load('JetMETCorrections.Configuration.DefaultJEC_cff')
+#process.load('RecoJets.Configuration.RecoPFJets_cff')
+#process.kt6PFJets.doRhoFastjet = True
+#process.ak5PFJets.doAreaFastjet = True
+# add process.kt6PFJets * process.ak5PFJets * in sequence
+#----------------------------------------------------
 
 # Add the files 
 readFiles = cms.untracked.vstring()
@@ -166,9 +175,10 @@ process.demo = cms.EDAnalyzer('Analyzer',
 
 #All paths are here
 process.p = cms.Path(
-#   process.photonReReco*
-   process.patDefaultSequence*
-   process.demo
+#    process.kt6PFJets * 
+#    process.ak5PFJets *
+     process.patDefaultSequence*
+     process.demo
    )
 
 
