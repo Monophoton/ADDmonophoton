@@ -19,7 +19,7 @@ from RecoEcal.EgammaClusterProducers.hybridSuperClusters_cfi import *
 process.load("FWCore.MessageLogger.MessageLogger_cfi")
 
 ## global tag for data
-process.GlobalTag.globaltag = cms.string('GR_R_42_V11::All')
+process.GlobalTag.globaltag = cms.string('GR_R_42_V12::All')
 
 
 from PhysicsTools.PatAlgos.tools.metTools import *                       
