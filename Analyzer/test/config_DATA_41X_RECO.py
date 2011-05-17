@@ -53,30 +53,6 @@ addJetCollection(process,cms.InputTag('ak5PFJets'),
                 )
 process.selectedPatJetsAK5PF.cut = cms.string('pt > 10')
 
-#---
-process.load("CondCore.DBCommon.CondDBCommon_cfi")
-process.jec = cms.ESSource("PoolDBESSource",
-      DBParameters = cms.PSet(
-        messageLevel = cms.untracked.int32(0)
-        ),
-      timetype = cms.string('runnumber'),
-      toGet = cms.VPSet(
-      cms.PSet(
-            record = cms.string('JetCorrectionsRecord'),
-            tag    = cms.string('JetCorrectorParametersCollection_Jec10V3_AK5PF'),
-            label  = cms.untracked.string('AK5PF')
-            ),
-     cms.PSet(
-            record = cms.string('JetCorrectionsRecord'),
-            tag    = cms.string('JetCorrectorParametersCollection_Jec10V3_AK5Calo'),
-            label  = cms.untracked.string('AK5Calo')
-            )
-      ),
-
-      connect = cms.string('sqlite_file:Jec10V3.db')
-)
-process.es_prefer_jec = cms.ESPrefer('PoolDBESSource','jec')
-#--------
 # Add the files 
 readFiles = cms.untracked.vstring()
 secFiles = cms.untracked.vstring()
