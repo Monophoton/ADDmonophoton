@@ -33,7 +33,7 @@ addTcMET(process,"TC")
 from PhysicsTools.PatAlgos.tools.trigTools import switchOnTrigger
 
 # Select calo jets
-process.patJetCorrFactors.levels = cms.vstring(['L1Offset','L2Relative','L3Absolute','L5Flavor', 'L7Parton','L2L3Residual'])
+process.patJetCorrFactors.levels = cms.vstring(['L1Offset','L2Relative','L3Absolute','L2L3Residual'])
 process.selectedPatJets.cut = cms.string('pt > 10 & abs(eta) < 3.0')
 
 # Add PF jets
@@ -42,7 +42,7 @@ addJetCollection(process,cms.InputTag('ak5PFJets'),
                  'AK5', 'PF',
                  doJTA        = True,
                  doBTagging   = True,
-                 jetCorrLabel = ('AK5PF', cms.vstring(['L1Offset','L2Relative', 'L3Absolute','L5Flavor','L7Parton','L2L3Residual'])),
+                 jetCorrLabel = ('AK5PF', cms.vstring(['L1Offset','L2Relative', 'L3Absolute','L2L3Residual'])),
                  doType1MET    = True,
                  doL1Cleaning  = True,
                  doL1Counters  = False,
@@ -53,12 +53,12 @@ addJetCollection(process,cms.InputTag('ak5PFJets'),
 
 process.selectedPatJetsAK5PF.cut = cms.string('pt > 10')
 
-##-------------Not sure if these are needed here with GT, twiki did not say anything explicitely-------
+##Not sure if these are needed here with GT, twiki did not say anything explicitely-------
 #process.load('JetMETCorrections.Configuration.DefaultJEC_cff')
 #process.load('RecoJets.Configuration.RecoPFJets_cff')
 #process.kt6PFJets.doRhoFastjet = True
 #process.ak5PFJets.doAreaFastjet = True
-# add process.kt6PFJets * process.ak5PFJets * in sequence
+#process.ak5CaloJets.doAreaFastjet = True
 #----------------------------------------------------
 
 # Add the files 
@@ -176,6 +176,7 @@ process.demo = cms.EDAnalyzer('Analyzer',
 #All paths are here
 process.p = cms.Path(
 #    process.kt6PFJets * 
+#    process.ak5CaloJets*
 #    process.ak5PFJets *
      process.patDefaultSequence*
      process.demo
