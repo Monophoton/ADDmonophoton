@@ -139,8 +139,7 @@ process.demo = cms.EDAnalyzer('Analyzer',
 
 #All paths are here
 process.p = cms.Path(
-#   process.kt6PFJets*                                                                                                                                                           
-#   process.ak5CaloJets* 
+#   process.kt6PFJets*                                                                                                                                                          #   process.ak5CaloJets* 
 #   process.ak5PFJets*
    process.patDefaultSequence*
    process.demo
