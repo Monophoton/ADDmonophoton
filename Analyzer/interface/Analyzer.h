@@ -76,6 +76,18 @@ class Analyzer : public edm::EDAnalyzer {
   int genJet_n;
   //HLT
 
+
+
+ std::vector<std::string>  hlNames_;           
+  //HLT      
+  TString module_type[20];
+  double trobjpt[100][100][100];
+  double trobjeta[100][100][100];
+  double trobjphi[100][100][100];
+
+
+
+
   //maximum size to be filled in tree branches
   size_t MaxN;
 
@@ -103,12 +115,15 @@ class Analyzer : public edm::EDAnalyzer {
   edm::InputTag rechitELabel_;
   edm::InputTag hcalrechitLabel_;
   edm::InputTag hlTriggerResults_;  // Input tag for TriggerResults
+  edm::InputTag triggerEventTag_; 
   edm::InputTag Tracks_;
   edm::InputTag BeamHaloSummaryLabel_;
   edm::InputTag Vertices_;
   edm::InputTag pileupLabel_;
 
   std::string outFile_;
+  std::string hltlabel_;
+
   bool rungenParticleCandidates_;
   bool runphotons_;
   bool runmet_;

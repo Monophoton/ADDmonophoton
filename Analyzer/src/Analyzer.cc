@@ -13,7 +13,7 @@
 //
 // Original Author:  Sandhya Jain
 //         Created:  Fri Apr 17 11:00:06 CEST 2009
-// $Id: Analyzer.cc,v 1.50 2011/05/06 20:59:31 schauhan Exp $
+// $Id: Analyzer.cc,v 1.51 2011/05/16 13:05:00 schauhan Exp $
 //
 //
 
@@ -93,6 +93,10 @@
 #include "DataFormats/JetReco/interface/PFJetCollection.h"
 #include "SimDataFormats/PileupSummaryInfo/interface/PileupSummaryInfo.h"
 #include "CondFormats/JetMETObjects/interface/JetCorrectionUncertainty.h"
+#include "DataFormats/HLTReco/interface/TriggerObject.h"
+#include "DataFormats/HLTReco/interface/TriggerEvent.h"
+#include "DataFormats/JetReco/interface/GenJet.h"                                                                                                     
+#include "DataFormats/JetReco/interface/GenJetCollection.h"
 
 
 #include "JetMETCorrections/Objects/interface/JetCorrector.h"
@@ -190,11 +194,13 @@ Analyzer::Analyzer(const edm::ParameterSet& iConfig):
   rechitELabel_(iConfig.getUntrackedParameter<edm::InputTag>("rechitETag")),
   hcalrechitLabel_(iConfig.getUntrackedParameter<edm::InputTag>("hcalrechitTag")),
   hlTriggerResults_(iConfig.getUntrackedParameter<edm::InputTag>("HLTriggerResults")),
+  triggerEventTag_(iConfig.getUntrackedParameter<edm::InputTag>("triggerEventTag")),
   Tracks_(iConfig.getUntrackedParameter<edm::InputTag>("Tracks")),
   BeamHaloSummaryLabel_(iConfig.getUntrackedParameter<edm::InputTag>("BeamHaloSummary")),
   Vertices_(iConfig.getUntrackedParameter<edm::InputTag>("Vertices")),
   pileupLabel_(iConfig.getUntrackedParameter<edm::InputTag>("pileup")), 
   outFile_(iConfig.getUntrackedParameter<string>("outFile")),
+  hltlabel_(iConfig.getUntrackedParameter<string>("hltlabel")),
   rungenParticleCandidates_(iConfig.getUntrackedParameter<bool>("rungenParticleCandidates")),
   runphotons_(iConfig.getUntrackedParameter<bool>("runphotons")),
   runmet_(iConfig.getUntrackedParameter<bool>("runmet")),
@@ -786,7 +792,9 @@ void Analyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup){
       else L1_chosen[ L1name ]=0;
     } 
   }  
- 
+
+
+/* 
   if(runHLT_){
     Handle<TriggerResults> HLTR;
     iEvent.getByLabel(hlTriggerResults_,HLTR);
@@ -815,7 +823,125 @@ void Analyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup){
       }//debug
     }//if HLTR is Valid
   }//runHLT_
-   
+*/  
+
+if(runHLT_)
+    { 
+      Handle<TriggerResults> HLTR;
+      iEvent.getByLabel(hlTriggerResults_,HLTR);
+
+      Handle<trigger::TriggerEvent> triggerEventHandle;
+      iEvent.getByLabel(triggerEventTag_,triggerEventHandle);
+
+      if (!triggerEventHandle.isValid()) {
+        std::cout << "Error in getting TriggerEvent product from Event!" << std::endl;
+        return;
+      }
+      
+      if (HLTR.isValid())
+        { 
+          all_triggerprescales.clear();
+          all_ifTriggerpassed.clear();
+          const edm::TriggerNames &triggerNames_ = iEvent.triggerNames(*HLTR);
+          hlNames_=triggerNames_.triggerNames();
+          vector<int> idx;
+          vector<int> ModuleSize;
+          int indexhltobj;
+          int ikey;
+        
+          for(int i = 0; i< ntriggers;i++){
+            for(int iIndex=0; iIndex<100;iIndex++)
+              {
+                for(int iKey = 0; iKey<100; iKey++)
+                  {
+                    trobjpt[i][iIndex][iKey] = -999;
+                    trobjeta[i][iIndex][iKey] = -999;
+                    trobjphi[i][iIndex][iKey] = -999;
+                  }
+              }
+          }
+
+
+         for(int i = 0; i< ntriggers;i++){
+            all_triggerprescales.push_back(0);
+            all_ifTriggerpassed.push_back(0);
+            idx.push_back(triggerNames_.triggerIndex(all_triggers[i]));
+            if(debug_)cout<<"Trigger Path="<<all_triggers[i]<<endl;
+            if(debug_)cout<<"index = "<<idx[i]<<endl;
+            ModuleSize.push_back(hltConfig_.size(idx[i]));
+            const std::vector<std::string>& moduleLabels(hltConfig_.moduleLabels(idx[i]));
+            const unsigned int moduleIndex(HLTR->index(idx[i]));
+            for(int ilab = 0; ilab < int(moduleLabels.size()); ilab++)
+                  { 
+                    if(debug_)cout<<"lab is =     "<<moduleLabels[ilab]<<endl;
+                  }
+            if(debug_)cout << " Last active module - label/type: "
+                 << moduleLabels[moduleIndex] << "/" << hltConfig_.moduleType(moduleLabels[moduleIndex])
+                 << " [" << moduleIndex << " out of 0-" << (ModuleSize[i]-1) << " on this path]"
+                 << endl;
+            assert (int(moduleIndex)<ModuleSize[i]);
+            indexhltobj=0;  
+            for (unsigned int j=0; j<=moduleIndex; ++j)
+              {
+              const string& moduleLabel(moduleLabels[j]);
+              const string  moduleType(hltConfig_.moduleType(moduleLabel));
+
+              // check whether the module is packed up in TriggerEvent product
+              const unsigned int filterIndex(triggerEventHandle->filterIndex(InputTag(moduleLabel,"",hltlabel_)));
+
+              if (filterIndex<triggerEventHandle->sizeFilters()) 
+                { 
+                  module_type[indexhltobj] = hltConfig_.moduleType(moduleLabel);
+                  const trigger::Keys& KEYS = triggerEventHandle->filterKeys(filterIndex);
+                  const trigger::Vids& VIDS = triggerEventHandle->filterIds(filterIndex);
+                  const trigger::size_type nI= VIDS.size();
+                  const trigger::size_type nK= KEYS.size();
+                  assert(nI==nK);
+                  const trigger::size_type n(max(nI,nK));
+                  const trigger::TriggerObjectCollection& TOC(triggerEventHandle->getObjects());
+                  ikey=0;
+                  for (trigger::size_type k=0; k!=n; ++k) 
+                      {
+                      const trigger::TriggerObject& TO(TOC[KEYS[k]]);
+                      trobjpt[i][indexhltobj][ikey]= TO.pt();
+                      trobjeta[i][indexhltobj][ikey]= TO.eta();
+                      trobjphi[i][indexhltobj][ikey]= TO.phi();
+                      if(debug_){
+                      cout<<"trobjpt["<<i<<"]["<<ikey<<"]["<<indexhltobj<<"]="<<trobjpt[i][indexhltobj][ikey];}
+                      ikey++;
+                    }//for (size_type i=0; i!=n; ++i)
+                  
+                indexhltobj++;
+                }//if (filterIndex<triggerEventHandle->sizeFilters())
+              }//for (unsigned int j=0; j<=moduleIndex; ++j)
+          }//for(int i = 0; i< ntriggers;i++)
+          
+            Int_t hsize = Int_t(HLTR->size());
+            for(int i=0;i<ntriggers;i++){
+            //what if last trigger is needed//
+              if(idx[i] < hsize){
+                all_ifTriggerpassed[i]=HLTR->accept(idx[i]);
+                all_triggerprescales[i]=hltConfig_.prescaleValue( iEvent, iSetup, all_triggers[i]);
+              }
+            }
+            if(debug_){
+              for(int i=0;i<ntriggers;i++){
+                cout<<"prescale for "<<all_triggers[i]<<" is: "<< all_triggerprescales[i]<<endl;
+                cout<<"if triggger passed for "<<all_triggers[i]<<" : "<<all_ifTriggerpassed[i]<<endl;
+            }//loop over ntriggers
+            }//debug
+        }//if HLTR is Valid
+    }//runHLT_
+
+
+
+
+
+
+
+
+
+ 
   if(runvertex_){
     Handle<reco::VertexCollection> recVtxs;
      iEvent.getByLabel(Vertices_, recVtxs);
@@ -2115,6 +2241,10 @@ void Analyzer::beginJob(){
   if(runHLT_){
   myEvent->Branch("triggerprescales","vector<int>",&triggerprescales);
   myEvent->Branch("ifTriggerpassed","vector<bool>",&ifTriggerpassed);
+  myEvent->Branch("ntriggers",&ntriggers,"ntriggers/I");
+  myEvent->Branch("trobjpt",trobjpt,"trobjpt[ntriggers][100][100]");                                                                                  
+  myEvent->Branch("trobjeta",trobjeta,"trobjeta[ntriggers][100][100]");
+  myEvent->Branch("trobjphi",trobjphi,"trobjphi[ntriggers][100][100]");
   }
   
   if(runvertex_){
