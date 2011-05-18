@@ -33,7 +33,7 @@ addTcMET(process,"TC")
 from PhysicsTools.PatAlgos.tools.trigTools import switchOnTrigger
 
 # Select calo jets
-process.patJetCorrFactors.levels = cms.vstring(['L1Offset','L2Relative','L3Absolute','L2L3Residual'])
+process.patJetCorrFactors.levels = cms.vstring(['L1FastJet','L2Relative','L3Absolute','L2L3Residual'])
 process.selectedPatJets.cut = cms.string('pt > 10 & abs(eta) < 3.0')
 
 # Add PF jets
@@ -42,7 +42,7 @@ addJetCollection(process,cms.InputTag('ak5PFJets'),
                  'AK5', 'PF',
                  doJTA        = True,
                  doBTagging   = True,
-                 jetCorrLabel = ('AK5PF', cms.vstring(['L1Offset','L2Relative', 'L3Absolute','L2L3Residual'])),
+                 jetCorrLabel = ('AK5PF', cms.vstring(['L1FastJet','L2Relative', 'L3Absolute','L2L3Residual'])),
                  doType1MET    = True,
                  doL1Cleaning  = True,
                  doL1Counters  = False,
@@ -100,6 +100,8 @@ process.demo = cms.EDAnalyzer('Analyzer',
                               PFmetTag         = cms.untracked.InputTag("patMETsPF"),
                               TCmetTag         = cms.untracked.InputTag("patMETsTC"),
                               HLTriggerResults = cms.untracked.InputTag("TriggerResults","","HLT"),
+                              triggerEventTag  = cms.untracked.InputTag("hltTriggerSummaryAOD","","HLT"),
+                              hltlabel          = cms.untracked.string("HLT"),   
                               Tracks           = cms.untracked.InputTag("generalTracks"),
                               Vertices         = cms.untracked.InputTag("offlinePrimaryVertices","",""),
                               BeamHaloSummary  = cms.untracked.InputTag("BeamHaloSummary"),

@@ -31,7 +31,7 @@ addTcMET(process,"TC")
 from PhysicsTools.PatAlgos.tools.trigTools import switchOnTrigger
 
 # Select calo jets
-process.patJetCorrFactors.levels = cms.vstring(['L1Offset','L2Relative','L3Absolute'])
+process.patJetCorrFactors.levels = cms.vstring(['L1FastJet','L2Relative','L3Absolute'])
 process.selectedPatJets.cut = cms.string('pt > 10 & abs(eta) < 3.0')
 
 # Add PF jets
@@ -40,7 +40,7 @@ addJetCollection(process,cms.InputTag('ak5PFJets'),
                  'AK5', 'PF',
                  doJTA        = True,
                  doBTagging   = True,
-                 jetCorrLabel = ('AK5PF', cms.vstring(['L1Offset','L2Relative', 'L3Absolute'])),
+                 jetCorrLabel = ('AK5PF', cms.vstring(['L1FastJet','L2Relative', 'L3Absolute'])),
                  doType1MET    = True,
                  doL1Cleaning  = True,
                  doL1Counters  = False,
@@ -97,7 +97,9 @@ process.demo = cms.EDAnalyzer('Analyzer',
                               metTag           = cms.untracked.InputTag("patMETs"),
                               PFmetTag         = cms.untracked.InputTag("patMETsPF"),
                               TCmetTag         = cms.untracked.InputTag("patMETsTC"),
-                              HLTriggerResults = cms.untracked.InputTag("TriggerResults","",""),
+                              HLTriggerResults = cms.untracked.InputTag("TriggerResults","","HLT"),
+                              triggerEventTag  = cms.untracked.InputTag("hltTriggerSummaryAOD","","HLT"),
+                              hltlabel          = cms.untracked.string("HLT"),   
                               Tracks           = cms.untracked.InputTag("generalTracks"),
                               Vertices         = cms.untracked.InputTag("offlinePrimaryVertices","",""),
                               BeamHaloSummary  = cms.untracked.InputTag("BeamHaloSummary"),
@@ -174,7 +176,8 @@ process.demo = cms.EDAnalyzer('Analyzer',
 
 #All paths are here
 process.p = cms.Path(
-#   process.kt6PFJets *                                                                                                                                                          #   process.ak5CaloJets* 
+#   process.kt6PFJets *
+#   process.ak5CaloJets* 
 #   process.ak5PFJets *
    process.patDefaultSequence*
    process.demo
