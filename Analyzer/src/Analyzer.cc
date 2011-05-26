@@ -13,7 +13,7 @@
 //
 // Original Author:  Sandhya Jain
 //         Created:  Fri Apr 17 11:00:06 CEST 2009
-// $Id: Analyzer.cc,v 1.51 2011/05/16 13:05:00 schauhan Exp $
+// $Id: Analyzer.cc,v 1.52 2011/05/18 13:38:25 schauhan Exp $
 //
 //
 
@@ -95,6 +95,9 @@
 #include "CondFormats/JetMETObjects/interface/JetCorrectionUncertainty.h"
 #include "DataFormats/HLTReco/interface/TriggerObject.h"
 #include "DataFormats/HLTReco/interface/TriggerEvent.h"
+#include "DataFormats/TauReco/interface/PFTau.h"
+#include "DataFormats/TauReco/interface/PFTauFwd.h"                                                                                                   
+#include "PhysicsTools/JetMCUtils/interface/JetMCTag.h"
 #include "DataFormats/JetReco/interface/GenJet.h"                                                                                                     
 #include "DataFormats/JetReco/interface/GenJetCollection.h"
 
@@ -109,9 +112,10 @@
 #include "TTree.h"
 #include "TFile.h"
 #include "Math/VectorUtil.h"
-
-#include <map>
 #include <string>
+#include <vector>
+#include <map>
+
 
 #include "ADDmonophoton/Analyzer/interface/Analyzer.h"
 
@@ -161,6 +165,22 @@ class EnergySortCriterium{
 public:
   bool operator() (CrystalInfo p1,CrystalInfo p2 ){
     return p1.energy > p2.energy;
+  }
+};
+
+class genTau{   
+ public:         
+  genTau(){};  ~genTau(){};                                                                                                                           
+  //double pt,px,py,pz,eta,phi,E;
+  double pt,px,py,pz,eta,phi,E,motherPt,motherEta,motherPhi;
+  int motherID,pdgid,had_decay;
+};    
+
+
+class PtSortCriteriumtau {
+public:
+  bool operator() (pat::Tau p1,pat::Tau p2 ){
+    return p1.pt() > p2.pt();
   }
 };
 
@@ -214,6 +234,7 @@ Analyzer::Analyzer(const edm::ParameterSet& iConfig):
   runpfjets_(iConfig.getUntrackedParameter<bool>("runpfjets")),
   rungenjets_(iConfig.getUntrackedParameter<bool>("rungenjets")),
   runtaus_(iConfig.getUntrackedParameter<bool>("runtaus")),
+  runDetailTauInfo_(iConfig.getUntrackedParameter<bool>("runDetailTauInfo")),
   runHLT_(iConfig.getUntrackedParameter<bool>("runHLT")),
   runL1_(iConfig.getUntrackedParameter<bool>("runL1")),
   runscraping_(iConfig.getUntrackedParameter<bool>("runscraping")),
@@ -287,7 +308,7 @@ Analyzer::beginRun(const edm::Run& iRun, const edm::EventSetup& iSetup){
    MaxN=200;
 
   bool changed(true);
-  if(hltConfig_.init(iRun,iSetup,"HLT",changed)){  // HLTlabel_ is grabbed from the cfg file
+  if(hltConfig_.init(iRun,iSetup,hltlabel_,changed)){  // HLTlabel_ is grabbed from the cfg file
     // if init returns TRUE, initialisation has succeeded!
     if(debug_) std::cout << "Initalizing HLTConfigProvider"  << std::endl;
     if(changed){
@@ -794,36 +815,6 @@ void Analyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup){
   }  
 
 
-/* 
-  if(runHLT_){
-    Handle<TriggerResults> HLTR;
-    iEvent.getByLabel(hlTriggerResults_,HLTR);
-    if (HLTR.isValid()) {
-      all_triggerprescales.clear();
-      all_ifTriggerpassed.clear();
-      const edm::TriggerNames &triggerNames_ = iEvent.triggerNames(*HLTR);
-      vector<int> idx;
-      for(int i = 0; i< ntriggers;i++){
-        all_triggerprescales.push_back(0);
-        all_ifTriggerpassed.push_back(0);
-        idx.push_back(triggerNames_.triggerIndex(all_triggers[i]));
-      }
-      Int_t hsize = Int_t(HLTR->size());
-      for(int i=0;i<ntriggers;i++){
-        if(idx[i] < hsize){
-          all_ifTriggerpassed[i]=HLTR->accept(idx[i]);
-          all_triggerprescales[i]=hltConfig_.prescaleValue( iEvent, iSetup, all_triggers[i]);
-	}
-      }
-      if(debug_){
-        for(int i=0;i<ntriggers;i++){
-          cout<<"prescale for "<<all_triggers[i]<<" is: "<< all_triggerprescales[i]<<endl;
-          cout<<"if triggger passed for "<<all_triggers[i]<<" : "<<all_ifTriggerpassed[i]<<endl;
-        }//loop over ntriggers
-      }//debug
-    }//if HLTR is Valid
-  }//runHLT_
-*/  
 
 if(runHLT_)
     { 
@@ -848,40 +839,47 @@ if(runHLT_)
           vector<int> ModuleSize;
           int indexhltobj;
           int ikey;
-        
+ 
           for(int i = 0; i< ntriggers;i++){
-            for(int iIndex=0; iIndex<100;iIndex++)
+            for(int iIndex=0; iIndex<80;iIndex++)
               {
-                for(int iKey = 0; iKey<100; iKey++)
+
+                for(int iKey = 0; iKey<10; iKey++)
                   {
-                    trobjpt[i][iIndex][iKey] = -999;
-                    trobjeta[i][iIndex][iKey] = -999;
-                    trobjphi[i][iIndex][iKey] = -999;
+                    trobjpt[i][iIndex][iKey] = -999.;
+                    trobjeta[i][iIndex][iKey] = -999.;
+                    trobjphi[i][iIndex][iKey] = -999.;
                   }
               }
           }
 
 
+ 
          for(int i = 0; i< ntriggers;i++){
             all_triggerprescales.push_back(0);
             all_ifTriggerpassed.push_back(0);
             idx.push_back(triggerNames_.triggerIndex(all_triggers[i]));
+
             if(debug_)cout<<"Trigger Path="<<all_triggers[i]<<endl;
             if(debug_)cout<<"index = "<<idx[i]<<endl;
+
             ModuleSize.push_back(hltConfig_.size(idx[i]));
+
             const std::vector<std::string>& moduleLabels(hltConfig_.moduleLabels(idx[i]));
             const unsigned int moduleIndex(HLTR->index(idx[i]));
+
             for(int ilab = 0; ilab < int(moduleLabels.size()); ilab++)
                   { 
                     if(debug_)cout<<"lab is =     "<<moduleLabels[ilab]<<endl;
                   }
+
             if(debug_)cout << " Last active module - label/type: "
                  << moduleLabels[moduleIndex] << "/" << hltConfig_.moduleType(moduleLabels[moduleIndex])
                  << " [" << moduleIndex << " out of 0-" << (ModuleSize[i]-1) << " on this path]"
                  << endl;
             assert (int(moduleIndex)<ModuleSize[i]);
-            indexhltobj=0;  
-            for (unsigned int j=0; j<=moduleIndex; ++j)
+            indexhltobj=0; 
+            for (unsigned int j=0; j<=moduleIndex && j < 80; ++j)
               {
               const string& moduleLabel(moduleLabels[j]);
               const string  moduleType(hltConfig_.moduleType(moduleLabel));
@@ -900,20 +898,25 @@ if(runHLT_)
                   const trigger::size_type n(max(nI,nK));
                   const trigger::TriggerObjectCollection& TOC(triggerEventHandle->getObjects());
                   ikey=0;
-                  for (trigger::size_type k=0; k!=n; ++k) 
+                  for (trigger::size_type k=0; k!=n && k< MaxN/20; ++k) 
                       {
                       const trigger::TriggerObject& TO(TOC[KEYS[k]]);
                       trobjpt[i][indexhltobj][ikey]= TO.pt();
                       trobjeta[i][indexhltobj][ikey]= TO.eta();
                       trobjphi[i][indexhltobj][ikey]= TO.phi();
-                      if(debug_){
-                      cout<<"trobjpt["<<i<<"]["<<ikey<<"]["<<indexhltobj<<"]="<<trobjpt[i][indexhltobj][ikey];}
+
+                    if(debug_)cout<<"trobjpt["<<i<<"]["<<ikey<<"]["<<indexhltobj<<"]=  "<<trobjpt[i][indexhltobj][ikey]<<endl;
+
                       ikey++;
+
+
                     }//for (size_type i=0; i!=n; ++i)
                   
                 indexhltobj++;
                 }//if (filterIndex<triggerEventHandle->sizeFilters())
               }//for (unsigned int j=0; j<=moduleIndex; ++j)
+
+
           }//for(int i = 0; i< ntriggers;i++)
           
             Int_t hsize = Int_t(HLTR->size());
@@ -932,11 +935,6 @@ if(runHLT_)
             }//debug
         }//if HLTR is Valid
     }//runHLT_
-
-
-
-
-
 
 
 
@@ -2187,17 +2185,21 @@ if(rungenjets_){
      }//end of for loop
    }
 	
-   if(runtaus_){
+ if(runtaus_){
      edm::Handle<edm::View<pat::Tau> > tauHandle;
      iEvent.getByLabel(tauLabel_,tauHandle);
      vector <pat::Tau> mytau_container;
-     
+   
+ 
      const edm::View<pat::Tau> & taus = *tauHandle;   // const ... &, we don't make a copy of it!
      for(edm::View<pat::Tau>::const_iterator tau = taus.begin(); tau!=taus.end(); ++tau){
        mytau_container.push_back(*tau);
      }
      Tau_n = 0;
-     for(unsigned int x=0;x < min(mytau_container.size(), MaxN);x++){
+
+     if(mytau_container.size() >1){std::sort(mytau_container.begin(),mytau_container.end(),PtSortCriteriumtau());}
+
+     for(unsigned int x=0;x < min(mytau_container.size(), (MaxN/2));x++){
        tau_pt[x]  = mytau_container[x].pt();
        tau_energy[x]  = mytau_container[x].energy();
        tau_px[x]  = mytau_container[x].px();
@@ -2207,8 +2209,113 @@ if(rungenjets_){
        tau_vy[x]  = mytau_container[x].vy();
        tau_vz[x]  = mytau_container[x].vz();
        tau_phi[x] = correct_phi(mytau_container[x].phi());
-       tau_eta[x] = mytau_container[x].eta();
        tau_charge[x] = mytau_container[x].charge();
+
+
+
+       if(runDetailTauInfo_){//-------Bhawna need this infor
+
+           nPions[x]       =0;                  
+           nPi0[x]         =0;                  
+           nPhotons[x]     =0;                  
+           oneProng0Pi0[x] =0;                  
+           oneProng1Pi0[x] =0;                  
+           oneProng2Pi0[x] =0;                  
+           threeProng0Pi0[x]=0;                 
+           threeProng1Pi0[x]=0;                 
+           tauelectron[x]   =0;                 
+           taumuon[x]       =0;      
+           
+              if(mytau_container[x].genJet())
+                 {      
+                   genTauDecayMode = JetMCTagUtils::genTauDecayMode(*mytau_container[x].genJet());
+                   genTauDecayMode1.push_back(JetMCTagUtils::genTauDecayMode(*mytau_container[x].genJet()));
+                        
+                   if (genTauDecayMode == "oneProng0Pi0")
+                     { oneProng0Pi0[x]=1;
+                       oneProng0Pi0Pt[x] = (mytau_container[x]).genJet()->pt() ;
+                       oneProng0Pi0Eta[x] = (mytau_container[x]).genJet()->eta();
+                       oneProng0Pi0Phi[x] = (mytau_container[x]).genJet()->phi();
+                     }  
+                        
+                   if (genTauDecayMode == "oneProng1Pi0")oneProng1Pi0[x]=1;
+                   if(genTauDecayMode == "oneProng2Pi0")oneProng2Pi0[x]=1;
+                   if (genTauDecayMode == "threeProng0Pi0"){ threeProng0Pi0[x]=1;
+                                                             nthreeProng0Pi0++;}
+                   if (genTauDecayMode == "threeProng1Pi0"){ threeProng1Pi0[x]=1;
+                                                             nthreeProng1Pi0++;}
+                   if (genTauDecayMode == "electron"){tauelectron[x]=1;
+                                                      ntauelectron++;}
+                   if (genTauDecayMode == "muon"){ taumuon[x]=1;
+                                                   ntaumuon++;}
+                        
+              if (  (genTauDecayMode == "oneProng0Pi0"   ||   genTauDecayMode == "oneProng1Pi0"   ||
+                     genTauDecayMode == "oneProng2Pi0"   ||   genTauDecayMode == "threeProng0Pi0" ||
+                     genTauDecayMode == "threeProng1Pi0" ||   genTauDecayMode == "electron"       ||
+                     genTauDecayMode == "muon"
+                 )  )   
+                {     
+                   genHadTauPt[x] = (mytau_container[x]).genJet()->pt() ;
+                   genHadTauEta[x] = (mytau_container[x]).genJet()->eta();
+                   genHadTauPhi[x] = (mytau_container[x]).genJet()->phi();
+
+                   if( (mytau_container[x].genJet()->getGenConstituents()).size() !=0 )
+                     {  
+                       genParticleList = mytau_container[x].genJet()->getGenConstituents();
+                       std::vector <const GenParticle*>  genParticleList = mytau_container[x].genJet()->getGenConstituents();
+                       
+                          for ( int i = 0; i < 5; i++)
+                         { PionPdgId[x][i]   = -999;
+                           PionPt[x][i]      = -999;
+                           PionEta[x][i]     = -999;
+                           PionPhi[x][i]     = -999;
+                           PhotonPdgId[x][i] = -999;
+                           PhotonPt[x][i]    = -999;
+                           PhotonEta[x][i]   = -999;
+                           PionPhi[x][i]     = -999;
+                           Pi0PdgId[x][i]    = -999;
+                           Pi0Pt[x][i]       = -999;
+                           Pi0Eta[x][i]      = -999;
+                           Pi0Phi[x][i]      = -999;
+                         }                 
+
+                    for (int iList = 0; iList <int(genParticleList.size()); iList++)
+                         {
+                        
+                           if(abs(genParticleList[iList]->pdgId()) == 211)
+                             { if(nPions[x]>5) continue;
+                               PionPt[x][nPions[x]] = genParticleList[iList]->pt();
+                               PionEta[x][nPions[x]] = genParticleList[iList]->eta();
+                               PionPhi[x][nPions[x]] = genParticleList[iList]->phi();
+                               PionPdgId[x][nPions[x]] = genParticleList[iList]->pdgId();
+                               nPions[x]++;
+                             }
+                          if(abs(genParticleList[iList]->pdgId()) == 22)
+                             { if(nPhotons[x]> 5)continue;
+                               PhotonPt[x][nPhotons[x]] = genParticleList[iList]->pt();
+                               PhotonEta[x][nPhotons[x]] = genParticleList[iList]->eta();
+                               PhotonPhi[x][nPhotons[x]] = genParticleList[iList]->phi();
+                               PhotonPdgId[x][nPhotons[x]]  = genParticleList[iList]->pdgId();
+                               nPhotons[x]++;
+                             }
+                           if(abs(genParticleList[iList]->pdgId()) == 111)
+                             { if(nPi0[x]> 5 ) continue;
+                             Pi0Pt[x][nPi0[x]] = genParticleList[iList]->pt();
+                             if(debug_)cout<<"Pi0Pt  = "<<Pi0Pt[x][nPi0[x]]<<endl;
+                             Pi0Eta[x][nPi0[x]] = genParticleList[iList]->eta();
+                             Pi0Phi[x][nPi0[x]] = genParticleList[iList]->phi();
+                             Pi0PdgId[x][nPi0[x]]  = genParticleList[iList]->pdgId();
+                             nPi0[x]++;
+                             }
+                         }//end of  for (int iList = 0; iList <int(genParticleList.size()); iList++)
+                      
+                       
+                     }//end of if( (mytau_container[x].genJet()->getGenConstituents()).size() !=0 )
+                }//TauDeca mode
+            }//genJet is true
+         }//if(runDetailTauInfor_)//---------Bhawana need
+
+
        Tau_n++;
      }//end of for loop
    }
@@ -2221,7 +2328,8 @@ if(rungenjets_){
 void Analyzer::beginJob(){
   triggernames     = &all_triggers; 
   triggerprescales = &all_triggerprescales; 
-  ifTriggerpassed  = &all_ifTriggerpassed; 
+  ifTriggerpassed  = &all_ifTriggerpassed;
+ 
   f=new TFile(outFile_.c_str(),"RECREATE");
   myEvent = new TTree("myEvent","a tree with histograms");
   myEvent->Branch("nevents",&nevents,"nevents/I");
@@ -2241,10 +2349,9 @@ void Analyzer::beginJob(){
   if(runHLT_){
   myEvent->Branch("triggerprescales","vector<int>",&triggerprescales);
   myEvent->Branch("ifTriggerpassed","vector<bool>",&ifTriggerpassed);
-  myEvent->Branch("ntriggers",&ntriggers,"ntriggers/I");
-  myEvent->Branch("trobjpt",trobjpt,"trobjpt[ntriggers][100][100]");                                                                                  
-  myEvent->Branch("trobjeta",trobjeta,"trobjeta[ntriggers][100][100]");
-  myEvent->Branch("trobjphi",trobjphi,"trobjphi[ntriggers][100][100]");
+  myEvent->Branch("trobjpt",trobjpt,"trobjpt[ntriggers][80][10]/F");                                                                                  
+  myEvent->Branch("trobjeta",trobjeta,"trobjeta[ntriggers][80][10]/F");
+  myEvent->Branch("trobjphi",trobjphi,"trobjphi[ntriggers][80][10]/F");
   }
   
   if(runvertex_){
@@ -2510,6 +2617,44 @@ void Analyzer::beginJob(){
     myEvent->Branch("Tau_energy",tau_energy,"tau_energy[Tau_n]/F");
     myEvent->Branch("Tau_charge",tau_charge,"tau_charge[Tau_n]/F");
   }
+
+if(runDetailTauInfo_){
+   myEvent->Branch("genTauDecayMode1",&genTauDecayMode1);
+   myEvent->Branch("oneProng0Pi0",oneProng0Pi0,"oneProng0Pi0[Tau_n]/I");
+   myEvent->Branch("oneProng1Pi0",oneProng1Pi0,"oneProng1Pi0[Tau_n]/I");
+   myEvent->Branch("oneProng2Pi0",oneProng2Pi0,"oneProng2Pi0[Tau_n]/I");
+   myEvent->Branch("threeProng0Pi0",threeProng0Pi0,"threeProng0Pi0[Tau_n]/I");
+   myEvent->Branch("threeProng1Pi0",threeProng1Pi0,"threeProng1Pi0[Tau_n]/I");
+   myEvent->Branch("tauelectron",tauelectron,"tauelectron[Tau_n]/I");
+   myEvent->Branch("taumuon",taumuon,"taumuon[Tau_n]/I");
+                    
+   myEvent->Branch("nthreeProng1Pi0",&nthreeProng1Pi0,"nthreeProng1Pi0/I");
+   myEvent->Branch("ntauelectron",&ntauelectron,"ntauelectron/I");
+   myEvent->Branch("ntaumuon",&ntaumuon,"ntaumuon/I");
+                    
+   myEvent->Branch("genHadTauPt",genHadTauPt,"genHadTauPt[Tau_n]/D");
+   myEvent->Branch("genHadTauEta",genHadTauEta,"genHadTauEta[Tau_n]/D");
+   myEvent->Branch("genHadTauPhi",genHadTauPhi,"genHadTauPhi[Tau_n]/D");
+                    
+   myEvent->Branch("nPions",nPions,"nPions[Tau_n]/I");
+   myEvent->Branch("PionPdgId",PionPdgId,"PionPdgId[Tau_n][5]/I");
+   myEvent->Branch("PionPt",PionPt,"PionPt[Tau_n][5]/D");
+   myEvent->Branch("PionEta",PionEta,"PionEta[Tau_n][5]/D");
+   myEvent->Branch("PionPhi",PionPhi,"PionPhi[Tau_n][5]/D");
+                    
+   myEvent->Branch("nPi0",&nPi0,"nPi0[Tau_n]/I");
+   myEvent->Branch("Pi0PdgId",Pi0PdgId,"Pi0PdgId[Tau_n][5]/I");
+   myEvent->Branch("Pi0Pt",Pi0Pt,"Pi0Pt[Tau_n][5]/D");
+   myEvent->Branch("Pi0Eta",Pi0Eta,"Pi0Eta[Tau_n][5]/D");
+   myEvent->Branch("Pi0Phi",Pi0Phi,"Pi0Phi[Tau_n][5]/D");
+   myEvent->Branch("nPhotons",&nPhotons,"nPhotons[Tau_n]/I");
+   myEvent->Branch("PhotonPt",PhotonPt,"PhotonPt[Tau_n][5]/D");
+   myEvent->Branch("PhotonEta",PhotonEta,"PhotonEta[Tau_n][5]/D");                      
+   myEvent->Branch("PhotonPhi",PhotonPhi,"PhotonPhi[Tau_n][5]/D");
+   myEvent->Branch("PhotonPdgId",PhotonPdgId,"PhotonPdgId[Tau_n][5]/I");
+
+  }//runDetailTauInfo_
+
   
   if( rungenParticleCandidates_ ){
     myEvent->Branch("gen_pthat",&gen_pthat,"gen_pthat/F");

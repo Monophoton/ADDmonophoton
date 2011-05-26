@@ -12,6 +12,9 @@
 #include "FWCore/Common/interface/TriggerNames.h"
 #include "HLTrigger/HLTcore/interface/HLTConfigProvider.h"
 #include <string>
+#include <map>
+
+
 
 class Analyzer : public edm::EDAnalyzer {
  public:
@@ -80,12 +83,10 @@ class Analyzer : public edm::EDAnalyzer {
 
  std::vector<std::string>  hlNames_;           
   //HLT      
-  TString module_type[20];
-  double trobjpt[100][100][100];
-  double trobjeta[100][100][100];
-  double trobjphi[100][100][100];
-
-
+  TString module_type[50];
+  float trobjpt[100][80][10];
+  float trobjeta[100][80][10];
+  float trobjphi[100][80][10];
 
 
   //maximum size to be filled in tree branches
@@ -137,6 +138,7 @@ class Analyzer : public edm::EDAnalyzer {
   bool runpfjets_;
   bool rungenjets_;
   bool runtaus_;
+  bool runDetailTauInfo_;
   bool runHLT_;
   bool runL1_;
   bool runscraping_;
@@ -385,18 +387,62 @@ class Analyzer : public edm::EDAnalyzer {
 
  
   //tau variables
-  float tau_pt[200];
-  float tau_px[200];
-  float tau_py[200];
-  float tau_pz[200];
-  float tau_vx[200];
-  float tau_vy[200];
-  float tau_vz[200];
-  float tau_energy[200];
-  float tau_charge[200];
-  float tau_eta[200];
-  float tau_phi[200];
-  
+  float tau_pt[100];
+  float tau_px[100];
+  float tau_py[100];
+  float tau_pz[100];
+  float tau_vx[100];
+  float tau_vy[100];
+  float tau_vz[100];
+  float tau_energy[100];
+  float tau_charge[100];
+  float tau_eta[100];
+  float tau_phi[100];
+ 
+  //detailed infor 
+  int nPions[100];                                                                                                                                  
+  int nPi0[100];
+  int nPhotons[100];
+  int oneProng0Pi0[100];
+  int oneProng1Pi0[100];
+  int oneProng2Pi0[100];
+  int threeProng0Pi0[100];
+  int threeProng1Pi0[100];
+  int tauelectron[100];
+  int taumuon[100];
+         
+  int nthreeProng0Pi0;
+  int nthreeProng1Pi0;
+  int ntauelectron;
+  int ntaumuon;
+
+  int PionPdgId[100][5];
+  int PhotonPdgId[100][5];
+  int Pi0PdgId[100][5];
+        
+  float PionPt[100][5];
+  float PionEta[100][5];
+  float PionPhi[100][5];
+  float Pi0Pt[100][5];
+  float Pi0Eta[100][5];
+  float Pi0Phi[100][5];
+  float PhotonPt[100][5];
+  float PhotonEta[100][5];
+  float PhotonPhi[100][5];
+        
+  float genHadTauPt[100];
+  float genHadTauEta[100];
+  float genHadTauPhi[100];
+  float oneProng0Pi0Pt[100];
+  float oneProng0Pi0Eta[100];
+  float oneProng0Pi0Phi[100];
+
+  std::vector <const reco::GenParticle*>  genParticleList ;
+  std::vector<std::string> genTauDecayMode1;                                                                                                          
+  std::string genTauDecayMode;
+
+
+ 
   //gen level variables
   float gen_pho_pt[1000];
   float gen_pho_px[1000];
