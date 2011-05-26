@@ -42,7 +42,7 @@ addJetCollection(process,cms.InputTag('ak5PFJets'),
                  'AK5', 'PF',
                  doJTA        = True,
                  doBTagging   = True,
-                 jetCorrLabel = ('AK5PF', cms.vstring(['L1Offset','L2Relative', 'L3Absolute','L2L3Residual'])),
+                 jetCorrLabel = ('AK5PF', cms.vstring(['L1FastJet','L2Relative', 'L3Absolute','L2L3Residual'])),
                  doType1MET    = True,
                  doL1Cleaning  = True,
                  doL1Counters  = False,
@@ -52,12 +52,25 @@ addJetCollection(process,cms.InputTag('ak5PFJets'),
                 )
 process.selectedPatJetsAK5PF.cut = cms.string('pt > 10')
 
-#---JEC for 41X
-#process.load('JetMETCorrections.Configuration.DefaultJEC_cff')
-#process.load('RecoJets.Configuration.RecoPFJets_cff')
-#process.kt6PFJets.doRhoFastjet = True
-#process.ak5PFJets.doAreaFastjet = True
-#process.ak5CaloJets.doAreaFastjet = True
+
+# HB + HE noise filtering
+process.load('CommonTools/RecoAlgos/HBHENoiseFilter_cfi')
+# Modify defaults setting to avoid an over-efficiency in the presence of OFT PU
+process.HBHENoiseFilter.minIsolatedNoiseSumE = cms.double(999999.)
+process.HBHENoiseFilter.minNumIsolatedNoiseChannels = cms.int32(999999)
+process.HBHENoiseFilter.minIsolatedNoiseSumEt = cms.double(999999.)
+
+
+#---For FastJet JEC for 41X--
+process.load('JetMETCorrections.Configuration.DefaultJEC_cff')
+process.load('RecoJets.Configuration.RecoPFJets_cff')
+process.kt6PFJets.doRhoFastjet = True
+process.kt6PFJets.Rho_EtaMax = cms.double(5.0)
+process.kt6PFJets.Ghost_EtaMax = cms.double(5.0)
+
+process.ak5PFJets.doAreaFastjet = True
+process.ak5PFJets.Ghost_EtaMax = cms.double(5.0)
+process.ak5PFJets.Rho_EtaMax = cms.double(5.0)
 #--------
 
 # Add the files 
@@ -65,7 +78,7 @@ readFiles = cms.untracked.vstring()
 secFiles = cms.untracked.vstring()
 
 readFiles.extend( [
-'/store/data/Run2011A/Photon/RECO/PromptReco-v2/000/163/869/86BE1C0B-5377-E011-BEC1-001617E30E28.root',
+        '/store/data/Run2011A/Photon/RECO/PromptReco-v2/000/163/869/86BE1C0B-5377-E011-BEC1-001617E30E28.root',
         '/store/data/Run2011A/Photon/RECO/PromptReco-v2/000/163/869/3E09B375-5477-E011-A60A-000423D9997E.root',
         '/store/data/Run2011A/Photon/RECO/PromptReco-v2/000/163/817/FACEEE9E-A576-E011-98A2-001617C3B6C6.root',
         '/store/data/Run2011A/Photon/RECO/PromptReco-v2/000/163/817/F6AC42AE-7776-E011-B272-003048F118E0.root',
@@ -102,9 +115,9 @@ process.demo = cms.EDAnalyzer('Analyzer',
                               metTag           = cms.untracked.InputTag("patMETs"),
                               PFmetTag         = cms.untracked.InputTag("patMETsPF"),
                               TCmetTag         = cms.untracked.InputTag("patMETsTC"),
-                              HLTriggerResults = cms.untracked.InputTag("TriggerResults","","HLT"),
-                              triggerEventTag  = cms.untracked.InputTag("hltTriggerSummaryAOD","","HLT"),
-                              hltlabel          = cms.untracked.string("HLT"),
+                              HLTriggerResults = cms.untracked.InputTag("TriggerResults","","HLT"),#check what you need here HLT or REDIGI3..
+                              triggerEventTag  = cms.untracked.InputTag("hltTriggerSummaryAOD","","HLT"),#check what you need here HLT or REDIGI3..
+                              hltlabel          = cms.untracked.string("HLT"),#check what you need here HLT or REDIGI3..
                               Tracks           = cms.untracked.InputTag("generalTracks"),
                               Vertices         = cms.untracked.InputTag("offlinePrimaryVertices","",""),
                               BeamHaloSummary  = cms.untracked.InputTag("BeamHaloSummary"),
@@ -122,6 +135,7 @@ process.demo = cms.EDAnalyzer('Analyzer',
                               rungenjets       = cms.untracked.bool(False),
                               runelectrons     = cms.untracked.bool(True),
                               runtaus          = cms.untracked.bool(True),
+                              runDetailTauInfo = cms.untracked.bool(True),
                               runmuons         = cms.untracked.bool(True),
                               runcosmicmuons   = cms.untracked.bool(True),
                               rungenParticleCandidates = cms.untracked.bool(False),
@@ -143,47 +157,13 @@ process.demo = cms.EDAnalyzer('Analyzer',
 
 
 
-#process.monoSkim = cms.EDFilter("MonoPhotonSkimmer",
-#  phoTag = cms.InputTag("photons"),
-#  selectEE = cms.bool(True),
-#  selectTrack = cms.bool(False),
-#  ecalisoOffsetEB = cms.double(5000.),
-#  ecalisoSlopeEB = cms.double(0.15),
-#  hcalisoOffsetEB = cms.double(7000.0),
-#  hcalisoSlopeEB = cms.double(0.),
-#  hadoveremEB = cms.double(0.05),
-#  minPhoEtEB = cms.double(30.),
-#  scHighEtThreshEB = cms.double(100.),
-#  ecalisoOffsetEE = cms.double(5000.),
-#  ecalisoSlopeEE = cms.double(0.15),
-#  hcalisoOffsetEE = cms.double(10000.),
-#  hcalisoSlopeEE = cms.double(0.),
-#  hadoveremEE = cms.double(0.05),
-#  minPhoEtEE = cms.double(30.),
-#  scHighEtThreshEE = cms.double(100.),
-# )
-
-
-
-#Remove the time severity flag from cleanedHybridSuperCluster
-#process.cleanedHybridSuperClusters.RecHitSeverityToBeExcluded= cms.vint32(4,5)
-#For Uncleaned ones
-#process.uncleanedHybridSuperClusters.RecHitSeverityToBeExcluded= cms.vint32(999)
-
-
-#Reconstrucition of photon from SC without the timing cuts
-#process.photonReReco = cms.Sequence(
-#        process.ecalClusters*
-#	ckfTracksFromConversions*
-#	process.conversionSequence*
-#	process.photonSequence*
-#	process.photonIDSequence)
 
 #All paths are here
 process.p = cms.Path(
-#   process.kt6PFJets*
-#   process.ak5CaloJets* 
-#   process.ak5PFJets*
+   process.HBHENoiseFilter*
+   process.kt6PFJets*
+   process.ak5PFJets*  
+   process.HBHENoiseFilter*
    process.patDefaultSequence*
    process.demo
    )

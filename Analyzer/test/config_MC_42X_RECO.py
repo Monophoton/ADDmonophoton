@@ -31,7 +31,7 @@ addTcMET(process,"TC")
 from PhysicsTools.PatAlgos.tools.trigTools import switchOnTrigger
 
 # Select calo jets
-process.patJetCorrFactors.levels = cms.vstring(['L1FastJet','L2Relative','L3Absolute'])
+process.patJetCorrFactors.levels = cms.vstring(['L1Offset','L2Relative','L3Absolute'])
 process.selectedPatJets.cut = cms.string('pt > 10 & abs(eta) < 3.0')
 
 
@@ -50,13 +50,27 @@ addJetCollection(process,cms.InputTag('ak5PFJets'),
                  jetIdLabel    = "ak5"
                 )
 process.selectedPatJetsAK5PF.cut = cms.string('pt > 10')
-##-Not sure if these are needed here with GT, twiki did not say anything explicitely-
-#process.load('JetMETCorrections.Configuration.DefaultJEC_cff')
-#process.load('RecoJets.Configuration.RecoPFJets_cff')
-#process.kt6PFJets.doRhoFastjet = True
-#process.ak5PFJets.doAreaFastjet = True
-#process.ak5CaloJets.doAreaFastjet = True
-#----------------------------------------------------
+
+
+# HB + HE noise filtering
+process.load('CommonTools/RecoAlgos/HBHENoiseFilter_cfi')
+# Modify defaults setting to avoid an over-efficiency in the presence of OFT PU
+process.HBHENoiseFilter.minIsolatedNoiseSumE = cms.double(999999.)
+process.HBHENoiseFilter.minNumIsolatedNoiseChannels = cms.int32(999999)
+process.HBHENoiseFilter.minIsolatedNoiseSumEt = cms.double(999999.)
+
+#---For FastJet JEC for 41X--
+process.load('JetMETCorrections.Configuration.DefaultJEC_cff')
+process.load('RecoJets.Configuration.RecoPFJets_cff')
+process.kt6PFJets.doRhoFastjet = True
+process.kt6PFJets.Rho_EtaMax = cms.double(5.0)
+process.kt6PFJets.Ghost_EtaMax = cms.double(5.0)
+ 
+process.ak5PFJets.doAreaFastjet = True
+process.ak5PFJets.Ghost_EtaMax = cms.double(5.0)
+process.ak5PFJets.Rho_EtaMax = cms.double(5.0)                                                                                                                                     
+#--------
+
 
 # Add the files 
 readFiles = cms.untracked.vstring()
@@ -95,9 +109,9 @@ process.demo = cms.EDAnalyzer('Analyzer',
                               metTag           = cms.untracked.InputTag("patMETs"),
                               PFmetTag           = cms.untracked.InputTag("patMETsPF"),
                               TCmetTag           = cms.untracked.InputTag("patMETsTC"),
-                              HLTriggerResults = cms.untracked.InputTag("TriggerResults","","HLT"),
-                              triggerEventTag  = cms.untracked.InputTag("hltTriggerSummaryAOD","","HLT"),
-                              hltlabel          = cms.untracked.string("HLT"),           
+                              HLTriggerResults = cms.untracked.InputTag("TriggerResults","","HLT"),#check what you need here HLT or REDIGI3..
+                              triggerEventTag  = cms.untracked.InputTag("hltTriggerSummaryAOD","","HLT"),#check what you need here HLT or REDIGI3..
+                              hltlabel          = cms.untracked.string("HLT"),           #check what you need here HLT or REDIGI3..
                               Tracks           = cms.untracked.InputTag("generalTracks"),
                               Vertices         = cms.untracked.InputTag("offlinePrimaryVertices","",""),
                               BeamHaloSummary  = cms.untracked.InputTag("BeamHaloSummary"),
@@ -115,6 +129,7 @@ process.demo = cms.EDAnalyzer('Analyzer',
                               rungenjets       = cms.untracked.bool(True),
                               runelectrons     = cms.untracked.bool(True),
                               runtaus          = cms.untracked.bool(True),
+                              runDetailTauInfo = cms.untracked.bool(True),
                               runmuons         = cms.untracked.bool(True),
                               runcosmicmuons   = cms.untracked.bool(True),
                               rungenParticleCandidates = cms.untracked.bool(True),
@@ -136,9 +151,9 @@ process.demo = cms.EDAnalyzer('Analyzer',
 
 #All paths are here
 process.p = cms.Path(
-#   process.kt6PFJets*
-#   process.ak5CaloJets * 
-#   process.ak5PFJets*
+   process.HBHENoiseFilter*
+   process.kt6PFJets*
+   process.ak5PFJets*
    process.patDefaultSequence*
    process.demo
    )

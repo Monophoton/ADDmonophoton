@@ -53,23 +53,37 @@ addJetCollection(process,cms.InputTag('ak5PFJets'),
 
 process.selectedPatJetsAK5PF.cut = cms.string('pt > 10')
 
-##Not sure if these are needed here with GT, twiki did not say anything explicitely-------
-#process.load('JetMETCorrections.Configuration.DefaultJEC_cff')
-#process.load('RecoJets.Configuration.RecoPFJets_cff')
-#process.kt6PFJets.doRhoFastjet = True
-#process.ak5PFJets.doAreaFastjet = True
-#process.ak5CaloJets.doAreaFastjet = True
 
-#----------------------------------------------------
+# HB + HE noise filtering
+process.load('CommonTools/RecoAlgos/HBHENoiseFilter_cfi')
+# Modify defaults setting to avoid an over-efficiency in the presence of OFT PU
+process.HBHENoiseFilter.minIsolatedNoiseSumE = cms.double(999999.)
+process.HBHENoiseFilter.minNumIsolatedNoiseChannels = cms.int32(999999)
+process.HBHENoiseFilter.minIsolatedNoiseSumEt = cms.double(999999.)
+
+#---For FastJet JEC for 41X--
+process.load('JetMETCorrections.Configuration.DefaultJEC_cff')
+process.load('RecoJets.Configuration.RecoPFJets_cff')
+process.kt6PFJets.doRhoFastjet = True
+process.kt6PFJets.Rho_EtaMax = cms.double(5.0)
+process.kt6PFJets.Ghost_EtaMax = cms.double(5.0)
+ 
+process.ak5PFJets.doAreaFastjet = True
+process.ak5PFJets.Ghost_EtaMax = cms.double(5.0)
+process.ak5PFJets.Rho_EtaMax = cms.double(5.0)                                                                                                                                     
+#--------
 
 # Add the files 
 readFiles = cms.untracked.vstring()
 secFiles = cms.untracked.vstring()
 
 readFiles.extend( [
-        '/store/data/Run2011A/Photon/AOD/PromptReco-v1/000/160/853/2E97032B-5453-E011-A481-0030487A3C9A.root'
-#        '/store/data/Run2011A/Photon/AOD/PromptReco-v1/000/160/827/5A9A2B84-8A53-E011-BC97-0030487CD7E0.root',
-#        '/store/data/Run2011A/Photon/AOD/PromptReco-v1/000/160/819/EA548277-8753-E011-8EA5-001D09F2B30B.root'
+        '/store/mc/Summer11/WToMuNu_TuneZ2_7TeV-pythia6/AODSIM/PU_S3_START42_V11-v2/0000/F02CA8F2-B37F-E011-9D14-00304867C0FC.root',
+        '/store/mc/Summer11/WToMuNu_TuneZ2_7TeV-pythia6/AODSIM/PU_S3_START42_V11-v2/0000/F01B3ACB-CD7F-E011-9C27-003048678F0C.root',
+        '/store/mc/Summer11/WToMuNu_TuneZ2_7TeV-pythia6/AODSIM/PU_S3_START42_V11-v2/0000/EEBB83DA-B37F-E011-A4FB-001A9281170C.root',
+        '/store/mc/Summer11/WToMuNu_TuneZ2_7TeV-pythia6/AODSIM/PU_S3_START42_V11-v2/0000/EEB01206-B47F-E011-8FB4-002618943958.root',
+        '/store/mc/Summer11/WToMuNu_TuneZ2_7TeV-pythia6/AODSIM/PU_S3_START42_V11-v2/0000/EC52A1ED-4780-E011-8A17-003048678BAA.root',
+        '/store/mc/Summer11/WToMuNu_TuneZ2_7TeV-pythia6/AODSIM/PU_S3_START42_V11-v2/0000/EA518F88-957F-E011-826A-003048679274.root'
     ] );
 
 process.source = cms.Source("PoolSource",
@@ -99,9 +113,9 @@ process.demo = cms.EDAnalyzer('Analyzer',
                               metTag           = cms.untracked.InputTag("patMETs"),
                               PFmetTag         = cms.untracked.InputTag("patMETsPF"),
                               TCmetTag         = cms.untracked.InputTag("patMETsTC"),
-                              HLTriggerResults = cms.untracked.InputTag("TriggerResults","","HLT"),
-                              triggerEventTag  = cms.untracked.InputTag("hltTriggerSummaryAOD","","HLT"),
-                              hltlabel          = cms.untracked.string("HLT"),   
+                              HLTriggerResults = cms.untracked.InputTag("TriggerResults","","HLT"),#check what you need here HLT or REDIGI3..
+                              triggerEventTag  = cms.untracked.InputTag("hltTriggerSummaryAOD","","HLT"),#check what you need here HLT or REDIGI3..
+                              hltlabel          = cms.untracked.string("HLT"),   #check what you need here HLT or REDIGI3..
                               Tracks           = cms.untracked.InputTag("generalTracks"),
                               Vertices         = cms.untracked.InputTag("offlinePrimaryVertices","",""),
                               BeamHaloSummary  = cms.untracked.InputTag("BeamHaloSummary"),
@@ -119,6 +133,7 @@ process.demo = cms.EDAnalyzer('Analyzer',
                               rungenjets        = cms.untracked.bool(False),
                               runelectrons     = cms.untracked.bool(True),
                               runtaus          = cms.untracked.bool(True),
+                              runDetailTauInfo = cms.untracked.bool(True),
                               runmuons         = cms.untracked.bool(True),
                               runcosmicmuons   = cms.untracked.bool(True),
                               rungenParticleCandidates = cms.untracked.bool(False),
@@ -140,47 +155,11 @@ process.demo = cms.EDAnalyzer('Analyzer',
 
 
 
-#process.monoSkim = cms.EDFilter("MonoPhotonSkimmer",
-#  phoTag = cms.InputTag("photons"),
-#  selectEE = cms.bool(True),
-#  selectTrack = cms.bool(False),
-#  ecalisoOffsetEB = cms.double(5000.),
-#  ecalisoSlopeEB = cms.double(0.15),
-#  hcalisoOffsetEB = cms.double(7000.0),
-#  hcalisoSlopeEB = cms.double(0.),
-#  hadoveremEB = cms.double(0.05),
-#  minPhoEtEB = cms.double(30.),
-#  scHighEtThreshEB = cms.double(100.),
-#  ecalisoOffsetEE = cms.double(5000.),
-#  ecalisoSlopeEE = cms.double(0.15),
-#  hcalisoOffsetEE = cms.double(10000.),
-#  hcalisoSlopeEE = cms.double(0.),
-#  hadoveremEE = cms.double(0.05),
-#  minPhoEtEE = cms.double(30.),
-#  scHighEtThreshEE = cms.double(100.),
-# )
-
-
-
-#Remove the time severity flag from cleanedHybridSuperCluster
-#process.cleanedHybridSuperClusters.RecHitSeverityToBeExcluded= cms.vint32(4,5)
-#For Uncleaned ones
-#process.uncleanedHybridSuperClusters.RecHitSeverityToBeExcluded= cms.vint32(999)
-
-
-#Reconstrucition of photon from SC without the timing cuts
-#process.photonReReco = cms.Sequence(
-#        process.ecalClusters*
-#	ckfTracksFromConversions*
-#	process.conversionSequence*
-#	process.photonSequence*
-#	process.photonIDSequence)
-
 #All paths are here
 process.p = cms.Path(
-#    process.kt6PFJets * 
-#    process.ak5CaloJets*
-#    process.ak5PFJets *
+     process.HBHENoiseFilter*
+     process.kt6PFJets* 
+     process.ak5PFJets*
      process.patDefaultSequence*
      process.demo
    )

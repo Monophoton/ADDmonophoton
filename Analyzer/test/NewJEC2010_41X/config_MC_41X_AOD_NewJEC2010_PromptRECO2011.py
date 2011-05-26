@@ -50,13 +50,31 @@ addJetCollection(process,cms.InputTag('ak5PFJets'),
 
 process.selectedPatJetsAK5PF.cut = cms.string('pt > 10')
 
-#---Final JEC for 41X ----   
-#process.load('JetMETCorrections.Configuration.DefaultJEC_cff')
-#process.load('RecoJets.Configuration.RecoPFJets_cff')
-#process.kt6PFJets.doRhoFastjet = True
-#process.ak5PFJets.doAreaFastjet = True
-#process.ak5CaloJets.doAreaFastjet = True
+
+process.load('RecoJets.Configuration.RecoPFJets_cff')
+process.kt6PFJets.doRhoFastjet = True
+process.p = cms.Path(process.kt6PFJets)
+
+
+# HB + HE noise filtering
+process.load('CommonTools/RecoAlgos/HBHENoiseFilter_cfi')
+# Modify defaults setting to avoid an over-efficiency in the presence of OFT PU
+process.HBHENoiseFilter.minIsolatedNoiseSumE = cms.double(999999.)
+process.HBHENoiseFilter.minNumIsolatedNoiseChannels = cms.int32(999999)
+process.HBHENoiseFilter.minIsolatedNoiseSumEt = cms.double(999999.)
+
+#---For FastJet JEC for 41X--
+process.load('JetMETCorrections.Configuration.DefaultJEC_cff')
+process.load('RecoJets.Configuration.RecoPFJets_cff')
+process.kt6PFJets.doRhoFastjet = True
+process.kt6PFJets.Rho_EtaMax = cms.double(5.0)
+process.kt6PFJets.Ghost_EtaMax = cms.double(5.0)
+ 
+process.ak5PFJets.doAreaFastjet = True
+process.ak5PFJets.Ghost_EtaMax = cms.double(5.0)
+process.ak5PFJets.Rho_EtaMax = cms.double(5.0)                                                                                                                                     
 #--------
+
 
 
 # Add the files 
@@ -97,9 +115,9 @@ process.demo = cms.EDAnalyzer('Analyzer',
                               metTag           = cms.untracked.InputTag("patMETs"),
                               PFmetTag         = cms.untracked.InputTag("patMETsPF"),
                               TCmetTag         = cms.untracked.InputTag("patMETsTC"),
-                              HLTriggerResults = cms.untracked.InputTag("TriggerResults","",""),
-                              triggerEventTag  = cms.untracked.InputTag("hltTriggerSummaryAOD","","HLT"),
-                              hltlabel          = cms.untracked.string("HLT"),
+                              HLTriggerResults = cms.untracked.InputTag("TriggerResults","","REDIGI311X"), #check what you need here HLT or REDIGI3..
+                              triggerEventTag  = cms.untracked.InputTag("hltTriggerSummaryAOD","","REDIGI311X"),#check what you need here HLT or REDIGI3..
+                              hltlabel          = cms.untracked.string("REDIGI311X"), #check what you need here HLT or REDIGI3..
                               Tracks           = cms.untracked.InputTag("generalTracks"),
                               Vertices         = cms.untracked.InputTag("offlinePrimaryVertices","",""),
                               BeamHaloSummary  = cms.untracked.InputTag("BeamHaloSummary"),
@@ -117,6 +135,7 @@ process.demo = cms.EDAnalyzer('Analyzer',
                               rungenjets        = cms.untracked.bool(True),
                               runelectrons     = cms.untracked.bool(True),
                               runtaus          = cms.untracked.bool(True),
+                              runDetailTauInfo = cms.untracked.bool(True),
                               runmuons         = cms.untracked.bool(True),
                               runcosmicmuons   = cms.untracked.bool(True),
                               rungenParticleCandidates = cms.untracked.bool(True),
@@ -138,47 +157,11 @@ process.demo = cms.EDAnalyzer('Analyzer',
 
 
 
-#process.monoSkim = cms.EDFilter("MonoPhotonSkimmer",
-#  phoTag = cms.InputTag("photons"),
-#  selectEE = cms.bool(True),
-#  selectTrack = cms.bool(False),
-#  ecalisoOffsetEB = cms.double(5000.),
-#  ecalisoSlopeEB = cms.double(0.15),
-#  hcalisoOffsetEB = cms.double(7000.0),
-#  hcalisoSlopeEB = cms.double(0.),
-#  hadoveremEB = cms.double(0.05),
-#  minPhoEtEB = cms.double(30.),
-#  scHighEtThreshEB = cms.double(100.),
-#  ecalisoOffsetEE = cms.double(5000.),
-#  ecalisoSlopeEE = cms.double(0.15),
-#  hcalisoOffsetEE = cms.double(10000.),
-#  hcalisoSlopeEE = cms.double(0.),
-#  hadoveremEE = cms.double(0.05),
-#  minPhoEtEE = cms.double(30.),
-#  scHighEtThreshEE = cms.double(100.),
-# )
-
-
-
-#Remove the time severity flag from cleanedHybridSuperCluster
-#process.cleanedHybridSuperClusters.RecHitSeverityToBeExcluded= cms.vint32(4,5)
-#For Uncleaned ones
-#process.uncleanedHybridSuperClusters.RecHitSeverityToBeExcluded= cms.vint32(999)
-
-
-#Reconstrucition of photon from SC without the timing cuts
-#process.photonReReco = cms.Sequence(
-#        process.ecalClusters*
-#	ckfTracksFromConversions*
-#	process.conversionSequence*
-#	process.photonSequence*
-#	process.photonIDSequence)
-
 #All paths are here
 process.p = cms.Path(
-#   process.kt6PFJets*
-#   process.ak5CaloJets* 
-#   process.ak5PFJets*
+   process.HBHENoiseFilter*
+   process.kt6PFJets*
+   process.ak5PFJets*
    process.patDefaultSequence*
    process.demo
    )
@@ -189,7 +172,7 @@ process.p = cms.Path(
 process.MessageLogger.cerr.FwkReport.reportEvery = cms.untracked.int32(1)
 
 # process all the events
-process.maxEvents = cms.untracked.PSet( input = cms.untracked.int32(-1) )
+process.maxEvents = cms.untracked.PSet( input = cms.untracked.int32(200) )
 #process.options.wantSummary = True
 #process.options.SkipEvent = cms.untracked.vstring('ProductNotFound')
 
