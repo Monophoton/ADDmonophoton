@@ -76,20 +76,40 @@ process.ak5PFJets.Rho_EtaMax = cms.double(5.0)
 process.load("RecoEcal.EgammaClusterProducers.uncleanSCRecovery_cfi") 
 process.uncleanSCRecovered.cleanScCollection = cms.InputTag("correctedHybridSuperClusters")
 process.photonCore.scHybridBarrelProducer = cms.InputTag("uncleanSCRecovered:uncleanHybridSuperClusters")
-
 photons.barrelEcalHits = cms.InputTag("reducedEcalRecHitsEB")
 photons.endcapEcalHits = cms.InputTag("reducedEcalRecHitsEE")
 
 from RecoEgamma.PhotonIdentification.isolationCalculator_cfi import *
 newisolationSumsCalculator = isolationSumsCalculator.clone()
-
-photons.barrelEcalRecHitProducer = cms.string('reducedEcalRecHitsEB')
-photons.endcapEcalRecHitProducer = cms.string('reducedEcalRecHitsEE')
-
-newisolationSumsCalculator.barrelEcalRecHitCollection = ''
-newisolationSumsCalculator.endcapEcalRecHitCollection = ''
+newisolationSumsCalculator.barrelEcalRecHitProducer = cms.string('reducedEcalRecHitsEB')
+newisolationSumsCalculator.endcapEcalRecHitProducer = cms.string('reducedEcalRecHitsEE')
+newisolationSumsCalculator.barrelEcalRecHitCollection = cms.InputTag('reducedEcalRecHitsEB')
+newisolationSumsCalculator.endcapEcalRecHitCollection = cms.InputTag('reducedEcalRecHitsEE')
 
 photons.isolationSumsCalculatorSet = newisolationSumsCalculator
+
+##----Now make a separate pat collection
+# make a new patPhotons
+from PhysicsTools.PatAlgos.producersLayer1.patCandidates_cff import *
+process.uncleanpatPhotons = patPhotons.clone(
+    photonSource = cms.InputTag("photons","","ADDtuple")
+) 
+# make a new selectedPatCandidates
+from PhysicsTools.PatAlgos.selectionLayer1.selectedPatCandidates_cff import *
+process.selecteduncleanPatPhotons = selectedPatPhotons.clone(
+    src = cms.InputTag("uncleanpatPhotons"),                                                                                                                 
+    cut = cms.string('pt> 10.') 
+)                 
+
+# make cleanPatCandidates
+from PhysicsTools.PatAlgos.cleaningLayer1.cleanPatCandidates_cff import *
+process.uncleanPatPhotons = cleanPatPhotons.clone(            
+    src = cms.InputTag("selecteduncleanPatPhotons")                                                                                                                 
+)      
+
+process.selectedPatPhotons.cut = cms.string('pt > 20 ')
+
+
 
 
 
@@ -178,23 +198,30 @@ process.uncleanPhotons = cms.Sequence(
                process.photonIDSequence
                )
 
+process.NewPatPhotons = cms.Sequence(
+               process.uncleanpatPhotons*
+               process.selecteduncleanPatPhotons*
+               process.uncleanPatPhotons
+               )
+
 #All paths are here
 process.p = cms.Path(
      process.HBHENoiseFilter*
-     process.uncleanPhotons* 
+#  process.uncleanPhotons* 
      process.kt6PFJets* 
      process.ak5PFJets*
      process.patDefaultSequence*
+#  process.NewPatPhotons*
      process.demo
    )
 
 
 
 # reduce verbosity
-process.MessageLogger.cerr.FwkReport.reportEvery = cms.untracked.int32(1000)
+process.MessageLogger.cerr.FwkReport.reportEvery = cms.untracked.int32(1)
 
 # process all the events
-process.maxEvents = cms.untracked.PSet( input = cms.untracked.int32(-1) )
+process.maxEvents = cms.untracked.PSet( input = cms.untracked.int32(3) )
 #process.options.wantSummary = True
 #process.options.SkipEvent = cms.untracked.vstring('ProductNotFound')
 
