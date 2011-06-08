@@ -72,33 +72,18 @@ process.ak5PFJets.Ghost_EtaMax = cms.double(5.0)
 process.ak5PFJets.Rho_EtaMax = cms.double(5.0)
 
 
-#--------For Uncleaned Photon-----
-process.load("RecoEcal.EgammaClusterProducers.uncleanSCRecovery_cfi") 
-process.uncleanSCRecovered.cleanScCollection = cms.InputTag("correctedHybridSuperClusters")
-process.photonCore.scHybridBarrelProducer = cms.InputTag("uncleanSCRecovered:uncleanHybridSuperClusters")
-photons.barrelEcalHits = cms.InputTag("reducedEcalRecHitsEB")
-photons.endcapEcalHits = cms.InputTag("reducedEcalRecHitsEE")
 
-from RecoEgamma.PhotonIdentification.isolationCalculator_cfi import *
-newisolationSumsCalculator = isolationSumsCalculator.clone()
-newisolationSumsCalculator.barrelEcalRecHitProducer = cms.string('reducedEcalRecHitsEB')
-newisolationSumsCalculator.endcapEcalRecHitProducer = cms.string('reducedEcalRecHitsEE')
-newisolationSumsCalculator.barrelEcalRecHitCollection = cms.InputTag('reducedEcalRecHitsEB')
-newisolationSumsCalculator.endcapEcalRecHitCollection = cms.InputTag('reducedEcalRecHitsEE')
-
-photons.isolationSumsCalculatorSet = newisolationSumsCalculator
-
-##----Now make a separate pat collection
+##----NEW PAT  PHOTN COLLLECTION
 # make a new patPhotons
 from PhysicsTools.PatAlgos.producersLayer1.patCandidates_cff import *
 process.uncleanpatPhotons = patPhotons.clone(
-    photonSource = cms.InputTag("photons","","ADDtuple")
+   photonSource = cms.InputTag("photons::ADDSkim")
 ) 
 # make a new selectedPatCandidates
 from PhysicsTools.PatAlgos.selectionLayer1.selectedPatCandidates_cff import *
 process.selecteduncleanPatPhotons = selectedPatPhotons.clone(
     src = cms.InputTag("uncleanpatPhotons"),                                                                                                                 
-    cut = cms.string('pt> 10.') 
+    cut = cms.string('') 
 )                 
 
 # make cleanPatCandidates
@@ -107,10 +92,12 @@ process.uncleanPatPhotons = cleanPatPhotons.clone(
     src = cms.InputTag("selecteduncleanPatPhotons")                                                                                                                 
 )      
 
-process.selectedPatPhotons.cut = cms.string('pt > 20 ')
-
-
-
+##--default pick new one so explictely spefifying RECO here
+process.patPhotons.photonSource = cms.InputTag("photons::RECO")
+process.patPhotons.photonIDSources = cms.PSet(
+        PhotonCutBasedIDTight = cms.InputTag("PhotonIDProd","PhotonCutBasedIDTight","RECO"),
+        PhotonCutBasedIDLoose = cms.InputTag("PhotonIDProd","PhotonCutBasedIDLoose","RECO")
+    )
 
 
 # Add the files 
@@ -118,8 +105,7 @@ readFiles = cms.untracked.vstring()
 secFiles = cms.untracked.vstring()
 
 readFiles.extend( [
-       '/store/data/Run2011A/METBTag/AOD/May10ReReco-v1/0000/3A1103FE-817C-E011-B3C4-001A92971B3A.root'
-
+       'file:/uscms_data/d2/sushil/CMSSW/MonoPhoton/CMSSW_4_2_3/src/ADDmonophoton/Skimmer/test/phoskim.root'
     ] );
 
 process.source = cms.Source("PoolSource",
@@ -141,6 +127,8 @@ process.demo = cms.EDAnalyzer('Analyzer',
                               pfjetTag         = cms.untracked.InputTag("selectedPatJetsAK5PF"),
                               genjetTag        = cms.untracked.InputTag("ak5GenJets"),
                               photonTag        = cms.untracked.InputTag("selectedPatPhotons"),
+                              uncleanphotonTag = cms.untracked.InputTag("selecteduncleanPatPhotons"),
+                              caloTowerTag   = cms.untracked.InputTag("towerMaker"),
                               cscTag           = cms.untracked.InputTag("cscSegments"),
                               rpcTag           = cms.untracked.InputTag("rpcRecHits"),
                               rechitBTag       = cms.untracked.InputTag("reducedEcalRecHitsEB"),
@@ -158,6 +146,7 @@ process.demo = cms.EDAnalyzer('Analyzer',
                               pileup           = cms.untracked.InputTag("PileUpInfo"),
                               outFile          = cms.untracked.string("Histo_Data_AOD.root"),
                               runphotons       = cms.untracked.bool(True),
+                              rununcleanphotons= cms.untracked.bool(True),
                               runHErechit      = cms.untracked.bool(True),
                               runrechit        = cms.untracked.bool(True),
                               runmet           = cms.untracked.bool(True),
@@ -182,8 +171,9 @@ process.demo = cms.EDAnalyzer('Analyzer',
                               runCSCseg        = cms.untracked.bool(False),
                               runRPChit        = cms.untracked.bool(False),
                               #---------------
+                              runcaloTower     = cms.untracked.bool(True),
                               runBeamHaloSummary= cms.untracked.bool(True),
-                              runPileUp         = cms.untracked.bool(False),
+                              runPileUp         = cms.untracked.bool(True),
                               isAOD             = cms.untracked.bool(True),
                               debug             = cms.untracked.bool(False)
                               )
@@ -191,27 +181,19 @@ process.demo = cms.EDAnalyzer('Analyzer',
 
 
 
-#Sequence for ucleaned photon
-process.uncleanPhotons = cms.Sequence(
-               process.uncleanSCRecovered*
-               process.photonSequence*
-               process.photonIDSequence
-               )
-
 process.NewPatPhotons = cms.Sequence(
                process.uncleanpatPhotons*
-               process.selecteduncleanPatPhotons*
-               process.uncleanPatPhotons
+               process.selecteduncleanPatPhotons
+               #process.uncleanPatPhotons
                )
 
 #All paths are here
 process.p = cms.Path(
      process.HBHENoiseFilter*
-#  process.uncleanPhotons* 
      process.kt6PFJets* 
      process.ak5PFJets*
+     process.NewPatPhotons*
      process.patDefaultSequence*
-#  process.NewPatPhotons*
      process.demo
    )
 
@@ -221,7 +203,7 @@ process.p = cms.Path(
 process.MessageLogger.cerr.FwkReport.reportEvery = cms.untracked.int32(1)
 
 # process all the events
-process.maxEvents = cms.untracked.PSet( input = cms.untracked.int32(3) )
+process.maxEvents = cms.untracked.PSet( input = cms.untracked.int32(-1) )
 #process.options.wantSummary = True
 #process.options.SkipEvent = cms.untracked.vstring('ProductNotFound')
 

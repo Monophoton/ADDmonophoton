@@ -33,7 +33,7 @@ addTcMET(process,"TC")
 from PhysicsTools.PatAlgos.tools.trigTools import switchOnTrigger
 
 # Select calo jets
-process.patJetCorrFactors.levels = cms.vstring(['L1FastJet','L2Relative','L3Absolute','L2L3Residual'])
+process.patJetCorrFactors.levels = cms.vstring(['L1Offset','L2Relative','L3Absolute'])
 process.selectedPatJets.cut = cms.string('pt > 10 & abs(eta) < 3.0')
 
 # Add PF jets
@@ -42,7 +42,7 @@ addJetCollection(process,cms.InputTag('ak5PFJets'),
                  'AK5', 'PF',
                  doJTA        = True,
                  doBTagging   = True,
-                 jetCorrLabel = ('AK5PF', cms.vstring(['L1FastJet','L2Relative', 'L3Absolute','L2L3Residual'])),
+                 jetCorrLabel = ('AK5PF', cms.vstring(['L1FastJet','L2Relative', 'L3Absolute'])),
                  doType1MET    = True,
                  doL1Cleaning  = True,
                  doL1Counters  = False,
@@ -71,7 +71,35 @@ process.kt6PFJets.Ghost_EtaMax = cms.double(5.0)
 process.ak5PFJets.doAreaFastjet = True
 process.ak5PFJets.Ghost_EtaMax = cms.double(5.0)
 process.ak5PFJets.Rho_EtaMax = cms.double(5.0)                                                                                                                                     
-#--------
+
+##----NEW PAT  PHOTN COLLLECTION
+# make a new patPhotons
+from PhysicsTools.PatAlgos.producersLayer1.patCandidates_cff import *
+process.uncleanpatPhotons = patPhotons.clone(
+   photonSource = cms.InputTag("photons::ADDSkim")
+) 
+# make a new selectedPatCandidates
+from PhysicsTools.PatAlgos.selectionLayer1.selectedPatCandidates_cff import *
+process.selecteduncleanPatPhotons = selectedPatPhotons.clone(
+    src = cms.InputTag("uncleanpatPhotons"),                                                                                                                 
+    cut = cms.string('') 
+)                 
+
+# make cleanPatCandidates
+from PhysicsTools.PatAlgos.cleaningLayer1.cleanPatCandidates_cff import *
+process.uncleanPatPhotons = cleanPatPhotons.clone(            
+    src = cms.InputTag("selecteduncleanPatPhotons")                                                                                                                 
+)      
+
+##--default pick new one so explictely spefifying RECO here
+process.patPhotons.photonSource = cms.InputTag("photons::RECO")
+process.patPhotons.photonIDSources = cms.PSet(
+        PhotonCutBasedIDTight = cms.InputTag("PhotonIDProd","PhotonCutBasedIDTight","RECO"),
+        PhotonCutBasedIDLoose = cms.InputTag("PhotonIDProd","PhotonCutBasedIDLoose","RECO")
+    )
+
+
+
 
 # Add the files 
 readFiles = cms.untracked.vstring()
@@ -105,6 +133,8 @@ process.demo = cms.EDAnalyzer('Analyzer',
                               pfjetTag         = cms.untracked.InputTag("selectedPatJetsAK5PF"),
                               genjetTag        = cms.untracked.InputTag("ak5GenJets"),
                               photonTag        = cms.untracked.InputTag("selectedPatPhotons"),
+                              uncleanphotonTag = cms.untracked.InputTag("selecteduncleanPatPhotons"),
+                              caloTowerTag   = cms.untracked.InputTag("calotowers"),
                               cscTag           = cms.untracked.InputTag("cscSegments"),
                               rpcTag           = cms.untracked.InputTag("rpcRecHits"),
                               rechitBTag       = cms.untracked.InputTag("reducedEcalRecHitsEB"),
@@ -122,6 +152,7 @@ process.demo = cms.EDAnalyzer('Analyzer',
                               pileup           = cms.untracked.InputTag("PileUpInfo"),
                               outFile          = cms.untracked.string("Histo_Data_AOD.root"),
                               runphotons       = cms.untracked.bool(True),
+                              rununcleanphotons= cms.untracked.bool(True),
                               runHErechit      = cms.untracked.bool(True),
                               runrechit        = cms.untracked.bool(True),
                               runmet           = cms.untracked.bool(True),
@@ -146,6 +177,7 @@ process.demo = cms.EDAnalyzer('Analyzer',
                               runCSCseg        = cms.untracked.bool(False),
                               runRPChit        = cms.untracked.bool(False),
                               #---------------
+                              runcaloTower     = cms.untracked.bool(True),
                               runBeamHaloSummary= cms.untracked.bool(True),
                               runPileUp         = cms.untracked.bool(False),
                               isAOD             = cms.untracked.bool(True),
@@ -153,6 +185,11 @@ process.demo = cms.EDAnalyzer('Analyzer',
                               )
 
 
+process.NewPatPhotons = cms.Sequence(
+               process.uncleanpatPhotons*
+               process.selecteduncleanPatPhotons
+               #process.uncleanPatPhotons
+               )
 
 
 #All paths are here
@@ -160,6 +197,7 @@ process.p = cms.Path(
      process.HBHENoiseFilter*
      process.kt6PFJets* 
      process.ak5PFJets*
+     process.NewatPhotons*
      process.patDefaultSequence*
      process.demo
    )
