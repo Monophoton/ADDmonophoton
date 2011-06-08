@@ -597,6 +597,7 @@ class Analyzer : public edm::EDAnalyzer {
   float pho_et[200];
   float pho_swissCross[200];
   float pho_e6e2[200];
+  float pho_e4e1[200];
   bool  pho_isConverted[200];
   bool  pho_hasConvTrk[200]; 
  
@@ -835,6 +836,7 @@ class Analyzer : public edm::EDAnalyzer {
   float ucpho_et[200];
   float ucpho_swissCross[200];
   float ucpho_e6e2[200];
+  float ucpho_e4e1[200];
   bool  ucpho_isConverted[200];
   bool  ucpho_hasConvTrk[200]; 
              

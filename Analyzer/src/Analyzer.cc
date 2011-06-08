@@ -13,7 +13,7 @@
 //
 // Original Author:  Sandhya Jain
 //         Created:  Fri Apr 17 11:00:06 CEST 2009
-// $Id: Analyzer.cc,v 1.53 2011/05/26 00:30:32 schauhan Exp $
+// $Id: Analyzer.cc,v 1.54 2011/06/08 13:23:04 schauhan Exp $
 //
 //
 
@@ -1575,6 +1575,7 @@ if(!isAOD_){
 	     pho_ieta_xtalEB[x][y]           = -99;
 	     pho_iphi_xtalEB[x][y]           = -99;
 	     pho_recoFlag_xtalEB[x][y]       = -99;
+             pho_timeError_xtal[x][y]        = -99.;
 	   }//end of for (unsigned int y =0; y < crystalinfo_container.size();y++)
 	   for (unsigned int y =0; y < crystalinfo_container.size() && y < 100;y++){ 
 	     pho_timing_xtal[x][y]         = crystalinfo_container[y].time;
@@ -1600,7 +1601,8 @@ if(!isAOD_){
              const reco::CaloClusterPtr  seed = myphoton_container[x].superCluster()->seed();
              DetId id = lazyTool.getMaximum(*seed).first;
              float swissCross=-99.;
-             pho_e6e2[x] = -99.;         
+             pho_e6e2[x] = -99.;
+             pho_e4e1[x] = -99.;         
 
              const EcalRecHitCollection & rechits = ( myphoton_container[x].isEB() ? *Brechit : *Brechit);
              EcalRecHitCollection::const_iterator it = rechits.find( id );
@@ -1611,7 +1613,7 @@ if(!isAOD_){
                pho_e2e9[x]      = -99.;
                pho_e2e9[x]      = GetE2OverE9(id,rechits);
                pho_e6e2[x]      = Gete6e2( id, rechits);
-               //cout<<pho_e6e2[x]<<endl;
+               pho_e4e1[x]      = e4e1(id, rechits);
 
 	     if(debug_ && 1-pho_swissCross[x]/pho_maxEnergyXtal[x] > 0.95) 
 	       cout<<"This photon candidate is an ECAL spike identified by Swiss Cross algorithm."<<endl;
@@ -1634,6 +1636,8 @@ if(!isAOD_){
              DetId id = lazyTool.getMaximum(*seed).first;
              float swissCross=-99.;
              pho_e6e2[x] =-99.;
+             pho_e4e1[x] =-99.;    
+
              const EcalRecHitCollection & rechits = ( myphoton_container[x].isEB() ? *Erechit : *Erechit);
              EcalRecHitCollection::const_iterator it = rechits.find( id );
 
@@ -1642,7 +1646,8 @@ if(!isAOD_){
             pho_swissCross[x]= swissCross;
             pho_e2e9[x]      = -99.;
             pho_e2e9[x]      = GetE2OverE9(id,rechits); 
-            pho_e6e2[x]      =Gete6e2( id, rechits); 
+            pho_e6e2[x]      = Gete6e2( id, rechits); 
+            pho_e4e1[x]      = e4e1(id, rechits); 
               
 	     if(debug_ && 1-pho_swissCross[x]/pho_maxEnergyXtal[x] > 0.95) {
 	       cout<<"This photon candidate is an ECAL spike identified by Swiss Cross algorithm." << endl;
@@ -2654,9 +2659,10 @@ if(rungenjets_){
 	   for (unsigned int y_uc =0; y_uc < 100.;y_uc++){
 	     ucpho_timing_xtal[x_uc][y_uc]         = -99.;
 	     ucpho_energy_xtal[x_uc][y_uc]         = -99.;
-	     ucpho_ieta_xtalEB[x_uc][y_uc]           = -99;
-	     ucpho_iphi_xtalEB[x_uc][y_uc]           = -99;
-	     ucpho_recoFlag_xtalEB[x_uc][y_uc]           = -99;
+	     ucpho_ieta_xtalEB[x_uc][y_uc]         = -99;
+	     ucpho_iphi_xtalEB[x_uc][y_uc]         = -99;
+	     ucpho_recoFlag_xtalEB[x_uc][y_uc]     = -99;
+             ucpho_timeError_xtal[x_uc][y_uc]      = -99.;
 	   }//end of for (unsigned int y_uc =0; y_uc < uccrystalinfo_container.size();y_uc++)
 	   for (unsigned int y_uc =0; y_uc < uccrystalinfo_container.size() && y_uc < 100;y_uc++){ 
 	     ucpho_timing_xtal[x_uc][y_uc]         = uccrystalinfo_container[y_uc].time;
@@ -2685,13 +2691,15 @@ if(rungenjets_){
              const EcalRecHitCollection & rechits_uc = ( ucphoton_container[x_uc].isEB() ? *Brechit : *Brechit);
              EcalRecHitCollection::const_iterator it = rechits_uc.find( id );
 
-               if( it != rechits_uc.end() ){uc_swissCross = EcalTools::swissCross( id, rechits_uc, 0.08, true);
-                                           }
-              ucpho_swissCross[x_uc]=uc_swissCross;
+               if( it != rechits_uc.end() ){uc_swissCross = EcalTools::swissCross( id, rechits_uc, 0.08, true);}
+
+               ucpho_swissCross[x_uc]=uc_swissCross;
                ucpho_e2e9[x_uc]      = -99.;
-               ucpho_e6e2[x_uc]      = -99.;            
+               ucpho_e6e2[x_uc]      = -99.;    
+               ucpho_e4e1[x_uc]      = -99.;        
                ucpho_e2e9[x_uc]      = GetE2OverE9(id,rechits_uc);
                ucpho_e6e2[x_uc]      = Gete6e2( id, rechits_uc);
+               ucpho_e4e1[x_uc]      = e4e1(id, rechits_uc);
 
 	     if(debug_ && 1-ucpho_swissCross[x_uc]/ucpho_maxEnergyXtal[x_uc] > 0.95) 
 	       cout<<"This photon candidate is an ECAL spike identified by Swiss Cross algorithm."<<endl;
@@ -2720,9 +2728,13 @@ if(rungenjets_){
                                         }                                    
             ucpho_swissCross[x_uc]= uc_swissCross;
             ucpho_e2e9[x_uc]      = -99.;
-            ucpho_e6e2[x_uc]      =-99.; 
+            ucpho_e6e2[x_uc]      = -99.;
+            ucpho_e4e1[x_uc]      = -99.;
+ 
             ucpho_e2e9[x_uc]      = GetE2OverE9(id,rechits_uc); 
             ucpho_e6e2[x_uc]      = Gete6e2( id, rechits_uc);
+            ucpho_e4e1[x_uc]      = e4e1(id, rechits_uc);
+
 	     if(debug_ && 1-ucpho_swissCross[x_uc]/ucpho_maxEnergyXtal[x_uc] > 0.95) {
 	       cout<<"This photon candidate is an ECAL spike identified by Swiss Cross algorithm." << endl;
 	       cout<<"This would be weird since there aren't spikes in the endcap of ECAL"<<endl; 
@@ -3284,6 +3296,7 @@ if(runDetailTauInfo_){
     myEvent->Branch("Photon_et",pho_et,"pho_et[Photon_n]/F");
     myEvent->Branch("Photon_swissCross",pho_swissCross,"pho_swissCross[Photon_n]/F");
     myEvent->Branch("Photon_e6e2",pho_e6e2,"pho_e6e2[Photon_n]/F");
+    myEvent->Branch("Photon_e4e1",pho_e4e1,"pho_e4e1[Photon_n]/F");
     myEvent->Branch("Photonr9",pho_r9,"pho_r9[Photon_n]/F");
     myEvent->Branch("Photon_e1x5",pho_e1x5,"pho_e1x5[Photon_n]/F");
     myEvent->Branch("Photon_e2x5",pho_e2x5,"pho_e2x5[Photon_n]/F");
@@ -3525,6 +3538,7 @@ if(runDetailTauInfo_){
     myEvent->Branch("ucPhoton_et",ucpho_et,"ucpho_et[ucPhoton_n]/F"); 
     myEvent->Branch("ucPhoton_swissCross",ucpho_swissCross,"ucpho_swissCross[ucPhoton_n]/F");
     myEvent->Branch("ucPhoton_e6e2",ucpho_e6e2,"ucpho_e6e2[ucPhoton_n]/F");
+    myEvent->Branch("ucPhoton_e4e1",ucpho_e4e1,"ucpho_e4e1[ucPhoton_n]/F");
     myEvent->Branch("ucPhotonr9",ucpho_r9,"ucpho_r9[ucPhoton_n]/F");
     myEvent->Branch("ucPhoton_e1x5",ucpho_e1x5,"ucpho_e1x5[ucPhoton_n]/F");
     myEvent->Branch("ucPhoton_e2x5",ucpho_e2x5,"ucpho_e2x5[ucPhoton_n]/F");
