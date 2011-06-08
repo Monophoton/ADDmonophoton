@@ -1,5 +1,6 @@
 #include "DataFormats/DetId/interface/DetId.h"
 #include "DataFormats/EcalRecHit/interface/EcalRecHitCollections.h"
+#include "DataFormats/EcalRecHit/interface/EcalRecHit.h"
 #include "DataFormats/EcalDetId/interface/EBDetId.h"
 #include "DataFormats/EcalDetId/interface/EEDetId.h"
 #include "TMath.h"
@@ -65,3 +66,64 @@ float recHitApproxEt(  const DetId id,  const EcalRecHitCollection &recHits )
   }
   return 0;
 }
+
+
+
+
+float recHitE( const DetId id, const EcalRecHitCollection &recHits, bool useTimingInfo ){
+  if ( id.rawId() == 0 ) return 0;
+
+ //These values are taken from:RecoLocalCalo/EcalRecAlgos/python/ecalCleaningAlgo.py
+ double e4e1Threshold_barrel_  = 0.080;
+ double e4e1Threshold_endcap_  = 0.300;
+ double ignoreOutOfTimeThresh_ = 2.0;
+ 
+ 
+   float threshold = e4e1Threshold_barrel_;
+
+   if ( id.subdetId() == EcalEndcap) threshold = e4e1Threshold_endcap_; 
+ 
+   EcalRecHitCollection::const_iterator it = recHits.find( id );
+   if ( it != recHits.end() ){
+     float ene= (*it).energy();
+ 
+     // ignore out of time in EB when making e4e1 if so configured
+     if (useTimingInfo){
+        if (id.subdetId()==EcalBarrel &&
+          it->checkFlag(EcalRecHit::kOutOfTime) 
+           && ene>ignoreOutOfTimeThresh_) return 0;
+     }
+ 
+     // ignore hits below threshold
+     if (ene < threshold) return 0;
+ 
+     // else return the energy of this hit
+     return ene;
+   }
+   return 0;
+}
+
+/// four neighbours in the swiss cross around id
+const std::vector<DetId> neighbours(const DetId& id){                                                                                                                              
+        std::vector<DetId> ret;
+    
+   if ( id.subdetId() == EcalBarrel) {
+    
+     ret.push_back( EBDetId::offsetBy( id,  1, 0 ));
+     ret.push_back( EBDetId::offsetBy( id, -1, 0 ));
+     ret.push_back( EBDetId::offsetBy( id,  0, 1 ));
+     ret.push_back( EBDetId::offsetBy( id,  0,-1 ));
+   }
+   // nobody understands what polymorphism is for, sgrunt !
+   else  if (id.subdetId() == EcalEndcap) {
+     ret.push_back( EEDetId::offsetBy( id,  1, 0 ));
+     ret.push_back( EEDetId::offsetBy( id, -1, 0 ));
+     ret.push_back( EEDetId::offsetBy( id,  0, 1 ));
+     ret.push_back( EEDetId::offsetBy( id,  0,-1 ));
+    }
+    
+    
+   return ret;
+    
+ }  
+
