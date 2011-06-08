@@ -27,6 +27,8 @@ class CrystalInfo{
   int iy;
   double energy;
   double time;
+  double timeErr;
+  int recoFlag;
 };
 
 CrystalInfo::CrystalInfo()
