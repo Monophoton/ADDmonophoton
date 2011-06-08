@@ -25,7 +25,9 @@
 <use name=DataFormats/RPCRecHit>
 <use name=Geometry/RPCGeometry>
 <use name=JetMETCorrections/Objects>
-<use name=CondFormats/JetMETObjects> 
+<use name=CondFormats/JetMETObjects>
+<use name=DataFormats/CaloTowers> 
+<use name=RecoLocalCalo/EcalRecAlgos>
 <flags EDM_PLUGIN=1>
 <export>
    <use name=root>
@@ -53,4 +55,6 @@
    <use name=Geometry/RPCGeometry>
    <use name=JetMETCorrections/Objects>
    <use name=CondFormats/JetMETObjects>
+   <use name=DataFormats/CaloTowers>
+   <use name=RecoLocalCalo/EcalRecAlgos>
 </export>

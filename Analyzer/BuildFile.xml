@@ -28,6 +28,7 @@
 <use   name="CondFormats/JetMETObjects"/>
 <use   name="RecoLocalCalo/EcalRecAlgos"/>
 <use   name="PhysicsTools/JetMCUtils"/>
+<use   name="DataFormats/CaloTowers"/>
 <flags   EDM_PLUGIN="1"/>
 <export>
 </export>
