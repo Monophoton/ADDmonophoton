@@ -11,6 +11,7 @@
 //#include "FWCore/Framework/interface/TriggerNames.h"
 #include "FWCore/Common/interface/TriggerNames.h"
 #include "HLTrigger/HLTcore/interface/HLTConfigProvider.h"
+//#include "RecoLocalCalo/EcalRecAlgos/interface/EcalCleaningAlgo.h"
 #include <string>
 #include <map>
 
@@ -29,7 +30,9 @@ class Analyzer : public edm::EDAnalyzer {
   virtual void endJob() ;
 
  double GetE2OverE9(const DetId id, const EcalRecHitCollection & recHits); 
-  
+ double  e4e1(const DetId& id, const EcalRecHitCollection & rhs); 
+ double  Gete6e2(const DetId& id, const EcalRecHitCollection & rhs); 
+
   HLTConfigProvider hltConfig_;
   std::vector<std::string> photon_triggers_in_run;
   std::vector<std::string> met_triggers_in_run;
@@ -65,6 +68,8 @@ class Analyzer : public edm::EDAnalyzer {
   int ngenphotons;
   int nhardphotons;
   int Photon_n;
+  int ucPhoton_n;
+  int CaloTower_n;
   int Vertex_n;
   int Muon_n;
   int CosmicMuon_n;
@@ -74,19 +79,21 @@ class Analyzer : public edm::EDAnalyzer {
   int Jet_n;
   int pfJet_n;
   int HERecHit_subset_n;
+  int ucHERecHit_subset_n;
   int CSCseg_n;
   int RPChit_n;
   int genJet_n;
   //HLT
 
-
+ //To get e6e2
+// EcalCleaningAlgo * ecalCleaningTool_;
 
  std::vector<std::string>  hlNames_;           
   //HLT      
   TString module_type[50];
-  float trobjpt[100][80][10];
-  float trobjeta[100][80][10];
-  float trobjphi[100][80][10];
+  float trobjpt[100][100][10];
+  float trobjeta[100][100][10];
+  float trobjphi[100][100][10];
 
 
   //maximum size to be filled in tree branches
@@ -110,6 +117,8 @@ class Analyzer : public edm::EDAnalyzer {
   edm::InputTag PFmetLabel_;
   edm::InputTag TCmetLabel_;
   edm::InputTag phoLabel_;
+  edm::InputTag ucphoLabel_;
+  edm::InputTag caloTowerLabel_;
   edm::InputTag cscLabel_;
   edm::InputTag rpcLabel_;
   edm::InputTag rechitBLabel_;
@@ -127,6 +136,7 @@ class Analyzer : public edm::EDAnalyzer {
 
   bool rungenParticleCandidates_;
   bool runphotons_;
+  bool runucphotons_;
   bool runmet_;
   bool rungenmet_;
   bool runPFmet_;
@@ -150,6 +160,7 @@ class Analyzer : public edm::EDAnalyzer {
   bool runBeamHaloSummary_;      
   bool runRPChit_;
   bool runPileUp_;
+  bool runcaloTower_;
   bool isAOD_;
   bool debug_;
   bool init_;
@@ -585,6 +596,7 @@ class Analyzer : public edm::EDAnalyzer {
   float pho_theta[200];
   float pho_et[200];
   float pho_swissCross[200];
+  float pho_e6e2[200];
   bool  pho_isConverted[200];
   bool  pho_hasConvTrk[200]; 
  
@@ -648,11 +660,13 @@ class Analyzer : public edm::EDAnalyzer {
   
   //rechit information
   int ncrysPhoton[200];
-  float pho_timing_xtal[200][100];
+  float pho_timing_xtal[200][100]; 
+  float pho_timeError_xtal[200][100]; 
   float pho_timingavg_xtal[200];
   float pho_energy_xtal[200][100];
   int   pho_ieta_xtalEB[200][100];
   int   pho_iphi_xtalEB[200][100];
+  int   pho_recoFlag_xtalEB[200][100];
   float pho_rookFraction[200];
   float pho_s9[200];
   float pho_e2e9[200];
@@ -781,6 +795,154 @@ class Analyzer : public edm::EDAnalyzer {
  //pileup info
  int npuVertices;
  int ootnpuVertices;
+
+
+
+
+//Uncleand Photon variables
+  float ucpho_E[200];
+  float ucpho_pt[200];
+  float ucpho_eta[200];
+  float ucpho_phi[200];
+  float ucpho_px[200];
+  float ucpho_py[200];
+  float ucpho_pz[200];
+  float ucpho_vx[200];
+  float ucpho_vy[200];
+  float ucpho_vz[200];
+  float ucpho_r9[200];
+  bool  ucpho_isEB[200];
+  bool  ucpho_isEE[200];
+  bool  ucpho_isEBGap[200];
+  bool  ucpho_isEEGap[200];
+  bool  ucpho_isEBEEGap[200];
+  float ucpho_e1x5[200];
+  float ucpho_e2x5[200];
+  float ucpho_e3x3[200];
+  float ucpho_e5x5[200];
+  float ucpho_r1x5[200];
+  float ucpho_r2x5[200];
+  float ucpho_SigmaEtaEta[200];
+  float ucpho_SigmaIetaIeta[200];
+  float ucpho_SigmaEtaPhi[200];
+  float ucpho_SigmaIetaIphi[200];
+  float ucpho_SigmaPhiPhi[200];
+  float ucpho_SigmaIphiIphi[200];
+  float ucpho_roundness[200];
+  float ucpho_angle[200];
+  float ucpho_maxEnergyXtal[200];
+  float ucpho_theta[200];
+  float ucpho_et[200];
+  float ucpho_swissCross[200];
+  float ucpho_e6e2[200];
+  bool  ucpho_isConverted[200];
+  bool  ucpho_hasConvTrk[200]; 
+             
+  //isolation variables
+  float ucpho_ecalRecHitSumEtConeDR03[200];
+  float ucpho_hcalTowerSumEtConeDR03[200];
+  float ucpho_hcalDepth1TowerSumEtConeDR03[200];
+  float ucpho_hcalDepth2TowerSumEtConeDR03[200];
+  float ucpho_trkSumPtSolidConeDR03[200];
+  float ucpho_trkSumPtHollowConeDR03[200];
+  int   ucpho_nTrkSolidConeDR03[200];
+  int   ucpho_nTrkHollowConeDR03[200];
+  float ucpho_ecalRecHitSumEtConeDR04[200];
+  float ucpho_hcalTowerSumEtConeDR04[200];
+  float ucpho_hcalDepth1TowerSumEtConeDR04[200];
+  float ucpho_hcalDepth2TowerSumEtConeDR04[200];
+  float ucpho_trkSumPtSolidConeDR04[200];
+  float ucpho_trkSumPtHollowConeDR04[200];
+  int   ucpho_nTrkSolidConeDR04[200];
+  int   ucpho_nTrkHollowConeDR04[200];
+  float ucpho_HoE[200];
+  bool  ucpho_hasPixelSeed[200];   
+             
+  //SC variables
+  float ucpho_sc_energy[200];
+  int   ucpho_size[200];
+  float ucpho_sc_eta[200];
+  float ucpho_sc_phi[200];
+  float ucpho_sc_etaWidth[200];
+  float ucpho_sc_phiWidth[200];
+  float ucpho_sc_et[200];
+  float ucpho_sc_x[200];
+  float ucpho_sc_y[200];
+  float ucpho_sc_z[200];
+  //gen matched photon 
+  float matchucpho_E[200];
+  float matchucpho_pt[200];
+  float matchucpho_eta[200];
+  float matchucpho_phi[200];
+  float matchucpho_px[200];
+  float matchucpho_py[200];
+  float matchucpho_pz[200];
+  bool  ismatcheducpho[200];
+
+  //converted photon variabes
+  unsigned int ucpho_nTracks[200];
+  float ucpho_pairInvariantMass[200];
+  float ucpho_pairCotThetaSeparation[200];
+  float ucpho_pairMomentum_x[200];
+  float ucpho_pairMomentum_y[200];
+  float ucpho_pairMomentum_z[200];
+  float ucpho_EoverP[200];
+  float ucpho_conv_vx[200];
+  float ucpho_conv_vy[200];
+  float ucpho_conv_vz[200];
+  float ucpho_zOfPrimaryVertex[200];
+  float ucpho_distOfMinimumApproach[200];
+  float ucpho_dPhiTracksAtVtx[200];      
+  float ucpho_dPhiTracksAtEcal[200];     
+  float ucpho_dEtaTracksAtEcal[200];     
+             
+  //rechit information
+  int uc_ncrysPhoton[200];
+  float ucpho_timing_xtal[200][100];
+  float ucpho_timeError_xtal[200][100];
+  float ucpho_timingavg_xtal[200];
+  float ucpho_energy_xtal[200][100];
+  int   ucpho_ieta_xtalEB[200][100];
+  int   ucpho_iphi_xtalEB[200][100];
+  int   ucpho_recoFlag_xtalEB[200][100];
+  float ucpho_rookFraction[200];
+  float ucpho_s9[200];
+  float ucpho_e2e9[200];
+             
+  //HErechit information
+  unsigned int ucHERecHit_subset_detid[10000];
+  float ucHERecHit_subset_energy[10000];
+  float ucHERecHit_subset_time[10000];
+  float ucHERecHit_subset_depth[10000];
+  float ucHERecHit_subset_phi[10000];
+  float ucHERecHit_subset_eta[10000];
+  float ucHERecHit_subset_x[10000];
+  float ucHERecHit_subset_y[10000];
+  float ucHERecHit_subset_z[10000];
+
+  //CaloTwoers
+  float caloTower_eta[5000];                      
+  float caloTower_phi[5000];                      
+  float caloTower_E[5000];                   
+  float caloTower_Et[5000];
+  float caloTower_emEnergy[5000];
+  float caloTower_hadEnergy[5000];
+  float caloTower_p[5000];
+  float caloTower_EMEt[5000];
+  float caloTower_HadEt[5000];
+  float caloTower_HadPhi[5000];
+  float caloTower_HadEta[5000];
+  float caloTower_EMPhi[5000];
+  float caloTower_EMEta[5000];
+  float caloTower_HadX[5000];
+  float caloTower_HadY[5000];
+  float caloTower_HadZ[5000];
+  float caloTower_HE_E[5000];
+  float caloTower_HB_E[5000];
+  float caloTower_EMTime[5000];
+  float caloTower_HadTime[5000];
+  //float caloTower_recoFlag[5000];
+
  
 };
 
