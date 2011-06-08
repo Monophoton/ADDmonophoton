@@ -13,7 +13,7 @@
 //
 // Original Author:  Sandhya Jain
 //         Created:  Fri Apr 17 11:00:06 CEST 2009
-// $Id: Analyzer.cc,v 1.52 2011/05/18 13:38:25 schauhan Exp $
+// $Id: Analyzer.cc,v 1.53 2011/05/26 00:30:32 schauhan Exp $
 //
 //
 
@@ -74,7 +74,8 @@
 #include "DataFormats/EcalRecHit/interface/EcalRecHitCollections.h"
 #include "RecoLocalCalo/EcalRecAlgos/interface/EcalSeverityLevelAlgo.h"
 #include "RecoEcal/EgammaCoreTools/interface/EcalClusterLazyTools.h"
-//#include "RecoEcal/EgammaCoreTools/interface/EcalTools.h"
+#include "RecoEcal/EgammaCoreTools/interface/EcalTools.h"
+//#include "RecoLocalCalo/EcalRecAlgos/interface/EcalCleaningAlgo.h"
 #include <DataFormats/CSCRecHit/interface/CSCSegmentCollection.h>
 #include "DataFormats/GeometryVector/interface/GlobalPoint.h"
 #include "DataFormats/GeometryVector/interface/GlobalVector.h"
@@ -100,7 +101,7 @@
 #include "PhysicsTools/JetMCUtils/interface/JetMCTag.h"
 #include "DataFormats/JetReco/interface/GenJet.h"                                                                                                     
 #include "DataFormats/JetReco/interface/GenJetCollection.h"
-
+#include "DataFormats/CaloTowers/interface/CaloTowerCollection.h"
 
 #include "JetMETCorrections/Objects/interface/JetCorrector.h"
 #include "CondFormats/JetMETObjects/interface/JetCorrectionUncertainty.h"
@@ -133,8 +134,9 @@ float Pl(float P,float Pt);
 //myEcalSeverityLevelAlgo.cc function prototypes ---- for calculating e2e9                                                                            
 float recHitE( const DetId id, const EcalRecHitCollection &recHits );
 float recHitE( const DetId id, const EcalRecHitCollection & recHits, int dEta, int dPhi );
+float recHitE( const DetId id, const EcalRecHitCollection &recHits , bool useTimingInfo);
 float recHitApproxEt( const DetId id, const EcalRecHitCollection &recHits );
-
+const std::vector<DetId> neighbours(const DetId& id);
 
 //
 // class decleration
@@ -208,6 +210,8 @@ Analyzer::Analyzer(const edm::ParameterSet& iConfig):
   PFmetLabel_(iConfig.getUntrackedParameter<edm::InputTag>("PFmetTag")),
   TCmetLabel_(iConfig.getUntrackedParameter<edm::InputTag>("TCmetTag")),
   phoLabel_(iConfig.getUntrackedParameter<edm::InputTag>("photonTag")),
+  ucphoLabel_(iConfig.getUntrackedParameter<edm::InputTag>("uncleanphotonTag")),
+  caloTowerLabel_(iConfig.getUntrackedParameter<edm::InputTag>("caloTowerTag")),
   cscLabel_(iConfig.getUntrackedParameter<edm::InputTag>("cscTag")),
   rpcLabel_(iConfig.getUntrackedParameter<edm::InputTag>("rpcTag")),
   rechitBLabel_(iConfig.getUntrackedParameter<edm::InputTag>("rechitBTag")),
@@ -223,6 +227,7 @@ Analyzer::Analyzer(const edm::ParameterSet& iConfig):
   hltlabel_(iConfig.getUntrackedParameter<string>("hltlabel")),
   rungenParticleCandidates_(iConfig.getUntrackedParameter<bool>("rungenParticleCandidates")),
   runphotons_(iConfig.getUntrackedParameter<bool>("runphotons")),
+  runucphotons_(iConfig.getUntrackedParameter<bool>("rununcleanphotons")),
   runmet_(iConfig.getUntrackedParameter<bool>("runmet")),
   rungenmet_(iConfig.getUntrackedParameter<bool>("rungenmet")),
   runPFmet_(iConfig.getUntrackedParameter<bool>("runPFmet")),
@@ -245,6 +250,7 @@ Analyzer::Analyzer(const edm::ParameterSet& iConfig):
   runCSCseg_(iConfig.getUntrackedParameter<bool>("runCSCseg")),
   runBeamHaloSummary_(iConfig.getUntrackedParameter<bool>("runBeamHaloSummary")),
   runRPChit_(iConfig.getUntrackedParameter<bool>("runRPChit")),
+  runcaloTower_(iConfig.getUntrackedParameter<bool>("runcaloTower")),
   isAOD_(iConfig.getUntrackedParameter<bool>("isAOD")),
   debug_(iConfig.getUntrackedParameter<bool>("debug")),
   init_(false)
@@ -253,6 +259,7 @@ Analyzer::Analyzer(const edm::ParameterSet& iConfig):
   all_triggers.clear();
   all_triggerprescales.clear();
   all_ifTriggerpassed.clear();
+
   nevents =0;
   ntriggers = 0;
   n_signal_events = 0; 
@@ -272,6 +279,7 @@ Analyzer::Analyzer(const edm::ParameterSet& iConfig):
   Vertex_n         = 0;
   Track_n          = 0;
   Photon_n         = 0;
+  ucPhoton_n       =0;
   HERecHit_subset_n = 0;
   Jet_n            = 0;
   pfJet_n          = 0;
@@ -346,7 +354,7 @@ Analyzer::beginRun(const edm::Run& iRun, const edm::EventSetup& iSetup){
         //cout<<"Does "<<hltname<<" contain "<<string_search<<" ? found returns "<<int(found)<<endl;
   
         if(found!=string::npos ){
-          if(debug_) cout<<"  "<<t<<" Photon HLT path in this run\t"<<hltname<<endl;
+          if(debug_)cout<<"  "<<t<<" Photon HLT path in this run\t"<<hltname<<endl;
           photon_triggers_in_run.push_back(hltname);
         }
 	
@@ -377,6 +385,12 @@ Analyzer::beginRun(const edm::Run& iRun, const edm::EventSetup& iSetup){
         
       }//loop over ntriggers
 
+      //This has to be clean for every run as Menu get changed frequently
+       all_triggerprescales.clear();
+       all_ifTriggerpassed.clear();
+       all_triggers.clear(); 
+
+  
       //SAVE PHOTON TRIGGER INFO
       for(int x = 0; x< (int)photon_triggers_in_run.size();x++){
         bool found = false;
@@ -435,7 +449,7 @@ Analyzer::beginRun(const edm::Run& iRun, const edm::EventSetup& iSetup){
   }
     
   ntriggers = (int)all_triggers.size();
-  if(debug_){
+ if(debug_){
     cout<<"----------------------------------------------------------------------------------------------------------------"<<endl;
     cout<<"----------------------------------------------------------------------------------------------------------------"<<endl;
     cout<<"the triggers in HLT list till now are:"<<endl;
@@ -448,6 +462,40 @@ Analyzer::beginRun(const edm::Run& iRun, const edm::EventSetup& iSetup){
 
 // ------------ method called to for each event  ------------
 void Analyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup){
+
+
+//--now do what ever initialization is needed
+  n_signal_events    = 0; 
+  n_Z_events         = 0; 
+  n_W_events         = 0;
+  n_Zelec_events     = 0; 
+  n_Zmu_events       = 0; 
+  n_Ztau_events      = 0; 
+  n_Znunu_events     = 0;
+  n_Welec_events     = 0; 
+  n_Wmu_events       = 0; 
+  n_Wtau_events      = 0;
+  n_diphoton_events  = 0;  
+  n_SingleHardPhoton_events = 0;
+  ngenphotons      = 0; //for every event, how many stable photons 
+  nhardphotons     = 0; //for every event, how many hard photons 
+  Vertex_n         = 0;
+  Track_n          = 0;
+  Photon_n         = 0;
+  ucPhoton_n       = 0;
+  HERecHit_subset_n = 0;
+  Jet_n            = 0;
+  pfJet_n          = 0;
+  EBRecHit_size    = 0;
+  EERecHit_size    = 0;  
+  Electron_n       = 0; 
+  Muon_n           = 0;
+  CosmicMuon_n     = 0;
+  Tau_n            = 0;
+  genJet_n         = 0;
+//-----
+
+
   if(debug_) cout<<"DEBUG: new event"<<endl;
   using namespace edm;
   using namespace reco;
@@ -833,6 +881,7 @@ if(runHLT_)
         { 
           all_triggerprescales.clear();
           all_ifTriggerpassed.clear();
+
           const edm::TriggerNames &triggerNames_ = iEvent.triggerNames(*HLTR);
           hlNames_=triggerNames_.triggerNames();
           vector<int> idx;
@@ -841,7 +890,7 @@ if(runHLT_)
           int ikey;
  
           for(int i = 0; i< ntriggers;i++){
-            for(int iIndex=0; iIndex<80;iIndex++)
+            for(int iIndex=0; iIndex<100;iIndex++)
               {
 
                 for(int iKey = 0; iKey<10; iKey++)
@@ -879,7 +928,7 @@ if(runHLT_)
                  << endl;
             assert (int(moduleIndex)<ModuleSize[i]);
             indexhltobj=0; 
-            for (unsigned int j=0; j<=moduleIndex && j < 80; ++j)
+            for (unsigned int j=0; j<=moduleIndex && j < 100; ++j)
               {
               const string& moduleLabel(moduleLabels[j]);
               const string  moduleType(hltConfig_.moduleType(moduleLabel));
@@ -1257,6 +1306,9 @@ if(!isAOD_){
     iSetup.get<CaloGeometryRecord>().get(geoHandle);
     const CaloGeometry* caloGeom = geoHandle.product();                                                                                                                         
                             
+    edm::Handle<HBHERecHitCollection> hcalRecHitHandle;
+    iEvent.getByLabel(hcalrechitLabel_, hcalRecHitHandle);
+    const HBHERecHitCollection *hbhe =  hcalRecHitHandle.product();
  
    // declare outside of runphotons_ so that we can use this container inside other "bools_"
    std::vector<pat::Photon> myphoton_container;
@@ -1277,6 +1329,7 @@ if(!isAOD_){
        for(unsigned int x=0; x < min(myphoton_container.size(), MaxN);x++){
 	 pho_E[x]                     =  myphoton_container[x].energy();
 	 pho_pt[x]                    =  myphoton_container[x].pt();
+         //cout<<"Cleaned Photon pt ="<<pho_pt[x]<<endl; 
 	 pho_px[x]                    =  myphoton_container[x].px();
 	 pho_py[x]                    =  myphoton_container[x].py();
 	 pho_pz[x]                    =  myphoton_container[x].pz();
@@ -1393,10 +1446,10 @@ if(!isAOD_){
 	 }//end of for (unsigned int iConv=0; iConv<conversions.size(); iConv++)
 	 
 	 if(runHErechit_ && pho_isEB[x]){
-	   //Store HE rechits
-	   edm::Handle<HBHERecHitCollection> hcalRecHitHandle;
-	   iEvent.getByLabel(hcalrechitLabel_, hcalRecHitHandle);
-	   const HBHERecHitCollection *hbhe =  hcalRecHitHandle.product();
+	  //Store HE rechits
+	  // edm::Handle<HBHERecHitCollection> hcalRecHitHandle;
+	  // iEvent.getByLabel(hcalrechitLabel_, hcalRecHitHandle);
+	  // const HBHERecHitCollection *hbhe =  hcalRecHitHandle.product();
 	   
 	   for(HBHERecHitCollection::const_iterator hh = hbhe->begin(); hh != hbhe->end() && HERecHit_subset_n<10000; hh++){
 	     HcalDetId id(hh->detid());
@@ -1465,7 +1518,9 @@ if(!isAOD_){
 	   int ncrys   = 0;
 	   ncrysPhoton[x]= 0;
 	   vector< std::pair<DetId, float> >::const_iterator detitr;
-	   for(detitr = PhotonHit_DetIds.begin(); detitr != PhotonHit_DetIds.end(); ++detitr){
+	   for(detitr = PhotonHit_DetIds.begin(); detitr != PhotonHit_DetIds.end(); ++detitr)
+           {
+
 	     if (((*detitr).first).det() == DetId::Ecal && ((*detitr).first).subdetId() == EcalBarrel) {
 	       EcalRecHitCollection::const_iterator j= Brechit->find(((*detitr).first));
 	       EcalRecHitCollection::const_iterator thishit;
@@ -1477,6 +1532,8 @@ if(!isAOD_){
 	       crystal.rawId  = thishit->id().rawId();
 	       crystal.energy = thishit->energy();
 	       crystal.time   = thishit->time();
+               crystal.timeErr= thishit->timeError();
+               crystal.recoFlag = thishit->recoFlag();
 	       crystal.ieta   = detId.ieta();
 	       crystal.iphi   = detId.iphi();
 	       if(crystal.energy > 0.1){
@@ -1494,6 +1551,8 @@ if(!isAOD_){
 	       EEDetId detId  = (EEDetId)((*detitr).first);
 	       crystal.energy = thishit->energy();
 	       crystal.time   = thishit->time();
+               crystal.timeErr= thishit->timeError();
+               crystal.recoFlag = thishit->recoFlag(); 
 	       crystal.rawId  = 999;
 	       crystal.ieta   = -99;
 	       crystal.iphi   = -99;
@@ -1515,12 +1574,15 @@ if(!isAOD_){
 	     pho_energy_xtal[x][y]         = -99.;
 	     pho_ieta_xtalEB[x][y]           = -99;
 	     pho_iphi_xtalEB[x][y]           = -99;
+	     pho_recoFlag_xtalEB[x][y]       = -99;
 	   }//end of for (unsigned int y =0; y < crystalinfo_container.size();y++)
 	   for (unsigned int y =0; y < crystalinfo_container.size() && y < 100;y++){ 
 	     pho_timing_xtal[x][y]         = crystalinfo_container[y].time;
+	     pho_timeError_xtal[x][y]         = crystalinfo_container[y].timeErr;
 	     pho_energy_xtal[x][y]         = crystalinfo_container[y].energy;
 	     pho_ieta_xtalEB[x][y]           = crystalinfo_container[y].ieta;
 	     pho_iphi_xtalEB[x][y]           = crystalinfo_container[y].iphi;
+	     pho_recoFlag_xtalEB[x][y]           = crystalinfo_container[y].recoFlag;
 	   }//end of for (unsigned int y =0; y < crystalinfo_container.size();y++
            const reco::BasicCluster& seedClus = *(myphoton_container[x].superCluster()->seed());
 
@@ -1538,14 +1600,19 @@ if(!isAOD_){
              const reco::CaloClusterPtr  seed = myphoton_container[x].superCluster()->seed();
              DetId id = lazyTool.getMaximum(*seed).first;
              float swissCross=-99.;
+             pho_e6e2[x] = -99.;         
 
              const EcalRecHitCollection & rechits = ( myphoton_container[x].isEB() ? *Brechit : *Brechit);
              EcalRecHitCollection::const_iterator it = rechits.find( id );
 
-               if( it != rechits.end() ){swissCross = EcalSeverityLevelAlgo::swissCross( id, rechits, 0.08, true);}
+               if( it != rechits.end() ){swissCross = EcalTools::swissCross( id, rechits, 0.08, true);
+                                         }
                pho_swissCross[x]=swissCross;
                pho_e2e9[x]      = -99.;
                pho_e2e9[x]      = GetE2OverE9(id,rechits);
+               pho_e6e2[x]      = Gete6e2( id, rechits);
+               //cout<<pho_e6e2[x]<<endl;
+
 	     if(debug_ && 1-pho_swissCross[x]/pho_maxEnergyXtal[x] > 0.95) 
 	       cout<<"This photon candidate is an ECAL spike identified by Swiss Cross algorithm."<<endl;
 
@@ -1566,16 +1633,17 @@ if(!isAOD_){
              const reco::CaloClusterPtr  seed = myphoton_container[x].superCluster()->seed();
              DetId id = lazyTool.getMaximum(*seed).first;
              float swissCross=-99.;
-
+             pho_e6e2[x] =-99.;
              const EcalRecHitCollection & rechits = ( myphoton_container[x].isEB() ? *Erechit : *Erechit);
              EcalRecHitCollection::const_iterator it = rechits.find( id );
 
-            if( it != rechits.end() ) {swissCross = EcalSeverityLevelAlgo::swissCross( id, rechits, 0.08, true);}
+            if( it != rechits.end() ) {swissCross = EcalTools::swissCross( id, rechits, 0.08, true);}
 
             pho_swissCross[x]= swissCross;
             pho_e2e9[x]      = -99.;
             pho_e2e9[x]      = GetE2OverE9(id,rechits); 
-
+            pho_e6e2[x]      =Gete6e2( id, rechits); 
+              
 	     if(debug_ && 1-pho_swissCross[x]/pho_maxEnergyXtal[x] > 0.95) {
 	       cout<<"This photon candidate is an ECAL spike identified by Swiss Cross algorithm." << endl;
 	       cout<<"This would be weird since there aren't spikes in the endcap of ECAL"<<endl; 
@@ -1985,8 +2053,8 @@ if(!isAOD_){
    if(runjets_){
      //this for jec uncert 
      iSetup.get<JetCorrectionsRecord>().get("AK5Calo",JetCorParColl); 
-     JetCorrectorParameters const & JetCorPar = (*JetCorParColl)["Uncertainty"];
-     JetCorrectionUncertainty *jecUnc = new JetCorrectionUncertainty(JetCorPar);
+     //JetCorrectorParameters const & JetCorPar = (*JetCorParColl)["Uncertainty"];
+     //JetCorrectionUncertainty *jecUnc = new JetCorrectionUncertainty(JetCorPar);
        
 
      edm::Handle<edm::View<pat::Jet> > jetHandle;
@@ -2024,10 +2092,10 @@ if(!isAOD_){
 	 jet_RHF[x] = (float)(myjet_container[x].jetID().fLong - myjet_container[x].jetID().fShort)/(myjet_container[x].jetID().fLong + myjet_container[x].jetID().fShort);
 	 jet_nTowers[x] = myjet_container[x].jetID().nECALTowers + myjet_container[x].jetID().nHCALTowers ;
          //jet energy uncertiany
-         jecUnc->setJetEta(jet_eta[x]);
+        /* jecUnc->setJetEta(jet_eta[x]);
          jecUnc->setJetPt(jet_pt[x]);
          jet_jecUncer[x] = jecUnc->getUncertainty(true);
-         if(myjet_container[x].jecFactor("Uncorrected") != 0 )
+        */ if(myjet_container[x].jecFactor("Uncorrected") != 0 )
              {jet_jecCorr[x] = 1./(myjet_container[x].jecFactor("Uncorrected")); 
               }  
                else{jet_jecCorr[x] =0.;}
@@ -2053,8 +2121,8 @@ if(!isAOD_){
      //for jec uncert
      edm::ESHandle<JetCorrectorParametersCollection> JetCorParColl;
      iSetup.get<JetCorrectionsRecord>().get("AK5PF",JetCorParColl); 
-     JetCorrectorParameters const & JetCorPar = (*JetCorParColl)["Uncertainty"];
-     JetCorrectionUncertainty *pfjecUnc = new JetCorrectionUncertainty(JetCorPar);
+     //JetCorrectorParameters const & JetCorPar = (*JetCorParColl)["Uncertainty"];
+     //JetCorrectionUncertainty *pfjecUnc = new JetCorrectionUncertainty(JetCorPar);
 
 
      edm::Handle<edm::View<pat::Jet> > pfjetHandle;
@@ -2101,10 +2169,10 @@ if(!isAOD_){
          pfjet_nTowers[x] = mypfjet_container[x].jetID().nECALTowers + mypfjet_container[x].jetID().nHCALTowers ;
          */
          //jet energy uncertiany
-         pfjecUnc->setJetEta(pfjet_eta[x]);
+       /*  pfjecUnc->setJetEta(pfjet_eta[x]);
          pfjecUnc->setJetPt(pfjet_pt[x]);
          pfjet_jecUncer[x] = pfjecUnc->getUncertainty(true);
-         //get the uncorrected jet and fill them
+       */  //get the uncorrected jet and fill them
          pat::Jet uncpfjet = mypfjet_container[x].correctedJet("Uncorrected");
          ucpfjet_pt[x] = uncpfjet.pt();
          ucpfjet_px[x] = uncpfjet.px();
@@ -2318,8 +2386,412 @@ if(rungenjets_){
 
        Tau_n++;
      }//end of for loop
-   }
-   // if (Photon_n>0)
+   }//Run taus_
+
+
+
+   //Below is the uncleaned photon colleciton
+   std::vector<pat::Photon> ucphoton_container;
+   ucphoton_container.clear();
+
+   if(runucphotons_){
+     edm::Handle<edm::View<pat::Photon> > ucphoHandle;
+     iEvent.getByLabel(ucphoLabel_,ucphoHandle);
+     edm::View<pat::Photon>::const_iterator ucphoton;
+     
+     set<DetId> ucHERecHitSet;
+     ucHERecHit_subset_n = 0;
+     
+     for(ucphoton = ucphoHandle->begin();ucphoton!=ucphoHandle->end();++ucphoton){
+       ucphoton_container.push_back(*ucphoton) ;
+     }
+     ucPhoton_n = 0;
+     if(ucphoton_container.size()!=0){
+       for(unsigned int x_uc=0; x_uc < min(ucphoton_container.size(), MaxN);x_uc++){
+	 ucpho_E[x_uc]                     =  ucphoton_container[x_uc].energy();
+	 ucpho_pt[x_uc]                    =  ucphoton_container[x_uc].pt();
+         //cout<<"Uncleaned Photon pT  = "<<ucpho_pt[x_uc]<<endl;
+	 ucpho_px[x_uc]                    =  ucphoton_container[x_uc].px();
+	 ucpho_py[x_uc]                    =  ucphoton_container[x_uc].py();
+	 ucpho_pz[x_uc]                    =  ucphoton_container[x_uc].pz();
+	 ucpho_vx[x_uc]                    =  ucphoton_container[x_uc].vx();
+	 ucpho_vy[x_uc]                    =  ucphoton_container[x_uc].vy();
+	 ucpho_vz[x_uc]                    =  ucphoton_container[x_uc].vz();
+	 ucpho_et[x_uc]                    =  ucphoton_container[x_uc].et();
+	 ucpho_eta[x_uc]                   =  ucphoton_container[x_uc].eta();
+	 ucpho_phi[x_uc]                   =  correct_phi(ucphoton_container[x_uc].phi());
+	 ucpho_theta[x_uc]                 =  ucphoton_container[x_uc].theta();
+	 ucpho_r9[x_uc]                    =  ucphoton_container[x_uc].r9();
+	 ucpho_e1x5[x_uc]                  =  ucphoton_container[x_uc].e1x5();
+	 ucpho_e2x5[x_uc]                  =  ucphoton_container[x_uc].e2x5();
+	 ucpho_e3x3[x_uc]                  =  ucphoton_container[x_uc].e3x3();
+	 ucpho_e5x5[x_uc]                  =  ucphoton_container[x_uc].e5x5();
+	 ucpho_maxEnergyXtal[x_uc]         =  ucphoton_container[x_uc].maxEnergyXtal();
+	 ucpho_SigmaEtaEta[x_uc]           =  ucphoton_container[x_uc].sigmaEtaEta();        
+	 ucpho_SigmaIetaIeta[x_uc]         =  ucphoton_container[x_uc].sigmaIetaIeta();        
+	 ucpho_r1x5[x_uc]                  =  ucphoton_container[x_uc].r1x5();
+	 ucpho_r2x5[x_uc]                  =  ucphoton_container[x_uc].r2x5();
+	 ucpho_size[x_uc]                  =  ucphoton_container[x_uc].superCluster()->clustersSize();
+	 ucpho_sc_energy[x_uc]             =  ucphoton_container[x_uc].superCluster()->energy();
+	 ucpho_sc_eta[x_uc]                =  ucphoton_container[x_uc].superCluster()->eta();
+	 ucpho_sc_phi[x_uc]                =  correct_phi(ucphoton_container[x_uc].superCluster()->phi());
+	 ucpho_sc_x[x_uc]                  =  ucphoton_container[x_uc].superCluster()->x();
+         ucpho_sc_y[x_uc]                  =  ucphoton_container[x_uc].superCluster()->y();
+         ucpho_sc_z[x_uc]                  =  ucphoton_container[x_uc].superCluster()->z();
+	 ucpho_sc_etaWidth[x_uc]           =  ucphoton_container[x_uc].superCluster()->etaWidth();
+	 ucpho_sc_phiWidth[x_uc]           =  ucphoton_container[x_uc].superCluster()->phiWidth();
+	 ucpho_HoE[x_uc]                   =  ucphoton_container[x_uc].hadronicOverEm();              
+	 ucpho_ecalRecHitSumEtConeDR03[x_uc]      =  ucphoton_container[x_uc].ecalRecHitSumEtConeDR03();
+	 ucpho_hcalTowerSumEtConeDR03[x_uc]       =  ucphoton_container[x_uc].hcalTowerSumEtConeDR03();
+	 ucpho_trkSumPtHollowConeDR03[x_uc]       =  ucphoton_container[x_uc].trkSumPtHollowConeDR03();
+	 ucpho_trkSumPtSolidConeDR03[x_uc]        =  ucphoton_container[x_uc].trkSumPtSolidConeDR03();
+	 ucpho_nTrkSolidConeDR03[x_uc]            = ucphoton_container[x_uc].nTrkSolidConeDR03();
+	 ucpho_nTrkHollowConeDR03[x_uc]           = ucphoton_container[x_uc].nTrkHollowConeDR03();
+	 ucpho_hcalDepth1TowerSumEtConeDR03[x_uc] = ucphoton_container[x_uc].hcalDepth1TowerSumEtConeDR03();
+	 ucpho_hcalDepth2TowerSumEtConeDR03[x_uc] = ucphoton_container[x_uc].hcalDepth2TowerSumEtConeDR03();
+	 ucpho_ecalRecHitSumEtConeDR04[x_uc]      =  ucphoton_container[x_uc].ecalRecHitSumEtConeDR04();
+	 ucpho_hcalTowerSumEtConeDR04[x_uc]       =  ucphoton_container[x_uc].hcalTowerSumEtConeDR04();
+	 ucpho_trkSumPtHollowConeDR04[x_uc]       =  ucphoton_container[x_uc].trkSumPtHollowConeDR04();
+	 ucpho_trkSumPtSolidConeDR04[x_uc]        =  ucphoton_container[x_uc].trkSumPtSolidConeDR04();
+	 ucpho_nTrkSolidConeDR04[x_uc]            = ucphoton_container[x_uc].nTrkSolidConeDR04();
+	 ucpho_nTrkHollowConeDR04[x_uc]           = ucphoton_container[x_uc].nTrkHollowConeDR04();
+	 ucpho_hcalDepth1TowerSumEtConeDR04[x_uc] = ucphoton_container[x_uc].hcalDepth1TowerSumEtConeDR04();
+	 ucpho_hcalDepth2TowerSumEtConeDR04[x_uc] = ucphoton_container[x_uc].hcalDepth2TowerSumEtConeDR04();
+	 ucpho_hasPixelSeed[x_uc]                 = ucphoton_container[x_uc].hasPixelSeed(); 
+	 ucpho_isEB[x_uc]                         = ucphoton_container[x_uc].isEB(); 
+	 ucpho_isEE[x_uc]                         = ucphoton_container[x_uc].isEE();
+	 ucpho_isEBGap[x_uc]                      = ucphoton_container[x_uc].isEBGap(); 
+	 ucpho_isEEGap[x_uc]                      = ucphoton_container[x_uc].isEEGap(); 
+	 ucpho_isEBEEGap[x_uc]                    = ucphoton_container[x_uc].isEBEEGap(); 
+         ucpho_hasConvTrk[x_uc]                   = ucphoton_container[x_uc].hasConversionTracks();
+	 
+	 if(ucphoton_container[x_uc].genParticleRef().isNonnull()){
+	   matchucpho_E[x_uc]                =  ucphoton_container[x_uc].genPhoton()->energy();
+	   matchucpho_pt[x_uc]               =  ucphoton_container[x_uc].genPhoton()->pt();
+	   matchucpho_eta[x_uc]              =  ucphoton_container[x_uc].genPhoton()->eta();
+	   matchucpho_phi[x_uc]              =  correct_phi(ucphoton_container[x_uc].genPhoton()->phi());
+	   matchucpho_px[x_uc]               =  ucphoton_container[x_uc].genPhoton()->px();
+	   matchucpho_py[x_uc]               =  ucphoton_container[x_uc].genPhoton()->py();
+	   matchucpho_pz[x_uc]               =  ucphoton_container[x_uc].genPhoton()->pz();
+	 }
+	 else{
+	   matchucpho_E[x_uc]                = -99.;
+	   matchucpho_pt[x_uc]               = -99.;
+	   matchucpho_eta[x_uc]              = -99.;
+	   matchucpho_phi[x_uc]              = -99.;
+	   matchucpho_px[x_uc]               = -99.;
+	   matchucpho_py[x_uc]               = -99.;
+	   matchucpho_pz[x_uc]               = -99.;
+	 }
+	 ismatchedpho[x_uc]                =  ucphoton_container[x_uc].genParticleRef().isNonnull();
+
+	 ucpho_nTracks[x_uc]                    = 9999;
+	 ucpho_isConverted[x_uc]                = false;
+	 ucpho_pairInvariantMass[x_uc]          = -99.;
+	 ucpho_pairCotThetaSeparation[x_uc]     = -99.;
+	 ucpho_pairMomentum_x[x_uc]             = -99.;
+	 ucpho_pairMomentum_y[x_uc]             = -99.;
+	 ucpho_pairMomentum_z[x_uc]             = -99.;
+	 ucpho_conv_vx[x_uc]                    = -99.;
+	 ucpho_conv_vy[x_uc]                    = -99.;
+	 ucpho_conv_vz[x_uc]                    = -99.;
+	 ucpho_EoverP[x_uc]                     = -99.;
+	 ucpho_zOfPrimaryVertex[x_uc]           = -99.;
+	 ucpho_distOfMinimumApproach[x_uc]      = -99.;
+	 ucpho_dPhiTracksAtVtx[x_uc]            = -99.;
+	 ucpho_dPhiTracksAtEcal[x_uc]           = -99.;
+	 ucpho_dEtaTracksAtEcal[x_uc]           = -99.;
+	 
+	 reco::ConversionRefVector conversions_uc   = ucphoton_container[x_uc].conversions();
+	 for (unsigned int iConv_uc=0; iConv_uc<conversions_uc.size(); iConv_uc++) {
+	   reco::ConversionRef aConv_uc=conversions_uc[iConv_uc];
+	   if ( aConv_uc->nTracks() <2 ) continue; 
+	   if ( aConv_uc->conversionVertex().isValid() ){
+	     ucpho_nTracks[x_uc]                    = aConv_uc->nTracks();
+	     ucpho_isConverted[x_uc]                = aConv_uc->isConverted();
+	     ucpho_pairInvariantMass[x_uc]          = aConv_uc->pairInvariantMass();
+	     ucpho_pairCotThetaSeparation[x_uc]     = aConv_uc->pairCotThetaSeparation();
+	     ucpho_pairMomentum_x[x_uc]             = aConv_uc->pairMomentum().x();
+	     ucpho_pairMomentum_y[x_uc]             = aConv_uc->pairMomentum().y();
+	     ucpho_pairMomentum_z[x_uc]             = aConv_uc->pairMomentum().z();
+	     ucpho_conv_vx[x_uc]                    = aConv_uc->conversionVertex().x();
+	     ucpho_conv_vy[x_uc]                    = aConv_uc->conversionVertex().y();
+	     ucpho_conv_vz[x_uc]                    = aConv_uc->conversionVertex().z();
+	     ucpho_EoverP[x_uc]                     = aConv_uc->EoverP();
+	     ucpho_zOfPrimaryVertex[x_uc]           = aConv_uc->zOfPrimaryVertexFromTracks();
+	     ucpho_distOfMinimumApproach[x_uc]      = aConv_uc->distOfMinimumApproach();
+	     ucpho_dPhiTracksAtVtx[x_uc]            = aConv_uc->dPhiTracksAtVtx();
+	     ucpho_dPhiTracksAtEcal[x_uc]           = aConv_uc->dPhiTracksAtEcal();
+	     ucpho_dEtaTracksAtEcal[x_uc]           = aConv_uc->dEtaTracksAtEcal();
+	   }//end of if ( aConv_uc->conversionVertex().isValid() )
+	 }//end of for (unsigned int iConv_uc=0; iConv_uc<conversions.size(); iConv_uc++)
+	 
+
+	 if(runHErechit_ && ucpho_isEB[x_uc]){
+
+	   //Store HE rechits
+	   //edm::Handle<HBHERecHitCollection> hcalRecHitHandle;
+	   //iEvent.getByLabel(hcalrechitLabel_, hcalRecHitHandle);
+	   //const HBHERecHitCollection *hbhe =  hcalRecHitHandle.product();
+	   
+	   for(HBHERecHitCollection::const_iterator hh_uc = hbhe->begin(); hh_uc != hbhe->end() && ucHERecHit_subset_n<10000; hh_uc++){
+	     HcalDetId id(hh_uc->detid());
+	     if (id.subdet()==2){
+	       
+	       const CaloCellGeometry *hbhe_cell = caloGeom->getGeometry(hh_uc->id());
+	       Global3DPoint hbhe_position = hbhe_cell->getPosition();
+	       
+	       if(fabs(deltaPhi(ucpho_sc_phi[x_uc],correct_phi(hbhe_position.phi())) ) < 0.5
+		  && hh_uc->energy()>1.){
+		 //find the detid in the set
+		 set<DetId>::const_iterator ucHERecHitChecker = ucHERecHitSet.find(hh_uc->detid());
+		 //if detid is not found in the set,(we reached the end), save info!
+		 if(ucHERecHitChecker == ucHERecHitSet.end()){
+		   ucHERecHitSet.insert(hh_uc->detid());
+		   ucHERecHit_subset_detid[ucHERecHit_subset_n]  = hh_uc->detid();
+		   ucHERecHit_subset_energy[ucHERecHit_subset_n] = hh_uc->energy();
+		   ucHERecHit_subset_time[ucHERecHit_subset_n]   = hh_uc->time();
+		   ucHERecHit_subset_depth[ucHERecHit_subset_n]  = id.depth();
+		   ucHERecHit_subset_phi[ucHERecHit_subset_n]    = correct_phi(hbhe_position.phi());
+		   ucHERecHit_subset_eta[ucHERecHit_subset_n]	  = hbhe_position.eta();
+		   ucHERecHit_subset_x[ucHERecHit_subset_n]      = hbhe_position.x();
+		   ucHERecHit_subset_y[ucHERecHit_subset_n]      = hbhe_position.y();
+		   ucHERecHit_subset_z[ucHERecHit_subset_n]      = hbhe_position.z();
+		   ucHERecHit_subset_n++;
+		 }//check to see if hit is already saved
+	       }//if delta dphi from photon is small and E>1 try to save
+	     }
+	   }
+	 }// runHErechit_ && ucpho_isEB
+         
+
+	 ucPhoton_n++;
+       }//end of for loop over x_uc
+     }//if(ucphoton_container.size!=0) 
+     
+
+     //to get the photon hit information from every crystal of SC
+     if(runrechit_){ 
+       Handle<EcalRecHitCollection> Brechit;  //barrel
+       Handle<EcalRecHitCollection> Erechit;  //endcap
+       iEvent.getByLabel(rechitBLabel_,Brechit);
+       iEvent.getByLabel(rechitELabel_,Erechit);
+
+       //this will be needed later for swiss corss
+       EcalClusterLazyTools lazyTool(iEvent, iSetup,rechitBLabel_, rechitELabel_ );
+
+
+       const EcalRecHitCollection* barrelRecHits_uc= Brechit.product();
+       const EcalRecHitCollection* endcapRecHits_uc= Erechit.product();
+
+
+       edm::ESHandle<CaloTopology> pTopology;
+       iSetup.get<CaloTopologyRecord>().get(theCaloTopo_);
+       const CaloTopology *topology = theCaloTopo_.product();
+
+       if(ucphoton_container.size()!=0){
+
+	 for(unsigned int x_uc=0; x_uc < ucphoton_container.size();x_uc++){   
+
+	   std::vector< std::pair<DetId, float> >  PhotonHit_DetIds  = ucphoton_container[x_uc].superCluster()->hitsAndFractions();
+	   std::vector<CrystalInfo> uccrystalinfo_container;
+	   uccrystalinfo_container.clear();
+	   CrystalInfo crystal_uc;
+	   float uc_timing_avg =0.0;
+	   int uc_ncrys   = 0;
+	   uc_ncrysPhoton[x_uc]= 0;
+	   vector< std::pair<DetId, float> >::const_iterator detitr_uc;
+	   for(detitr_uc = PhotonHit_DetIds.begin(); detitr_uc != PhotonHit_DetIds.end(); ++detitr_uc){
+	     if (((*detitr_uc).first).det() == DetId::Ecal && ((*detitr_uc).first).subdetId() == EcalBarrel) {
+	       EcalRecHitCollection::const_iterator j_uc= Brechit->find(((*detitr_uc).first));
+	       EcalRecHitCollection::const_iterator thishit;
+	       if ( j_uc!= Brechit->end())  thishit = j_uc;
+	       if ( j_uc== Brechit->end()){
+		 continue;
+	       }
+	       EBDetId detId  = (EBDetId)((*detitr_uc).first);
+	       crystal_uc.rawId  = thishit->id().rawId();
+	       crystal_uc.energy = thishit->energy();
+	       crystal_uc.time   = thishit->time();
+               crystal_uc.timeErr= thishit->timeError();
+               crystal_uc.recoFlag = thishit->recoFlag(); 
+	       crystal_uc.ieta   = detId.ieta();
+	       crystal_uc.iphi   = detId.iphi();
+	       if(crystal_uc.energy > 0.1){
+		 uc_timing_avg  = uc_timing_avg + crystal_uc.time;
+		 uc_ncrys++;
+	       }  
+	     }//end of if ((*detitr_uc).det() == DetId::Ecal && (*detitr_uc).subdetId() == EcalBarrel)
+	     else if (((*detitr_uc).first).det() == DetId::Ecal && ((*detitr_uc).first).subdetId() == EcalEndcap){
+	       EcalRecHitCollection::const_iterator j_uc= Erechit->find(((*detitr_uc).first));
+	       EcalRecHitCollection::const_iterator thishit;
+	       if ( j_uc!= Erechit->end())  thishit = j_uc;
+	       if ( j_uc== Erechit->end()){
+		 continue;
+	       }
+	       EEDetId detId  = (EEDetId)((*detitr_uc).first);
+	       crystal_uc.energy  = thishit->energy();
+	       crystal_uc.time    = thishit->time();
+               crystal_uc.timeErr = thishit->timeError();
+               crystal_uc.recoFlag = thishit->recoFlag(); 
+	       crystal_uc.rawId  = 999;
+	       crystal_uc.ieta   = -99;
+	       crystal_uc.iphi   = -99;
+	       if(crystal_uc.energy > 0.1){
+		 uc_timing_avg  = uc_timing_avg + crystal_uc.time;
+		 uc_ncrys++;
+	       } 
+	     }//end of if EcalEndcap
+	     uccrystalinfo_container.push_back(crystal_uc);  
+	   }//End loop over detids
+
+	   std::sort(uccrystalinfo_container.begin(),uccrystalinfo_container.end(),EnergySortCriterium());
+	   //Without taking into account uncertainty, this time makes no sense.
+	   if (uc_ncrys !=0) uc_timing_avg = uc_timing_avg/(float)uc_ncrys;
+	   else uc_timing_avg = -99.;
+	   uc_ncrysPhoton[x_uc] = uccrystalinfo_container.size(); 
+	   ucpho_timingavg_xtal[x_uc]      = uc_timing_avg;
+	   for (unsigned int y_uc =0; y_uc < 100.;y_uc++){
+	     ucpho_timing_xtal[x_uc][y_uc]         = -99.;
+	     ucpho_energy_xtal[x_uc][y_uc]         = -99.;
+	     ucpho_ieta_xtalEB[x_uc][y_uc]           = -99;
+	     ucpho_iphi_xtalEB[x_uc][y_uc]           = -99;
+	     ucpho_recoFlag_xtalEB[x_uc][y_uc]           = -99;
+	   }//end of for (unsigned int y_uc =0; y_uc < uccrystalinfo_container.size();y_uc++)
+	   for (unsigned int y_uc =0; y_uc < uccrystalinfo_container.size() && y_uc < 100;y_uc++){ 
+	     ucpho_timing_xtal[x_uc][y_uc]         = uccrystalinfo_container[y_uc].time;
+	     ucpho_timeError_xtal[x_uc][y_uc]      = uccrystalinfo_container[y_uc].timeErr;
+	     ucpho_energy_xtal[x_uc][y_uc]         = uccrystalinfo_container[y_uc].energy;
+	     ucpho_ieta_xtalEB[x_uc][y_uc]           = uccrystalinfo_container[y_uc].ieta;
+	     ucpho_iphi_xtalEB[x_uc][y_uc]           = uccrystalinfo_container[y_uc].iphi;
+	     ucpho_recoFlag_xtalEB[x_uc][y_uc]           = uccrystalinfo_container[y_uc].recoFlag;
+	   }//end of for (unsigned int y_uc =0; y_uc < uccrystalinfo_container.size();y_uc++
+           const reco::BasicCluster& seedClus = *(ucphoton_container[x_uc].superCluster()->seed());
+
+
+          
+
+	   if(ucphoton_container[x_uc].isEB()){
+	     std::vector<float> showershapes_barrel = EcalClusterTools::roundnessBarrelSuperClusters(*(ucphoton_container[x_uc].superCluster()),*barrelRecHits_uc,0);
+	     ucpho_roundness[x_uc]    = (float)showershapes_barrel[0];
+	     ucpho_angle[x_uc]        = (float)showershapes_barrel[1];
+	     ucpho_s9[x_uc]           = ucpho_energy_xtal[x_uc][0]/ucpho_e3x3[x_uc];
+
+             //-New way to get swiss cross
+             const reco::CaloClusterPtr  seed = ucphoton_container[x_uc].superCluster()->seed();
+             DetId id = lazyTool.getMaximum(*seed).first;
+             float uc_swissCross=-99.;
+
+             const EcalRecHitCollection & rechits_uc = ( ucphoton_container[x_uc].isEB() ? *Brechit : *Brechit);
+             EcalRecHitCollection::const_iterator it = rechits_uc.find( id );
+
+               if( it != rechits_uc.end() ){uc_swissCross = EcalTools::swissCross( id, rechits_uc, 0.08, true);
+                                           }
+              ucpho_swissCross[x_uc]=uc_swissCross;
+               ucpho_e2e9[x_uc]      = -99.;
+               ucpho_e6e2[x_uc]      = -99.;            
+               ucpho_e2e9[x_uc]      = GetE2OverE9(id,rechits_uc);
+               ucpho_e6e2[x_uc]      = Gete6e2( id, rechits_uc);
+
+	     if(debug_ && 1-ucpho_swissCross[x_uc]/ucpho_maxEnergyXtal[x_uc] > 0.95) 
+	       cout<<"This photon candidate is an ECAL spike identified by Swiss Cross algorithm."<<endl;
+
+            vector<float> stdCov_uc = EcalClusterTools::covariances(seedClus,&(*barrelRecHits_uc),&(*topology),&(*caloGeom));
+            vector<float> crysCov_uc = EcalClusterTools::localCovariances(seedClus,&(*barrelRecHits_uc),&(*topology));
+            ucpho_SigmaEtaPhi[x_uc]   = sqrt(stdCov_uc[1]);
+            ucpho_SigmaIetaIphi[x_uc] = sqrt(crysCov_uc[1]);    
+            ucpho_SigmaPhiPhi[x_uc]   = sqrt(stdCov_uc[2]);
+            ucpho_SigmaIphiIphi[x_uc] = sqrt(crysCov_uc[2]);
+ 
+	}//end of if(ucphoton_container[x_uc].isEB())
+	   else{ 
+	     ucpho_roundness[x_uc]   = -99.;
+	     ucpho_angle[x_uc]       = -99.;
+	     ucpho_s9[x_uc]          = ucpho_energy_xtal[x_uc][0]/ucpho_e3x3[x_uc];
+
+             //----New way to get the swiss cross
+             const reco::CaloClusterPtr  seed = ucphoton_container[x_uc].superCluster()->seed();
+             DetId id = lazyTool.getMaximum(*seed).first;
+             float uc_swissCross=-99.;
+             const EcalRecHitCollection & rechits_uc = ( ucphoton_container[x_uc].isEB() ? *Erechit : *Erechit);
+             EcalRecHitCollection::const_iterator it = rechits_uc.find( id );
+
+            if( it != rechits_uc.end() ) {uc_swissCross = EcalTools::swissCross( id, rechits_uc, 0.08, true);
+                                        }                                    
+            ucpho_swissCross[x_uc]= uc_swissCross;
+            ucpho_e2e9[x_uc]      = -99.;
+            ucpho_e6e2[x_uc]      =-99.; 
+            ucpho_e2e9[x_uc]      = GetE2OverE9(id,rechits_uc); 
+            ucpho_e6e2[x_uc]      = Gete6e2( id, rechits_uc);
+	     if(debug_ && 1-ucpho_swissCross[x_uc]/ucpho_maxEnergyXtal[x_uc] > 0.95) {
+	       cout<<"This photon candidate is an ECAL spike identified by Swiss Cross algorithm." << endl;
+	       cout<<"This would be weird since there aren't spikes in the endcap of ECAL"<<endl; 
+	     }
+
+             vector<float> stdCov_uc = EcalClusterTools::covariances(seedClus,&(*endcapRecHits_uc),&(*topology),&(*caloGeom));
+             vector<float> crysCov_uc = EcalClusterTools::localCovariances(seedClus,&(*endcapRecHits_uc),&(*topology));
+             ucpho_SigmaEtaPhi[x_uc]   = sqrt(stdCov_uc[1]);
+             ucpho_SigmaIetaIphi[x_uc] = sqrt(crysCov_uc[1]);   
+             ucpho_SigmaPhiPhi[x_uc]   = sqrt(stdCov_uc[2]);
+             ucpho_SigmaIphiIphi[x_uc] = sqrt(crysCov_uc[2]);
+
+	   }//end of else (if !EB)
+
+
+	 }//end of for loop over x_uc
+       }//if(ucphoton_container.size!=0)
+
+ 
+     }//if(runrechit_)
+   }//if(runphotons_)
+
+
+
+//-------CaloTower Infor
+  if(runcaloTower_){
+   Handle<CaloTowerCollection> caloTowers;
+   iEvent.getByLabel(caloTowerLabel_, caloTowers );
+   std::vector<CaloTower> mycaloTowers_container;
+   mycaloTowers_container.clear();
+    
+  for( CaloTowerCollection::const_iterator cal = caloTowers->begin(); cal != caloTowers->end(); ++ cal ) {
+       mycaloTowers_container.push_back(*cal);          
+     }
+  
+     CaloTower_n = 0;           
+     if(mycaloTowers_container.size()!=0){
+       for(unsigned int x=0; x< mycaloTowers_container.size() && x < 5000; x++){
+      
+        caloTower_eta[x] = mycaloTowers_container[x].eta();
+        caloTower_phi[x] = mycaloTowers_container[x].phi();
+        caloTower_E[x]   = mycaloTowers_container[x].energy();
+        caloTower_Et[x]   = mycaloTowers_container[x].et();
+        caloTower_emEnergy[x]  = mycaloTowers_container[x].emEnergy();
+        caloTower_hadEnergy[x] = mycaloTowers_container[x].hadEnergy();
+        caloTower_p[x]    = mycaloTowers_container[x].p();
+        caloTower_EMEt[x] = mycaloTowers_container[x].emEt();
+        caloTower_HadEt[x] = mycaloTowers_container[x].hadEt();
+        caloTower_HadPhi[x]= mycaloTowers_container[x].hadPosition().phi();
+        caloTower_HadEta[x]= mycaloTowers_container[x].hadPosition().eta();
+        caloTower_EMPhi[x] = mycaloTowers_container[x].emPosition().phi();
+        caloTower_EMEta[x] = mycaloTowers_container[x].emPosition().eta();
+        caloTower_HadX[x]  = mycaloTowers_container[x].hadPosition().x();
+        caloTower_HadY[x]  = mycaloTowers_container[x].hadPosition().y();
+        caloTower_HadZ[x]  = mycaloTowers_container[x].hadPosition().z();
+        caloTower_HE_E[x]  = mycaloTowers_container[x].energyInHE();
+        caloTower_HB_E[x]  = mycaloTowers_container[x].energyInHB();
+        caloTower_EMTime[x]      = mycaloTowers_container[x].ecalTime();
+        caloTower_HadTime[x]     = mycaloTowers_container[x].hcalTime();
+        //caloTower_recoFlag[x]    = mycaloTowers_container[x].recoFlag();
+
+        CaloTower_n++;  
+       }//for(unsigned int x=0; x < min(mycaloTowers_container.size(), MaxN);x++)
+    }//if atleast one calo-tower exist
+
+}//if(runcaloTowers){
+
+
+
      myEvent->Fill();
    if(debug_) cout<<"DEBUG: analyze loop done"<<endl;
 }
@@ -2409,7 +2881,7 @@ void Analyzer::beginJob(){
     myEvent->Branch("Jet_fHPD",jet_fHPD,"jet_fHPD[Jet_n]/F");
     myEvent->Branch("Jet_fRBX",jet_fRBX,"jet_fRBX[Jet_n]/F");
     myEvent->Branch("Jet_RHF",jet_RHF,"jet_RHF[Jet_n]/F");
-    myEvent->Branch("Jet_jecUncer",jet_jecUncer,"jet_jecUncer[Jet_n]/F");
+  //  myEvent->Branch("Jet_jecUncer",jet_jecUncer,"jet_jecUncer[Jet_n]/F");
     myEvent->Branch("Jet_jecCorr",jet_jecCorr,"jet_jecCorr[Jet_n]/F");
    //uncorrected jet infor
     myEvent->Branch("ucJet_px",ucjet_px,"ucjet_px[Jet_n]/F");
@@ -2444,7 +2916,7 @@ void Analyzer::beginJob(){
     myEvent->Branch("pfJet_fRBX",pfjet_fRBX,"pfjet_fRBX[pfJet_n]/F");
     myEvent->Branch("pfJet_RHF",pfjet_RHF,"pfjet_RHF[pfJet_n]/F");
   */
-    myEvent->Branch("pfJet_jecUncer",pfjet_jecUncer,"pfjet_jecUncer[pfJet_n]/F");
+    //myEvent->Branch("pfJet_jecUncer",pfjet_jecUncer,"pfjet_jecUncer[pfJet_n]/F");
     myEvent->Branch("pfJet_jecCorr",pfjet_jecCorr,"pfjet_jecCorr[pfJet_n]/F");
     //uncorrected jet info
     myEvent->Branch("ucpfJet_px",ucpfjet_px,"ucpfjet_px[pfJet_n]/F");
@@ -2811,6 +3283,7 @@ if(runDetailTauInfo_){
     myEvent->Branch("Photon_theta",pho_theta,"pho_theta[Photon_n]/F");
     myEvent->Branch("Photon_et",pho_et,"pho_et[Photon_n]/F");
     myEvent->Branch("Photon_swissCross",pho_swissCross,"pho_swissCross[Photon_n]/F");
+    myEvent->Branch("Photon_e6e2",pho_e6e2,"pho_e6e2[Photon_n]/F");
     myEvent->Branch("Photonr9",pho_r9,"pho_r9[Photon_n]/F");
     myEvent->Branch("Photon_e1x5",pho_e1x5,"pho_e1x5[Photon_n]/F");
     myEvent->Branch("Photon_e2x5",pho_e2x5,"pho_e2x5[Photon_n]/F");
@@ -2904,6 +3377,8 @@ if(runDetailTauInfo_){
       myEvent->Branch("Photon_energy_xtal",pho_energy_xtal,"pho_energy_xtal[Photon_n][100]/F");
       myEvent->Branch("Photon_ieta_xtalEB",pho_ieta_xtalEB,"pho_ieta_xtalEB[Photon_n][100]/I");
       myEvent->Branch("Photon_iphi_xtalEB",pho_iphi_xtalEB,"pho_iphi_xtalEB[Photon_n][100]/I");
+      myEvent->Branch("Photon_recoFlag_xtalEB",pho_recoFlag_xtalEB,"pho_recoFlag_xtalEB[Photon_n][100]/I");
+      myEvent->Branch("Photon_timeError_xtal",pho_timeError_xtal,"pho_timeError_xtal[Photon_n][100]/F");
       myEvent->Branch("Photon_s9",pho_s9,"pho_s9[Photon_n]/F");
     }
     
@@ -3037,6 +3512,161 @@ if(runDetailTauInfo_){
   }//end of if(runmet)
   if(runTCmet_&& runphotons_)
     myEvent->Branch("Delta_phiTC",&Delta_phiTC,"Delta_phiTC/F");
+
+   //Uncleaned Photon
+  if (runucphotons_){
+    //uncorrected photon information
+    myEvent->Branch("ucPhoton_n",&ucPhoton_n,"ucPhoton_n/I");
+    myEvent->Branch("ucPhoton_E",ucpho_E,"ucpho_E[ucPhoton_n]/F");
+    myEvent->Branch("ucPhoton_pt",ucpho_pt,"ucpho_pt[ucPhoton_n]/F");
+    myEvent->Branch("ucPhoton_eta",ucpho_eta,"ucpho_eta[ucPhoton_n]/F");
+    myEvent->Branch("ucPhoton_phi",ucpho_phi,"ucpho_phi[ucPhoton_n]/F");
+    myEvent->Branch("ucPhoton_theta",ucpho_theta,"ucpho_theta[ucPhoton_n]/F");
+    myEvent->Branch("ucPhoton_et",ucpho_et,"ucpho_et[ucPhoton_n]/F"); 
+    myEvent->Branch("ucPhoton_swissCross",ucpho_swissCross,"ucpho_swissCross[ucPhoton_n]/F");
+    myEvent->Branch("ucPhoton_e6e2",ucpho_e6e2,"ucpho_e6e2[ucPhoton_n]/F");
+    myEvent->Branch("ucPhotonr9",ucpho_r9,"ucpho_r9[ucPhoton_n]/F");
+    myEvent->Branch("ucPhoton_e1x5",ucpho_e1x5,"ucpho_e1x5[ucPhoton_n]/F");
+    myEvent->Branch("ucPhoton_e2x5",ucpho_e2x5,"ucpho_e2x5[ucPhoton_n]/F");
+    myEvent->Branch("ucPhoton_e3x3",ucpho_e3x3,"ucpho_e3x3[ucPhoton_n]/F");
+    myEvent->Branch("ucPhoton_e5x5",ucpho_e5x5,"ucpho_e5x5[ucPhoton_n]/F");
+    myEvent->Branch("ucPhoton_r1x5",ucpho_r1x5,"ucpho_erx5[ucPhoton_n]/F");
+    myEvent->Branch("ucPhoton_r2x5",ucpho_r2x5,"ucpho_erx5[ucPhoton_n]/F");
+    myEvent->Branch("ucPhoton_maxEnergyXtal",ucpho_maxEnergyXtal,"ucpho_maxEnergyXtal[ucPhoton_n]/F");
+    myEvent->Branch("ucPhoton_SigmaEtaEta",ucpho_SigmaEtaEta,"ucpho_SigmaEtaEta[ucPhoton_n]/F");
+    myEvent->Branch("ucPhoton_SigmaIetaIeta",ucpho_SigmaIetaIeta,"ucpho_SigmaIetaIeta[ucPhoton_n]/F");
+    myEvent->Branch("ucPhoton_SigmaEtaPhi",ucpho_SigmaEtaPhi,"ucpho_SigmaEtaPhi[ucPhoton_n]/F");
+    myEvent->Branch("ucPhoton_SigmaIetaIphi",ucpho_SigmaIetaIphi,"ucpho_SigmaIetaIphi[ucPhoton_n]/F");
+    myEvent->Branch("ucPhoton_SigmaPhiPhi",ucpho_SigmaPhiPhi,"ucpho_SigmaPhiPhi[ucPhoton_n]/F");
+    myEvent->Branch("ucPhoton_SigmaIphiIphi",ucpho_SigmaIphiIphi,"ucpho_SigmaIphiIphi[ucPhoton_n]/F");
+    myEvent->Branch("ucPhoton_Roundness",ucpho_roundness,"ucpho_roundness[ucPhoton_n]/F");
+    myEvent->Branch("ucPhoton_Angle",ucpho_angle,"ucpho_angle[ucPhoton_n]/F");
+    myEvent->Branch("ucPhoton_ecalRecHitSumEtConeDR03",ucpho_ecalRecHitSumEtConeDR03,"ucpho_ecalRecHitSumEtConeDR03[ucPhoton_n]/F");
+    myEvent->Branch("ucPhoton_hcalTowerSumEtConeDR03",ucpho_hcalTowerSumEtConeDR03,"ucpho_hcalTowerSumEtConeDR03[ucPhoton_n]/F");
+    myEvent->Branch("ucPhoton_trkSumPtSolidConeDR03",ucpho_trkSumPtSolidConeDR03,"ucpho_trkSumPtSolidConeDR03[ucPhoton_n]/F");
+    myEvent->Branch("ucPhoton_trkSumPtHollowConeDR03",ucpho_trkSumPtHollowConeDR03,"ucpho_trkSumPtHollowConeDR03[ucPhoton_n]/F");
+    myEvent->Branch("ucPhoton_nTrkSolidConeDR03",ucpho_nTrkSolidConeDR03,"ucpho_nTrkSolidConeDR03[ucPhoton_n]/I");
+    myEvent->Branch("ucPhoton_nTrkHollowConeDR03",ucpho_nTrkHollowConeDR03,"ucpho_nTrkHollowConeDR03[ucPhoton_n]/I");
+    myEvent->Branch("ucPhoton_hcalDepth1TowerSumEtConeDR03",ucpho_hcalDepth1TowerSumEtConeDR03,"ucpho_hcalDepth1TowerSumEtConeDR03[ucPhoton_n]/F");
+    myEvent->Branch("ucPhoton_hcalDepth2TowerSumEtConeDR03",ucpho_hcalDepth2TowerSumEtConeDR03,"ucpho_hcalDepth2TowerSumEtConeDR03[ucPhoton_n]/F");
+    myEvent->Branch("ucPhoton_ecalRecHitSumEtConeDR04",ucpho_ecalRecHitSumEtConeDR04,"ucpho_ecalRecHitSumEtConeDR04[ucPhoton_n]/F");
+    myEvent->Branch("ucPhoton_hcalTowerSumEtConeDR04",ucpho_hcalTowerSumEtConeDR04,"ucpho_hcalTowerSumEtConeDR04[ucPhoton_n]/F");
+    myEvent->Branch("ucPhoton_trkSumPtSolidConeDR04",ucpho_trkSumPtSolidConeDR04,"ucpho_trkSumPtSolidConeDR04[ucPhoton_n]/F");
+    myEvent->Branch("ucPhoton_trkSumPtHollowConeDR04",ucpho_trkSumPtHollowConeDR04,"ucpho_trkSumPtHollowConeDR04[ucPhoton_n]/F");
+    myEvent->Branch("ucPhoton_nTrkSolidConeDR04",ucpho_nTrkSolidConeDR04,"ucpho_nTrkSolidConeDR04[ucPhoton_n]/I");
+    myEvent->Branch("ucPhoton_nTrkHollowConeDR04",ucpho_nTrkHollowConeDR04,"ucpho_nTrkHollowConeDR04[ucPhoton_n]/I");
+    myEvent->Branch("ucPhoton_hcalDepth1TowerSumEtConeDR04",ucpho_hcalDepth1TowerSumEtConeDR04,"ucpho_hcalDepth1TowerSumEtConeDR04[ucPhoton_n]/F");
+    myEvent->Branch("ucPhoton_hcalDepth2TowerSumEtConeDR04",ucpho_hcalDepth2TowerSumEtConeDR04,"ucpho_hcalDepth2TowerSumEtConeDR04[ucPhoton_n]/F");
+   myEvent->Branch("ucPhoton_hasPixelSeed",ucpho_hasPixelSeed,"ucpho_hasPixelSeed[ucPhoton_n]/O"); 
+    myEvent->Branch("ucPhoton_isEB",ucpho_isEB,"ucpho_isEB[ucPhoton_n]/O");
+    myEvent->Branch("ucPhoton_isEE",ucpho_isEE,"ucpho_isEE[ucPhoton_n]/O");
+    myEvent->Branch("ucPhoton_isEBGap",ucpho_isEBGap,"ucpho_isEBGap[ucPhoton_n]/O");
+    myEvent->Branch("ucPhoton_isEEGap",ucpho_isEEGap,"ucpho_isEEGap[ucPhoton_n]/O");
+    myEvent->Branch("ucPhoton_isEBEEGap",ucpho_isEBEEGap,"ucpho_isEBEEGap[ucPhoton_n]/O");
+    myEvent->Branch("ucPhoton_e2e9",ucpho_e2e9,"ucpho_e2e9[ucPhoton_n]/F");
+                                                               
+    myEvent->Branch("ucPhoton_HoE",ucpho_HoE,"ucpho_HoE[ucPhoton_n]/F");
+    myEvent->Branch("ucPhoton_px",ucpho_px,"ucpho_px[ucPhoton_n]/F");  
+    myEvent->Branch("ucPhoton_py",ucpho_py,"ucpho_py[ucPhoton_n]/F");  
+    myEvent->Branch("ucPhoton_pz",ucpho_pz,"ucpho_pz[ucPhoton_n]/F");  
+    myEvent->Branch("ucPhoton_vx",ucpho_vx,"ucpho_vx[ucPhoton_n]/F");  
+    myEvent->Branch("ucPhoton_vy",ucpho_vy,"ucpho_vy[ucPhoton_n]/F");  
+    myEvent->Branch("ucPhoton_vz",ucpho_vz,"ucpho_vz[ucPhoton_n]/F");  
+    myEvent->Branch("ucPhoton_no_of_basic_clusters",ucpho_size,"ucpho_size[ucPhoton_n]/I");
+                                                               
+    myEvent->Branch("ucPhoton_sc_energy",ucpho_sc_energy,"ucpho_sc_energy[ucPhoton_n]/F");
+    myEvent->Branch("ucPhoton_sc_eta",ucpho_sc_eta,"ucpho_sc_eta[ucPhoton_n]/F");
+    myEvent->Branch("ucPhoton_sc_phi",ucpho_sc_phi,"ucpho_sc_phi[ucPhoton_n]/F");
+    myEvent->Branch("ucPhoton_sc_x",ucpho_sc_x,"ucpho_sc_x[ucPhoton_n]/F");
+    myEvent->Branch("ucPhoton_sc_y",ucpho_sc_y,"ucpho_sc_y[ucPhoton_n]/F");
+    myEvent->Branch("ucPhoton_sc_z",ucpho_sc_z,"ucpho_sc_z[ucPhoton_n]/F");
+                                                               
+    myEvent->Branch("ucPhoton_etaWidth",ucpho_sc_etaWidth,"ucpho_sc_etaWidth[ucPhoton_n]/F");
+    myEvent->Branch("ucPhoton_phiWidth",ucpho_sc_phiWidth,"ucpho_sc_phiWidth[ucPhoton_n]/F");
+    myEvent->Branch("ucPhoton_sc_et",ucpho_sc_et,"ucpho_sc_et[ucPhoton_n]/F");
+                                                               
+    myEvent->Branch("matchucphotonE",matchucpho_E,"matchucpho_E[ucPhoton_n]/F");
+    myEvent->Branch("matchucphotonpt",matchucpho_pt,"matchucpho_pt[ucPhoton_n]/F");
+    myEvent->Branch("matchucphotoneta",matchucpho_eta,"matchucpho_eta[ucPhoton_n]/F");
+    myEvent->Branch("matchucphotonphi",matchucpho_phi,"matchucpho_phi[ucPhoton_n]/F");
+    myEvent->Branch("matchucphotonpx",matchucpho_px,"matchucpho_px[ucPhoton_n]/F");
+    myEvent->Branch("matchucphotonpy",matchucpho_py,"matchucpho_py[ucPhoton_n]/F");
+    myEvent->Branch("matchucphotonpz",matchucpho_pz,"matchucpho_pz[ucPhoton_n]/F");
+    myEvent->Branch("ismatcheducphoton",ismatcheducpho,"ismatcheducpho[ucPhoton_n]/O");
+                                                               
+    myEvent->Branch("ucPhoton_hasConvTrk",ucpho_hasConvTrk,"ucpho_hasConvTrk[ucPhoton_n]/O"); 
+    myEvent->Branch("ucPhoton_ntracks",ucpho_nTracks,"ucpho_nTracks[ucPhoton_n]/I");
+    myEvent->Branch("ucPhoton_isconverted",ucpho_isConverted,"ucpho_isConverted[ucPhoton_n]/O");
+    myEvent->Branch("ucPhoton_pairInvmass",ucpho_pairInvariantMass,"ucpho_pairInvariantMass[ucPhoton_n]/F");
+    myEvent->Branch("ucPhoton_pairCotThetaSeperation",ucpho_pairCotThetaSeparation,"ucpho_pairCotThetaSeparation[ucPhoton_n]/F");
+    myEvent->Branch("ucPhoton_pairmomentumX",ucpho_pairMomentum_x,"ucpho_pairMomentum_x[ucPhoton_n]/F");
+    myEvent->Branch("ucPhoton_pairmomentumY",ucpho_pairMomentum_y,"ucpho_pairMomentum_y[ucPhoton_n]/F");
+    myEvent->Branch("ucPhoton_pairmomentumZ",ucpho_pairMomentum_z,"ucpho_pairMomentum_z[ucPhoton_n]/F");
+    myEvent->Branch("ucPhoton_EoverP",ucpho_EoverP,"ucpho_EoverP[ucPhoton_n]/F");
+    myEvent->Branch("ucPhoton_ConvVx",ucpho_conv_vx,"ucpho_conv_vx[ucPhoton_n]/F");
+    myEvent->Branch("ucPhoton_ConvVy",ucpho_conv_vy,"ucpho_conv_vy[ucPhoton_n]/F");
+    myEvent->Branch("ucPhoton_ConvVz",ucpho_conv_vz,"ucpho_conv_vz[ucPhoton_n]/F");
+    myEvent->Branch("ucPhoton_ZOfPrimaryVertex",ucpho_zOfPrimaryVertex,"ucpho_zOfPrimaryVertex[ucPhoton_n]/F");
+    myEvent->Branch("ucPhoton_distOfMinimumApproach",ucpho_distOfMinimumApproach,"ucpho_distOfMinimumApproach[ucPhoton_n]/F");
+    myEvent->Branch("ucPhoton_dPhiTracksAtVtx",ucpho_dPhiTracksAtVtx,"ucpho_dPhiTracksAtVtx[ucPhoton_n]/F");
+    myEvent->Branch("ucPhoton_dPhiTracksAtEcal",ucpho_dPhiTracksAtEcal,"ucpho_dPhiTracksAtEcal[ucPhoton_n]/F");
+    myEvent->Branch("ucPhoton_dEtaTracksAtEcal",ucpho_dEtaTracksAtEcal,"ucpho_dEtaTracksAtEcal[ucPhoton_n]/F");
+    if(runrechit_){                                            
+      myEvent->Branch("ucPhoton_ncrys",ncrysPhoton,"ncrysPhoton[ucPhoton_n]/I");
+      myEvent->Branch("ucPhoton_timing_xtal",ucpho_timing_xtal,"ucpho_timing_xtal[ucPhoton_n][100]/F");
+      myEvent->Branch("ucPhoton_timingavg_xtal",ucpho_timingavg_xtal,"ucpho_timingavg_xtal[ucPhoton_n]/F");
+      myEvent->Branch("ucPhoton_energy_xtal",ucpho_energy_xtal,"ucpho_energy_xtal[ucPhoton_n][100]/F");
+      myEvent->Branch("ucPhoton_ieta_xtalEB",ucpho_ieta_xtalEB,"ucpho_ieta_xtalEB[ucPhoton_n][100]/I");
+      myEvent->Branch("ucPhoton_iphi_xtalEB",ucpho_iphi_xtalEB,"ucpho_iphi_xtalEB[ucPhoton_n][100]/I");
+      myEvent->Branch("ucPhoton_recoFlag_xtalEB",ucpho_recoFlag_xtalEB,"ucpho_recoFlag_xtalEB[ucPhoton_n][100]/I");
+      myEvent->Branch("ucPhoton_timeError_xtal",ucpho_timeError_xtal,"ucpho_timeError_xtal[ucPhoton_n][100]/F");     
+      myEvent->Branch("ucPhoton_s9",ucpho_s9,"ucpho_s9[ucPhoton_n]/F");
+    }                                                          
+                                                               
+    if(runHErechit_){                                          
+      myEvent->Branch("ucHERecHit_subset_n",&ucHERecHit_subset_n,"ucHERecHit_subset_n/I");
+      myEvent->Branch("ucHERecHit_subset_detid",ucHERecHit_subset_detid,"ucHERecHit_subset_detid[ucHERecHit_subset_n]/i");
+      myEvent->Branch("ucHERecHit_subset_energy",ucHERecHit_subset_energy,"ucHERecHit_subset_energy[ucHERecHit_subset_n]/F");
+      myEvent->Branch("ucHERecHit_subset_time",ucHERecHit_subset_time,"ucHERecHit_subset_time[ucHERecHit_subset_n]/F");
+      myEvent->Branch("ucHERecHit_subset_depth",ucHERecHit_subset_depth,"ucHERecHit_subset_depth[ucHERecHit_subset_n]/I");
+      myEvent->Branch("ucHERecHit_subset_phi",ucHERecHit_subset_phi,"ucHERecHit_subset_phi[ucHERecHit_subset_n]/F");
+      myEvent->Branch("ucHERecHit_subset_eta",ucHERecHit_subset_eta,"ucHERecHit_subset_eta[ucHERecHit_subset_n]/F");
+      myEvent->Branch("ucHERecHit_subset_x",ucHERecHit_subset_x,"ucHERecHit_subset_x[ucHERecHit_subset_n]/F");
+      myEvent->Branch("ucHERecHit_subset_y",ucHERecHit_subset_y,"ucHERecHit_subset_y[ucHERecHit_subset_n]/F");
+      myEvent->Branch("ucHERecHit_subset_z",ucHERecHit_subset_z,"ucHERecHit_subset_z[ucHERecHit_subset_n]/F");
+    }                                                          
+                                                               
+  }//end of if (runucphotons_)                              
+
+
+
+  if(runcaloTower_){
+     myEvent->Branch("CaloTower_n",&CaloTower_n,"CaloTower_n/I");
+     myEvent->Branch("CaloTower_eta",caloTower_eta,"caloTower_eta[CaloTower_n]/F");
+     myEvent->Branch("CaloTower_phi",caloTower_phi,"caloTower_phi[CaloTower_n]/F");
+     myEvent->Branch("CaloTower_E",caloTower_E,"caloTower_E[CaloTower_n]/F");
+     myEvent->Branch("CaloTower_Et",caloTower_Et,"caloTower_Et[CaloTower_n]/F");
+     myEvent->Branch("CaloTower_emEnergy",caloTower_emEnergy,"caloTower_emEnergy[CaloTower_n]/F");
+     myEvent->Branch("CaloTower_hadEnergy",caloTower_hadEnergy,"caloTower_hadEnergy[CaloTower_n]/F");
+     myEvent->Branch("CaloTower_p",caloTower_p,"caloTower_p[CaloTower_n]/F");
+     myEvent->Branch("CaloTower_EMEt",caloTower_EMEt,"caloTower_EMEt[CaloTower_n]/F");
+     myEvent->Branch("CaloTower_HadEt",caloTower_HadEt,"caloTower_HadEt[CaloTower_n]/F");
+     myEvent->Branch("CaloTower_HadPhi",caloTower_HadPhi,"caloTower_HadPhi[CaloTower_n]/F");
+     myEvent->Branch("CaloTower_HadEta",caloTower_HadEta,"caloTower_HadEta[CaloTower_n]/F");
+     myEvent->Branch("CaloTower_EMPhi",caloTower_EMPhi,"caloTower_EMPhi[CaloTower_n]/F");
+     myEvent->Branch("CaloTower_EMEta",caloTower_EMEta,"caloTower_EMEta[CaloTower_n]/F");
+     myEvent->Branch("CaloTower_HadX",caloTower_HadX,"caloTower_HadX[CaloTower_n]/F");
+     myEvent->Branch("CaloTower_HadY",caloTower_HadY,"caloTower_HadY[CaloTower_n]/F");
+     myEvent->Branch("CaloTower_HadZ",caloTower_HadZ,"caloTower_HadZ[CaloTower_n]/F");
+     myEvent->Branch("CaloTower_HE_E",caloTower_HE_E,"caloTower_HE_E[CaloTower_n]/F");
+     myEvent->Branch("CaloTower_HB_E",caloTower_HB_E,"caloTower_HB_E[CaloTower_n]/F");
+     myEvent->Branch("CaloTower_EMTime",caloTower_EMTime,"caloTower_EMTime[CaloTower_n]/F");
+     myEvent->Branch("CaloTower_HadTime",caloTower_HadTime,"caloTower_HadTime[CaloTower_n]/F"); 
+    // myEvent->Branch("CaloTower_recoFlag",caloTower_recoFlag,"caloTower_recoFlag[CaloTower_n]/F"); 
+   }//if(runcaloTower_)
+ 
+
+
 }
 
 // ------------ method called once each job just after ending the event loop  ------------
@@ -3164,5 +3794,60 @@ if ( id.subdetId() == EcalBarrel ) {
  }
 return 0;
 }
+
+
+//to remove double spikes: IN RECO double splikes are if e6e2< 0.04
+double Analyzer::Gete6e2(const DetId& id, 
+                     const EcalRecHitCollection& rhs){
+      float s4_1 = 0;
+     float s4_2 = 0;
+     float e1 = recHitE( id, rhs , false );
+ 
+    
+     float maxene=0;
+    DetId maxid;
+ 
+     if ( e1 == 0 ) return 0;
+
+     const std::vector<DetId>& neighs =  neighbours(id);
+ 
+     // find the most energetic neighbour ignoring time info
+     for (size_t i=0; i<neighs.size(); ++i){
+       float ene = recHitE(neighs[i],rhs,false);
+       if (ene>maxene)  {
+         maxene=ene;
+         maxid = neighs[i];
+       }
+     }
+ 
+     float e2=maxene;
+ 
+     s4_1 = e4e1(id,rhs)* e1;
+     s4_2 = e4e1(maxid,rhs)* e2;
+ 
+     return (s4_1 + s4_2) / (e1+e2) -1. ;
+ 
+ }
+
+double Analyzer::e4e1(const DetId& id, 
+                             const EcalRecHitCollection& rhs){
+ 
+ 
+   float s4 = 0;
+   float e1 = recHitE( id, rhs, false );
+   
+   
+   if ( e1 == 0 ) return 0;
+   const std::vector<DetId>& neighs =  neighbours(id);
+   for (size_t i=0; i<neighs.size(); ++i)
+     // avoid hits out of time when making s4
+     s4+=recHitE(neighs[i],rhs, true);
+  
+   return s4 / e1;
+   
+  
+ }
+
+
 //define this as a plug-in
 DEFINE_FWK_MODULE(Analyzer);
