@@ -143,7 +143,7 @@ process.demo = cms.EDAnalyzer('Analyzer',
                               Tracks           = cms.untracked.InputTag("generalTracks"),
                               Vertices         = cms.untracked.InputTag("offlinePrimaryVertices","",""),
                               BeamHaloSummary  = cms.untracked.InputTag("BeamHaloSummary"),
-                              pileup           = cms.untracked.InputTag("PileUpInfo"),
+                              pileup           = cms.untracked.InputTag("addPileupInfo"),
                               outFile          = cms.untracked.string("Histo_Data_AOD.root"),
                               runphotons       = cms.untracked.bool(True),
                               rununcleanphotons= cms.untracked.bool(True),
@@ -173,7 +173,7 @@ process.demo = cms.EDAnalyzer('Analyzer',
                               #---------------
                               runcaloTower     = cms.untracked.bool(True),
                               runBeamHaloSummary= cms.untracked.bool(True),
-                              runPileUp         = cms.untracked.bool(True),
+                              runPileUp         = cms.untracked.bool(False),
                               isAOD             = cms.untracked.bool(True),
                               debug             = cms.untracked.bool(False)
                               )
