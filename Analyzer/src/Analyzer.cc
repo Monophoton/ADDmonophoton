@@ -13,7 +13,7 @@
 //
 // Original Author:  Sandhya Jain
 //         Created:  Fri Apr 17 11:00:06 CEST 2009
-// $Id: Analyzer.cc,v 1.54 2011/06/08 13:23:04 schauhan Exp $
+// $Id: Analyzer.cc,v 1.55 2011/06/08 22:44:33 schauhan Exp $
 //
 //
 
@@ -250,6 +250,7 @@ Analyzer::Analyzer(const edm::ParameterSet& iConfig):
   runCSCseg_(iConfig.getUntrackedParameter<bool>("runCSCseg")),
   runBeamHaloSummary_(iConfig.getUntrackedParameter<bool>("runBeamHaloSummary")),
   runRPChit_(iConfig.getUntrackedParameter<bool>("runRPChit")),
+  runPileUp_(iConfig.getUntrackedParameter<bool>("runPileUp")),
   runcaloTower_(iConfig.getUntrackedParameter<bool>("runcaloTower")),
   isAOD_(iConfig.getUntrackedParameter<bool>("isAOD")),
   debug_(iConfig.getUntrackedParameter<bool>("debug")),
@@ -2833,9 +2834,8 @@ void Analyzer::beginJob(){
   if(runHLT_){
   myEvent->Branch("triggerprescales","vector<int>",&triggerprescales);
   myEvent->Branch("ifTriggerpassed","vector<bool>",&ifTriggerpassed);
-  myEvent->Branch("trobjpt",trobjpt,"trobjpt[ntriggers][80][10]/F");                                                                                  
-  myEvent->Branch("trobjeta",trobjeta,"trobjeta[ntriggers][80][10]/F");
-  myEvent->Branch("trobjphi",trobjphi,"trobjphi[ntriggers][80][10]/F");
+  myEvent->Branch("trobjpt",trobjpt,"trobjpt[ntriggers][100][10]/F");                                                                                   myEvent->Branch("trobjeta",trobjeta,"trobjeta[ntriggers][100][10]/F");
+  myEvent->Branch("trobjphi",trobjphi,"trobjphi[ntriggers][100][10]/F");
   }
   
   if(runvertex_){
