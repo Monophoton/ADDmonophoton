@@ -13,7 +13,7 @@
 //
 // Original Author:  Sandhya Jain
 //         Created:  Fri Apr 17 11:00:06 CEST 2009
-// $Id: Analyzer.cc,v 1.55 2011/06/08 22:44:33 schauhan Exp $
+// $Id: Analyzer.cc,v 1.56 2011/06/10 11:50:55 schauhan Exp $
 //
 //
 
@@ -2489,7 +2489,7 @@ if(rungenjets_){
 	   matchucpho_py[x_uc]               = -99.;
 	   matchucpho_pz[x_uc]               = -99.;
 	 }
-	 ismatchedpho[x_uc]                =  ucphoton_container[x_uc].genParticleRef().isNonnull();
+	 ismatcheducpho[x_uc]                =  ucphoton_container[x_uc].genParticleRef().isNonnull();
 
 	 ucpho_nTracks[x_uc]                    = 9999;
 	 ucpho_isConverted[x_uc]                = false;
