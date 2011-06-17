@@ -1,0 +1,12 @@
+universe=vanilla
+Executable = condor.sh
+should_transfer_files = YES
+WhenToTransferOutput = ON_EXIT
+transfer_input_files = runMonoPhodata
+Output = /uscms/home/miceli/nobackup/monophoton/subsets/May10_2011_CMSSW_4_2_3/data/logs/batch_$(cluster)_$(process).stdout
+Error  = /uscms/home/miceli/nobackup/monophoton/subsets/May10_2011_CMSSW_4_2_3/data/logs/batch_$(cluster)_$(process).stderr
+Log    = /uscms/home/miceli/nobackup/monophoton/subsets/May10_2011_CMSSW_4_2_3/data/logs/batch_$(cluster)_$(process).condor
+Requirements          = Memory >= 199 && OpSys == "LINUX" && (Arch != "DUMMY")
+Notification = never
+Arguments = $(cluster) $(process) /uscms/home/miceli/nobackup/monophoton/subsets/May10_2011_CMSSW_4_2_3/CMSSW_4_2_3/ /uscms/home/miceli/nobackup/monophoton/subsets/May10_2011_CMSSW_4_2_3/data/ runMonoPhodata -1
+Queue 105

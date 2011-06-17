@@ -1,0 +1,39 @@
+This README outlines the proceedure Tia Miceli uses as of 17 June 2011 to select monophoton candidates and plot some quantities from the monophoton ntuples produced by Analyzer.cc.
+
+Related files:
+compile
+condor.sh
+makeHistogramsMonoPho_8.C
+makeHistogramsMonoPho_8.h
+runMonoPhodata.C (Will need to be updated as we get new nTuples!)
+submitMonoPhodata.jdl
+
+To run interactively, on only one section of the ntuple list (section 0):
+./compile runMonoPhodata.C runMonoPhodata
+./runMonoPhodata 0
+
+To run on condor:
+./compile runMonoPhodata.C runMonoPhodata
+condor_q submitMonoPhodata.jdl
+
+
+makeHistogramsMonoPho_8.h
+This defines a class to read in the monophoton ntuples. Here are defined many functions used to perform cuts.
+When Loop(...) provides parameters to turn on/off certain cuts. The outName is the name of the output file. The char subset, is not important, just put any char (it's legacy code).
+makeHistogramsMonoPho_8::Loop(char subset, string outName, bool applyTriggerCut=true, bool applyCosMuCut=true, bool applyScraping=true, bool onlyOneVertex=false)
+
+makeHistogramsMonoPho_8.C
+This defines the many histograms to plot and calls functions from the .h file to perform selection cuts.
+
+runMonoPhodata.C is a wrapper that adds files to run over and calls makeHistogramsMonoPho_8::Loop. The input ntuples are divided into sections, and so runMonoPhodata.C takes an integer to add ntuples from only a specific section. (This is used to ease division of jobs for condor, but can be used also interactively.)
+
+submitMonoPhodata.jdl
+This provides the parameters for condor.sh and shows how many jobs to call.
+
+condor.sh
+This instructs what needs to be done for each condor job.
+
+compile
+This is a command that will compile and link ROOT, runMonoPhodata.C, makeHistogramsMonoPho_8.C, and makeHistogramsMonoPho_8.h
+The executible output from this is what is used by the user interactively or by condor.sh.
+
