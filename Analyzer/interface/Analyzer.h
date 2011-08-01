@@ -130,6 +130,8 @@ class Analyzer : public edm::EDAnalyzer {
   edm::InputTag BeamHaloSummaryLabel_;
   edm::InputTag Vertices_;
   edm::InputTag pileupLabel_;
+  edm::InputTag rhoLabel_;
+  edm::InputTag sigmaLabel_;
 
   std::string outFile_;
   std::string hltlabel_;
@@ -945,6 +947,9 @@ class Analyzer : public edm::EDAnalyzer {
   float caloTower_HadTime[5000];
   //float caloTower_recoFlag[5000];
 
+
+  float rho;
+  float sigma;
  
 };
 

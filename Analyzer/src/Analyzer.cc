@@ -13,7 +13,7 @@
 //
 // Original Author:  Sandhya Jain
 //         Created:  Fri Apr 17 11:00:06 CEST 2009
-// $Id: Analyzer.cc,v 1.56 2011/06/10 11:50:55 schauhan Exp $
+// $Id: Analyzer.cc,v 1.57 2011/06/14 14:30:58 schauhan Exp $
 //
 //
 
@@ -251,6 +251,8 @@ Analyzer::Analyzer(const edm::ParameterSet& iConfig):
   runBeamHaloSummary_(iConfig.getUntrackedParameter<bool>("runBeamHaloSummary")),
   runRPChit_(iConfig.getUntrackedParameter<bool>("runRPChit")),
   runPileUp_(iConfig.getUntrackedParameter<bool>("runPileUp")),
+  rhoLabel_(iConfig.getUntrackedParameter<edm::InputTag>("rhoLabel")),
+  sigmaLabel_(iConfig.getUntrackedParameter<edm::InputTag>("sigmaLabel")),
   runcaloTower_(iConfig.getUntrackedParameter<bool>("runcaloTower")),
   isAOD_(iConfig.getUntrackedParameter<bool>("isAOD")),
   debug_(iConfig.getUntrackedParameter<bool>("debug")),
@@ -2804,6 +2806,24 @@ if(rungenjets_){
 }//if(runcaloTowers){
 
 
+// Rho correction
+  edm::Handle<double> rhoHandle;
+  iEvent.getByLabel(rhoLabel_, rhoHandle);
+   rho=0.;
+  if(rhoHandle.isValid()) {
+     rho= *(rhoHandle.product());
+  }
+
+
+  edm::Handle<double> sigmaHandle;
+  iEvent.getByLabel(sigmaLabel_, sigmaHandle);
+   sigma =0.;
+ if(sigmaHandle.isValid()) {      
+     sigma = *(sigmaHandle.product());
+  }                 
+
+
+
 
      myEvent->Fill();
    if(debug_) cout<<"DEBUG: analyze loop done"<<endl;
@@ -2834,7 +2854,8 @@ void Analyzer::beginJob(){
   if(runHLT_){
   myEvent->Branch("triggerprescales","vector<int>",&triggerprescales);
   myEvent->Branch("ifTriggerpassed","vector<bool>",&ifTriggerpassed);
-  myEvent->Branch("trobjpt",trobjpt,"trobjpt[ntriggers][100][10]/F");                                                                                   myEvent->Branch("trobjeta",trobjeta,"trobjeta[ntriggers][100][10]/F");
+  myEvent->Branch("trobjpt",trobjpt,"trobjpt[ntriggers][100][10]/F");   
+  myEvent->Branch("trobjeta",trobjeta,"trobjeta[ntriggers][100][10]/F");
   myEvent->Branch("trobjphi",trobjphi,"trobjphi[ntriggers][100][10]/F");
   }
   
@@ -3678,7 +3699,10 @@ if(runDetailTauInfo_){
      myEvent->Branch("CaloTower_HadTime",caloTower_HadTime,"caloTower_HadTime[CaloTower_n]/F"); 
     // myEvent->Branch("CaloTower_recoFlag",caloTower_recoFlag,"caloTower_recoFlag[CaloTower_n]/F"); 
    }//if(runcaloTower_)
- 
+
+
+   myEvent->Branch("rho", &rho, "rho/F");
+   myEvent->Branch("sigma", &sigma, "sigma/F"); 
 
 
 }
