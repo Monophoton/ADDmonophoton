@@ -13,7 +13,7 @@
 //
 // Original Author:  Sandhya Jain
 //         Created:  Fri Apr 17 11:00:06 CEST 2009
-// $Id: Analyzer.cc,v 1.57 2011/06/14 14:30:58 schauhan Exp $
+// $Id: Analyzer.cc,v 1.58 2011/08/01 16:58:35 schauhan Exp $
 //
 //
 
@@ -2061,8 +2061,8 @@ if(!isAOD_){
    if(runjets_){
      //this for jec uncert 
      iSetup.get<JetCorrectionsRecord>().get("AK5Calo",JetCorParColl); 
-     //JetCorrectorParameters const & JetCorPar = (*JetCorParColl)["Uncertainty"];
-     //JetCorrectionUncertainty *jecUnc = new JetCorrectionUncertainty(JetCorPar);
+     JetCorrectorParameters const & JetCorPar = (*JetCorParColl)["Uncertainty"];
+     JetCorrectionUncertainty *jecUnc = new JetCorrectionUncertainty(JetCorPar);
        
 
      edm::Handle<edm::View<pat::Jet> > jetHandle;
@@ -2100,10 +2100,10 @@ if(!isAOD_){
 	 jet_RHF[x] = (float)(myjet_container[x].jetID().fLong - myjet_container[x].jetID().fShort)/(myjet_container[x].jetID().fLong + myjet_container[x].jetID().fShort);
 	 jet_nTowers[x] = myjet_container[x].jetID().nECALTowers + myjet_container[x].jetID().nHCALTowers ;
          //jet energy uncertiany
-        /* jecUnc->setJetEta(jet_eta[x]);
+         jecUnc->setJetEta(jet_eta[x]);
          jecUnc->setJetPt(jet_pt[x]);
          jet_jecUncer[x] = jecUnc->getUncertainty(true);
-        */ if(myjet_container[x].jecFactor("Uncorrected") != 0 )
+         if(myjet_container[x].jecFactor("Uncorrected") != 0 )
              {jet_jecCorr[x] = 1./(myjet_container[x].jecFactor("Uncorrected")); 
               }  
                else{jet_jecCorr[x] =0.;}
@@ -2129,8 +2129,8 @@ if(!isAOD_){
      //for jec uncert
      edm::ESHandle<JetCorrectorParametersCollection> JetCorParColl;
      iSetup.get<JetCorrectionsRecord>().get("AK5PF",JetCorParColl); 
-     //JetCorrectorParameters const & JetCorPar = (*JetCorParColl)["Uncertainty"];
-     //JetCorrectionUncertainty *pfjecUnc = new JetCorrectionUncertainty(JetCorPar);
+     JetCorrectorParameters const & JetCorPar = (*JetCorParColl)["Uncertainty"];
+     JetCorrectionUncertainty *pfjecUnc = new JetCorrectionUncertainty(JetCorPar);
 
 
      edm::Handle<edm::View<pat::Jet> > pfjetHandle;
@@ -2177,10 +2177,10 @@ if(!isAOD_){
          pfjet_nTowers[x] = mypfjet_container[x].jetID().nECALTowers + mypfjet_container[x].jetID().nHCALTowers ;
          */
          //jet energy uncertiany
-       /*  pfjecUnc->setJetEta(pfjet_eta[x]);
+         pfjecUnc->setJetEta(pfjet_eta[x]);
          pfjecUnc->setJetPt(pfjet_pt[x]);
          pfjet_jecUncer[x] = pfjecUnc->getUncertainty(true);
-       */  //get the uncorrected jet and fill them
+         //get the uncorrected jet and fill them
          pat::Jet uncpfjet = mypfjet_container[x].correctedJet("Uncorrected");
          ucpfjet_pt[x] = uncpfjet.pt();
          ucpfjet_px[x] = uncpfjet.px();
@@ -2914,7 +2914,7 @@ void Analyzer::beginJob(){
     myEvent->Branch("Jet_fHPD",jet_fHPD,"jet_fHPD[Jet_n]/F");
     myEvent->Branch("Jet_fRBX",jet_fRBX,"jet_fRBX[Jet_n]/F");
     myEvent->Branch("Jet_RHF",jet_RHF,"jet_RHF[Jet_n]/F");
-  //  myEvent->Branch("Jet_jecUncer",jet_jecUncer,"jet_jecUncer[Jet_n]/F");
+    myEvent->Branch("Jet_jecUncer",jet_jecUncer,"jet_jecUncer[Jet_n]/F");
     myEvent->Branch("Jet_jecCorr",jet_jecCorr,"jet_jecCorr[Jet_n]/F");
    //uncorrected jet infor
     myEvent->Branch("ucJet_px",ucjet_px,"ucjet_px[Jet_n]/F");
@@ -2949,7 +2949,7 @@ void Analyzer::beginJob(){
     myEvent->Branch("pfJet_fRBX",pfjet_fRBX,"pfjet_fRBX[pfJet_n]/F");
     myEvent->Branch("pfJet_RHF",pfjet_RHF,"pfjet_RHF[pfJet_n]/F");
   */
-    //myEvent->Branch("pfJet_jecUncer",pfjet_jecUncer,"pfjet_jecUncer[pfJet_n]/F");
+    myEvent->Branch("pfJet_jecUncer",pfjet_jecUncer,"pfjet_jecUncer[pfJet_n]/F");
     myEvent->Branch("pfJet_jecCorr",pfjet_jecCorr,"pfjet_jecCorr[pfJet_n]/F");
     //uncorrected jet info
     myEvent->Branch("ucpfJet_px",ucpfjet_px,"ucpfjet_px[pfJet_n]/F");
