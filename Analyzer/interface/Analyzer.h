@@ -94,9 +94,9 @@ class Analyzer : public edm::EDAnalyzer {
   float trobjpt[100][100][10];
   float trobjeta[100][100][10];
   float trobjphi[100][100][10];
-
-
-  //maximum size to be filled in tree branches
+  int   lastFilterIndex[100];
+ 
+ //maximum size to be filled in tree branches
   size_t MaxN;
 
   edm::TriggerNames triggerNames_;  // TriggerNames class
@@ -622,7 +622,10 @@ class Analyzer : public edm::EDAnalyzer {
   int   pho_nTrkHollowConeDR04[200];
   float pho_HoE[200];
   bool  pho_hasPixelSeed[200];   
-  
+ int  pho_mGenmompdgId[200][100];
+ int  pho_mGenpdgId[200];
+ int  pho_nummoth[200]; 
+ 
   //SC variables
   float pho_sc_energy[200];
   int   pho_size[200];

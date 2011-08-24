@@ -13,7 +13,7 @@
 //
 // Original Author:  Sandhya Jain
 //         Created:  Fri Apr 17 11:00:06 CEST 2009
-// $Id: Analyzer.cc,v 1.58 2011/08/01 16:58:35 schauhan Exp $
+// $Id: Analyzer.cc,v 1.59 2011/08/02 08:49:36 schauhan Exp $
 //
 //
 
@@ -911,9 +911,11 @@ if(runHLT_)
             all_triggerprescales.push_back(0);
             all_ifTriggerpassed.push_back(0);
             idx.push_back(triggerNames_.triggerIndex(all_triggers[i]));
-
-            if(debug_)cout<<"Trigger Path="<<all_triggers[i]<<endl;
+            if(debug_)cout<<"i = "<<i<<"   Trigger Path Name ="<<all_triggers[i]<<"  Trigger is pass/fail= "<<(HLTR->accept(idx[i]))<<endl;
             if(debug_)cout<<"index = "<<idx[i]<<endl;
+
+            lastFilterIndex[i] = -99;
+
 
             ModuleSize.push_back(hltConfig_.size(idx[i]));
 
@@ -935,12 +937,11 @@ if(runHLT_)
               {
               const string& moduleLabel(moduleLabels[j]);
               const string  moduleType(hltConfig_.moduleType(moduleLabel));
-
               // check whether the module is packed up in TriggerEvent product
               const unsigned int filterIndex(triggerEventHandle->filterIndex(InputTag(moduleLabel,"",hltlabel_)));
-
-              if (filterIndex<triggerEventHandle->sizeFilters()) 
-                { 
+              if (filterIndex< triggerEventHandle->sizeFilters()) 
+                {
+ 
                   module_type[indexhltobj] = hltConfig_.moduleType(moduleLabel);
                   const trigger::Keys& KEYS = triggerEventHandle->filterKeys(filterIndex);
                   const trigger::Vids& VIDS = triggerEventHandle->filterIds(filterIndex);
@@ -949,13 +950,16 @@ if(runHLT_)
                   assert(nI==nK);
                   const trigger::size_type n(max(nI,nK));
                   const trigger::TriggerObjectCollection& TOC(triggerEventHandle->getObjects());
-                  ikey=0;
+                  ikey=0;  //cout<<"Objects = "<<n<<endl;
+                 //store this filter
+                 if(moduleType=="HLTEgammaGenericQuadraticFilter" && (HLTR->accept(idx[i])))lastFilterIndex[i]=indexhltobj;
                   for (trigger::size_type k=0; k!=n && k< MaxN/20; ++k) 
                       {
                       const trigger::TriggerObject& TO(TOC[KEYS[k]]);
                       trobjpt[i][indexhltobj][ikey]= TO.pt();
                       trobjeta[i][indexhltobj][ikey]= TO.eta();
                       trobjphi[i][indexhltobj][ikey]= TO.phi();
+             
 
                     if(debug_)cout<<"trobjpt["<<i<<"]["<<ikey<<"]["<<indexhltobj<<"]=  "<<trobjpt[i][indexhltobj][ikey]<<endl;
 
@@ -1320,11 +1324,13 @@ if(!isAOD_){
      edm::Handle<edm::View<pat::Photon> > phoHandle;
      iEvent.getByLabel(phoLabel_,phoHandle);
      edm::View<pat::Photon>::const_iterator photon;
-     
+
      set<DetId> HERecHitSet;
      HERecHit_subset_n = 0;
      
      for(photon = phoHandle->begin();photon!=phoHandle->end();++photon){
+  
+       //cout<<(photon->triggerObjectMatchesByPath("HLT_Photon90_CaloIdVL_IsoL_v3",true,false))<<endl;
        myphoton_container.push_back(*photon) ;
      }
      Photon_n = 0;
@@ -1386,7 +1392,33 @@ if(!isAOD_){
 	 pho_isEEGap[x]                      = myphoton_container[x].isEEGap(); 
 	 pho_isEBEEGap[x]                    = myphoton_container[x].isEBEEGap(); 
          pho_hasConvTrk[x]                   = myphoton_container[x].hasConversionTracks();
-	 
+	
+
+
+        //Add these three variables--	
+        if(rungenParticleCandidates_){
+
+         cout<<"Photon x = "<<x<<endl;
+
+         if( myphoton_container[x].genParticleRef().isNonnull() )       
+         {
+                pho_mGenpdgId[x]       = myphoton_container[x].genParticleRef()->pdgId();
+                pho_nummoth[x] = (int)myphoton_container[x].genParticleRef()->numberOfMothers();    
+          
+                cout<<"ID = "<<pho_mGenpdgId[x]<<"   mothers =  "<<pho_nummoth[x]<<endl;
+     
+             if(pho_nummoth[x]!=0)                                     
+               {         
+                for(int imoth=0; imoth<pho_nummoth[x] && imoth< 100; imoth++){       
+                 pho_mGenmompdgId[x][imoth] = myphoton_container[x].genParticleRef()->mother(imoth)->pdgId();}
+
+               //  cout<<"======>  mother n = "<<imoth<<"      Id of Mother = "<<pho_mGenmompdgId[x][imoth]<<endl;   
+               } 
+          }      
+
+        }
+
+ 
 	 if(myphoton_container[x].genParticleRef().isNonnull()){
 	   matchpho_E[x]                =  myphoton_container[x].genPhoton()->energy();
 	   matchpho_pt[x]               =  myphoton_container[x].genPhoton()->pt();
@@ -2857,6 +2889,7 @@ void Analyzer::beginJob(){
   myEvent->Branch("trobjpt",trobjpt,"trobjpt[ntriggers][100][10]/F");   
   myEvent->Branch("trobjeta",trobjeta,"trobjeta[ntriggers][100][10]/F");
   myEvent->Branch("trobjphi",trobjphi,"trobjphi[ntriggers][100][10]/F");
+  myEvent->Branch("lastFilterIndex",lastFilterIndex,"lastFilterIndex[ntriggers]/I");
   }
   
   if(runvertex_){
@@ -3600,6 +3633,12 @@ if(runDetailTauInfo_){
     myEvent->Branch("ucPhoton_isEBEEGap",ucpho_isEBEEGap,"ucpho_isEBEEGap[ucPhoton_n]/O");
     myEvent->Branch("ucPhoton_e2e9",ucpho_e2e9,"ucpho_e2e9[ucPhoton_n]/F");
                                                                
+   //sushil 
+    if(rungenParticleCandidates_){
+    myEvent->Branch("Photon_nummoth",pho_nummoth,"pho_nummoth[Photon_n]/I");
+    myEvent->Branch("Photon_mGenpdgId",pho_mGenpdgId,"pho_mGenpdgId[Photon_n]/I");
+    myEvent->Branch("Photon_mGenmompdgId",pho_mGenmompdgId,"pho_mGenmompdgId[Photon_n][100]/I");
+   }//--   
     myEvent->Branch("ucPhoton_HoE",ucpho_HoE,"ucpho_HoE[ucPhoton_n]/F");
     myEvent->Branch("ucPhoton_px",ucpho_px,"ucpho_px[ucPhoton_n]/F");  
     myEvent->Branch("ucPhoton_py",ucpho_py,"ucpho_py[ucPhoton_n]/F");  
