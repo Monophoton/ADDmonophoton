@@ -13,7 +13,7 @@
 //
 // Original Author:  Sandhya Jain
 //         Created:  Fri Apr 17 11:00:06 CEST 2009
-// $Id: Analyzer.cc,v 1.59 2011/08/02 08:49:36 schauhan Exp $
+// $Id: Analyzer.cc,v 1.60 2011/08/24 02:20:23 schauhan Exp $
 //
 //
 
@@ -915,7 +915,7 @@ if(runHLT_)
             if(debug_)cout<<"index = "<<idx[i]<<endl;
 
             lastFilterIndex[i] = -99;
-
+            lastFilterIndexHLT135[i] = -99;
 
             ModuleSize.push_back(hltConfig_.size(idx[i]));
 
@@ -953,6 +953,7 @@ if(runHLT_)
                   ikey=0;  //cout<<"Objects = "<<n<<endl;
                  //store this filter
                  if(moduleType=="HLTEgammaGenericQuadraticFilter" && (HLTR->accept(idx[i])))lastFilterIndex[i]=indexhltobj;
+                 if(moduleType=="HLTEgammaGenericFilter" && (HLTR->accept(idx[i])))lastFilterIndexHLT135[i]=indexhltobj;
                   for (trigger::size_type k=0; k!=n && k< MaxN/20; ++k) 
                       {
                       const trigger::TriggerObject& TO(TOC[KEYS[k]]);
@@ -2890,6 +2891,7 @@ void Analyzer::beginJob(){
   myEvent->Branch("trobjeta",trobjeta,"trobjeta[ntriggers][100][10]/F");
   myEvent->Branch("trobjphi",trobjphi,"trobjphi[ntriggers][100][10]/F");
   myEvent->Branch("lastFilterIndex",lastFilterIndex,"lastFilterIndex[ntriggers]/I");
+  myEvent->Branch("lastFilterIndexHLT135",lastFilterIndexHLT135,"lastFilterIndexHLT135[ntriggers]/I"); 
   }
   
   if(runvertex_){

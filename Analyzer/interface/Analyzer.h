@@ -95,7 +95,7 @@ class Analyzer : public edm::EDAnalyzer {
   float trobjeta[100][100][10];
   float trobjphi[100][100][10];
   int   lastFilterIndex[100];
- 
+  int   lastFilterIndexHLT135[100]; 
  //maximum size to be filled in tree branches
   size_t MaxN;
 
