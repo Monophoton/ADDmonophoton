@@ -77,7 +77,7 @@ process.ak5PFJets.Rho_EtaMax = cms.double(5.0)
 # make a new patPhotons
 from PhysicsTools.PatAlgos.producersLayer1.patCandidates_cff import *
 process.uncleanpatPhotons = patPhotons.clone(
-   photonSource = cms.InputTag("photons::ADDSkim")
+   photonSource = cms.InputTag("photons::MonoHiSkim")
 ) 
 # make a new selectedPatCandidates
 from PhysicsTools.PatAlgos.selectionLayer1.selectedPatCandidates_cff import *
@@ -105,7 +105,7 @@ readFiles = cms.untracked.vstring()
 secFiles = cms.untracked.vstring()
 
 readFiles.extend( [
-       'file:/uscms_data/d2/sushil/CMSSW/MonoPhoton/CMSSW_4_2_3/src/ADDmonophoton/Skimmer/test/phoskim.root'
+       'dcap://cmsgridftp.fnal.gov:24125/pnfs/fnal.gov/usr/cms/WAX/11/store/user/lpcgg/askew/42Rho/2011/UncleanMono42_25_1_hYE.root'
     ] );
 
 process.source = cms.Source("PoolSource",
@@ -146,7 +146,6 @@ process.demo = cms.EDAnalyzer('Analyzer',
                               pileup           = cms.untracked.InputTag("addPileupInfo"),
                               rhoLabel         = cms.untracked.InputTag("kt6PFJets", "rho"),
                               sigmaLabel       = cms.untracked.InputTag("kt6PFJets", "sigma"),
-                              cscTag           = cms.untracked.InputTag("cscSegments"),
                               outFile          = cms.untracked.string("Histo_Data_AOD.root"),
                               runphotons       = cms.untracked.bool(True),
                               rununcleanphotons= cms.untracked.bool(True),
@@ -203,7 +202,7 @@ process.p = cms.Path(
 
 
 # reduce verbosity
-process.MessageLogger.cerr.FwkReport.reportEvery = cms.untracked.int32(1)
+process.MessageLogger.cerr.FwkReport.reportEvery = cms.untracked.int32(1000)
 
 # process all the events
 process.maxEvents = cms.untracked.PSet( input = cms.untracked.int32(-1) )
