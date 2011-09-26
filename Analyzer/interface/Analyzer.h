@@ -342,7 +342,19 @@ class Analyzer : public edm::EDAnalyzer {
   float muon_InnerTrack_OuterPoint_px[200];
   float muon_InnerTrack_OuterPoint_py[200];
   float muon_InnerTrack_OuterPoint_pz[200];
-  
+ 
+
+  float muon_trackIso[200];                                                                                                                                                        
+  float muon_ecalIso[200];
+  float muon_hcalIso[200];
+  float muon_relIso[200];
+  int   muon_normChi2[200];
+  int   muon_validHits[200];
+  int   muon_tkHits[200];
+  int   muon_pixHits[200];
+  int  muon_numberOfMatches[200];
+
+ 
   //FOR AOD only
   float muon_OuterPoint_x[200];
   float muon_OuterPoint_y[200];
@@ -350,6 +362,8 @@ class Analyzer : public edm::EDAnalyzer {
   float muon_InnerPoint_x[200];
   float muon_InnerPoint_y[200];
   float muon_InnerPoint_z[200];
+
+  
 
  
   //cosmicmuon variables

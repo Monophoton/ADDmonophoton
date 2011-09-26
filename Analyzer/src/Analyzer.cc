@@ -13,7 +13,7 @@
 //
 // Original Author:  Sandhya Jain
 //         Created:  Fri Apr 17 11:00:06 CEST 2009
-// $Id: Analyzer.cc,v 1.60 2011/08/24 02:20:23 schauhan Exp $
+// $Id: Analyzer.cc,v 1.61 2011/09/14 20:21:40 schauhan Exp $
 //
 //
 
@@ -1102,7 +1102,31 @@ if(runHLT_)
        muon_vx[x]  = mymuon_container[x].vx();
        muon_vy[x]  = mymuon_container[x].vy();
        muon_vz[x]  = mymuon_container[x].vz();
-       
+
+       muon_trackIso[x] = mymuon_container[x].trackIso();
+       muon_ecalIso[x] = mymuon_container[x].ecalIso();
+       muon_hcalIso[x] = mymuon_container[x].hcalIso();
+       muon_relIso[x] =(muon_trackIso[x] + muon_ecalIso[x] + muon_hcalIso[x])/muon_pt[x];
+ 
+       muon_normChi2[x]= -99;
+       muon_validHits[x]= -99;
+ 
+       if(mymuon_container[x].globalTrack().isNonnull() ){
+         muon_normChi2[x] = mymuon_container[x].normChi2();
+         muon_validHits[x] = mymuon_container[x].globalTrack()->hitPattern().numberOfValidMuonHits();
+        }
+
+        muon_numberOfMatches[x] = mymuon_container[x].numberOfMatches();
+                              
+        muon_tkHits[x] =-99;
+        muon_pixHits[x]=-99;
+                                                                                                                                                     
+       if(mymuon_container[x].track().isNonnull() ){
+         muon_tkHits[x] = mymuon_container[x].track()->numberOfValidHits();
+         muon_pixHits[x] = mymuon_container[x].track()->hitPattern().numberOfValidPixelHits();
+       }
+
+ 
        //tia's stuff
        muon_isGlobalMuon[x] =     mymuon_container[x].isGlobalMuon();
        muon_isTrackerMuon[x] =    mymuon_container[x].isTrackerMuon();
@@ -3081,8 +3105,17 @@ void Analyzer::beginJob(){
     myEvent->Branch("Muon_InnerTrack_OuterPoint_px",muon_InnerTrack_OuterPoint_px,"muon_InnerTrack_OuterPoint_px[Muon_n]/F");
     myEvent->Branch("Muon_InnerTrack_OuterPoint_py",muon_InnerTrack_OuterPoint_py,"muon_InnerTrack_OuterPoint_py[Muon_n]/F");
     myEvent->Branch("Muon_InnerTrack_OuterPoint_pz",muon_InnerTrack_OuterPoint_pz,"muon_InnerTrack_OuterPoint_pz[Muon_n]/F");  
-  
-      
+    myEvent->Branch("Muon_trackIso",muon_trackIso,"muon_trackIso[Muon_n]/F");                                                                                                      
+    myEvent->Branch("Muon_ecalIso",muon_ecalIso,"muon_ecalIso[Muon_n]/F");
+    myEvent->Branch("Muon_hcalIso",muon_hcalIso,"muon_hcalIso[Muon_n]/F");
+    myEvent->Branch("Muon_relIso",muon_relIso,"muon_relIso[Muon_n]/F");
+ 
+    myEvent->Branch("Muon_normChi2",muon_normChi2,"muon_normChi2[Muon_n]/I");
+    myEvent->Branch("Muon_validHits",muon_validHits,"muon_validHits[Muon_n]/I");
+    myEvent->Branch("Muon_tkHits",muon_tkHits,"muon_tkHits[Muon_n]/I");
+    myEvent->Branch("Muon_pixHits",muon_pixHits,"muon_pixHits[Muon_n]/I");
+    myEvent->Branch("Muon_numberOfMatches",muon_numberOfMatches,"muon_numberOfMatches[Muon_n]/I");
+
   if(isAOD_){
     myEvent->Branch("Muon_OuterPoint_x",muon_OuterPoint_x,"muon_OuterPoint_x[Muon_n]/F");
     myEvent->Branch("Muon_OuterPoint_y",muon_OuterPoint_y,"muon_OuterPoint_y[Muon_n]/F");
