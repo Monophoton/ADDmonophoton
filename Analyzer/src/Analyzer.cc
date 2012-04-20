@@ -13,7 +13,7 @@
 //
 // Original Author:  Sandhya Jain
 //         Created:  Fri Apr 17 11:00:06 CEST 2009
-// $Id: Analyzer.cc,v 1.61 2011/09/14 20:21:40 schauhan Exp $
+// $Id: Analyzer.cc,v 1.62 2011/09/26 15:29:08 schauhan Exp $
 //
 //
 
@@ -57,6 +57,8 @@
 #include "DataFormats/L1GlobalTrigger/interface/L1GlobalTriggerReadoutRecord.h"
 #include "CondFormats/L1TObjects/interface/L1GtTriggerMenu.h"
 #include "CondFormats/DataRecord/interface/L1GtTriggerMenuRcd.h"
+#include "RecoEcal/EgammaCoreTools/interface/EcalClusterLazyTools.h"
+#include "RecoEcal/EgammaCoreTools/interface/EcalTools.h"
 #include "RecoEcal/EgammaCoreTools/interface/EcalClusterTools.h"
 #include "RecoEcal/EgammaCoreTools/interface/EcalClusterLazyTools.h"
 #include "DataFormats/Common/interface/TriggerResults.h"
@@ -73,8 +75,6 @@
 #include "Geometry/CaloTopology/interface/EcalEndcapTopology.h"
 #include "DataFormats/EcalRecHit/interface/EcalRecHitCollections.h"
 #include "RecoLocalCalo/EcalRecAlgos/interface/EcalSeverityLevelAlgo.h"
-#include "RecoEcal/EgammaCoreTools/interface/EcalClusterLazyTools.h"
-#include "RecoEcal/EgammaCoreTools/interface/EcalTools.h"
 //#include "RecoLocalCalo/EcalRecAlgos/interface/EcalCleaningAlgo.h"
 #include <DataFormats/CSCRecHit/interface/CSCSegmentCollection.h>
 #include "DataFormats/GeometryVector/interface/GlobalPoint.h"
@@ -86,7 +86,6 @@
 #include "Geometry/CSCGeometry/interface/CSCLayer.h"
 #include "Geometry/CSCGeometry/interface/CSCLayerGeometry.h"
 #include "Geometry/Records/interface/MuonGeometryRecord.h"
-//#include "Geometry/CommonDetUnit/interface/GlobalTrackingGeometry.h"
 #include "Geometry/CommonDetUnit/interface/GeomDet.h"
 #include "DataFormats/RPCRecHit/interface/RPCRecHitCollection.h"
 #include <Geometry/RPCGeometry/interface/RPCGeometry.h>
@@ -253,6 +252,8 @@ Analyzer::Analyzer(const edm::ParameterSet& iConfig):
   runPileUp_(iConfig.getUntrackedParameter<bool>("runPileUp")),
   rhoLabel_(iConfig.getUntrackedParameter<edm::InputTag>("rhoLabel")),
   sigmaLabel_(iConfig.getUntrackedParameter<edm::InputTag>("sigmaLabel")),
+  rhoLabel44_(iConfig.getUntrackedParameter<edm::InputTag>("rhoLabel44")),
+  sigmaLabel44_(iConfig.getUntrackedParameter<edm::InputTag>("sigmaLabel44")),
   runcaloTower_(iConfig.getUntrackedParameter<bool>("runcaloTower")),
   isAOD_(iConfig.getUntrackedParameter<bool>("isAOD")),
   debug_(iConfig.getUntrackedParameter<bool>("debug")),
@@ -317,6 +318,8 @@ Analyzer::beginRun(const edm::Run& iRun, const edm::EventSetup& iSetup){
   }
 
    MaxN=200;
+
+  cout<<"running"<<endl;
 
   bool changed(true);
   if(hltConfig_.init(iRun,iSetup,hltlabel_,changed)){  // HLTlabel_ is grabbed from the cfg file
@@ -542,26 +545,38 @@ void Analyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup){
   nevents++;
  
 
- if(runPileUp_){
+
+                      
+ if(runPileUp_){      
    //pile up info from MC only 
    Handle<std::vector< PileupSummaryInfo > >  PupInfo;
    iEvent.getByLabel(pileupLabel_, PupInfo);
-                    
+                      
    std::vector<PileupSummaryInfo>::const_iterator PVI;   
     ootnpuVertices =0;
-    npuVertices    =0;            
-                                                                                 
+    npuVertices    =0;           
+    npuVerticesm1    =0;
+    npuVerticesp1    =0; 
+    trueInteractions   =0.0;                        
+                                                         
    for(PVI = PupInfo->begin(); PVI != PupInfo->end(); ++PVI) {
-      if(PVI->getBunchCrossing()== 0){npuVertices += PVI->getPU_NumInteractions();
-       }
-       else{
-             ootnpuVertices += PVI->getPU_NumInteractions();
-           }
-
+     if(PVI->getBunchCrossing()==  0){ npuVertices += PVI->getPU_NumInteractions();   }
+     if(PVI->getBunchCrossing()== -1){ npuVerticesm1 += PVI->getPU_NumInteractions(); }
+     if(PVI->getBunchCrossing()==  1){ npuVerticesp1 += PVI->getPU_NumInteractions(); } 
+     if(abs(PVI->getBunchCrossing()) >= 2){
+                                             ootnpuVertices += PVI->getPU_NumInteractions();
+                                          }
+                      
+    if(PVI->getBunchCrossing() == 0)trueInteractions = PVI->getTrueNumInteractions();  
+                      
   if(debug_)std::cout << " Pileup Information: bunchXing, nvtx,: " << PVI->getBunchCrossing() << " " << PVI->getPU_NumInteractions()<< std::endl;
-                    
-   }//loop over pileup infor               
-  }//Run over Pileup
+                      
+   }//loop over pileup infor       
+                      
+                      
+  }//Run over Pileup  
+                      
+
 
   
   //getting handle to generator level information
@@ -864,7 +879,6 @@ void Analyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup){
       else L1_chosen[ L1name ]=0;
     } 
   }  
-
 
 
 if(runHLT_)
@@ -1363,7 +1377,6 @@ if(!isAOD_){
        for(unsigned int x=0; x < min(myphoton_container.size(), MaxN);x++){
 	 pho_E[x]                     =  myphoton_container[x].energy();
 	 pho_pt[x]                    =  myphoton_container[x].pt();
-         //cout<<"Cleaned Photon pt ="<<pho_pt[x]<<endl; 
 	 pho_px[x]                    =  myphoton_container[x].px();
 	 pho_py[x]                    =  myphoton_container[x].py();
 	 pho_pz[x]                    =  myphoton_container[x].pz();
@@ -1417,27 +1430,33 @@ if(!isAOD_){
 	 pho_isEEGap[x]                      = myphoton_container[x].isEEGap(); 
 	 pho_isEBEEGap[x]                    = myphoton_container[x].isEBEEGap(); 
          pho_hasConvTrk[x]                   = myphoton_container[x].hasConversionTracks();
-	
+
+        //Add MIP Variable for each photon
+         pho_mipChi2[x]       = myphoton_container[x].mipChi2();
+         pho_mipTotEnergy[x]  = myphoton_container[x].mipTotEnergy();
+         pho_mipSlope[x]      = myphoton_container[x].mipSlope();
+         pho_mipIntercept[x]  = myphoton_container[x].mipIntercept();
+         pho_mipNhitCone[x]   = myphoton_container[x].mipNhitCone();
+         pho_mipIsHalo[x]     = myphoton_container[x].mipIsHalo();
+ 
+         //cout<<pho_eta[x]<<"   "<<pho_mipChi2[x]<<"  "<<pho_mipTotEnergy[x]<<"  "<<pho_mipSlope[x]<<"  "<<pho_mipNhitCone[x]<<"  "<<pho_mipIsHalo[x]<<endl;	
 
 
         //Add these three variables--	
         if(rungenParticleCandidates_){
 
-         cout<<"Photon x = "<<x<<endl;
 
          if( myphoton_container[x].genParticleRef().isNonnull() )       
          {
                 pho_mGenpdgId[x]       = myphoton_container[x].genParticleRef()->pdgId();
                 pho_nummoth[x] = (int)myphoton_container[x].genParticleRef()->numberOfMothers();    
           
-                cout<<"ID = "<<pho_mGenpdgId[x]<<"   mothers =  "<<pho_nummoth[x]<<endl;
      
              if(pho_nummoth[x]!=0)                                     
                {         
                 for(int imoth=0; imoth<pho_nummoth[x] && imoth< 100; imoth++){       
                  pho_mGenmompdgId[x][imoth] = myphoton_container[x].genParticleRef()->mother(imoth)->pdgId();}
 
-               //  cout<<"======>  mother n = "<<imoth<<"      Id of Mother = "<<pho_mGenmompdgId[x][imoth]<<endl;   
                } 
           }      
 
@@ -1646,10 +1665,6 @@ if(!isAOD_){
 	     pho_recoFlag_xtalEB[x][y]           = crystalinfo_container[y].recoFlag;
 	   }//end of for (unsigned int y =0; y < crystalinfo_container.size();y++
            const reco::BasicCluster& seedClus = *(myphoton_container[x].superCluster()->seed());
-
-           //edm::ESHandle<CaloGeometry> geoHandle;	       
-	   //iSetup.get<CaloGeometryRecord>().get(geoHandle);
-	   //const CaloGeometry* caloGeom = geoHandle.product();
 
 	   if(myphoton_container[x].isEB()){
 	     std::vector<float> showershapes_barrel = EcalClusterTools::roundnessBarrelSuperClusters(*(myphoton_container[x].superCluster()),*barrelRecHits,0);
@@ -2223,16 +2238,23 @@ if(!isAOD_){
          }
          else{pfjet_jecCorr[x] =0.;}
 
-         /*
-         pfjet_emEnergyFraction[x]= mypfjet_container[x].emEnergyFraction();
-         pfjet_energyFractionHadronic[x] = mypfjet_container[x].energyFractionHadronic();
-         pfjet_hitsInN90[x]= mypfjet_container[x].jetID().hitsInN90;
-         pfjet_n90Hits[x] = mypfjet_container[x].jetID().n90Hits;
-         pfjet_fHPD[x] = (float) mypfjet_container[x].jetID().fHPD;
-         pfjet_fRBX[x] = (float) mypfjet_container[x].jetID().fRBX;
-         pfjet_RHF[x] = (float)(mypfjet_container[x].jetID().fLong - mypfjet_container[x].jetID().fShort)/(mypfjet_container[x].jetID().fLong + mypfjet_container[x].jetID().fShort);
-         pfjet_nTowers[x] = mypfjet_container[x].jetID().nECALTowers + mypfjet_container[x].jetID().nHCALTowers ;
-         */
+       pfjet_CEF[x]    = mypfjet_container[x].chargedEmEnergyFraction();
+       pfjet_NEF[x]    = mypfjet_container[x].neutralEmEnergyFraction();
+       pfjet_CHF[x]    = mypfjet_container[x].chargedHadronEnergyFraction();
+       pfjet_NHF[x]    = mypfjet_container[x].neutralHadronEnergyFraction();
+       pfjet_HFHAE[x]  = mypfjet_container[x].HFHadronEnergy();
+       pfjet_HFEME[x]  = mypfjet_container[x].HFEMEnergy();
+       pfjet_NCH[x]    = mypfjet_container[x].chargedMultiplicity();
+       pfjet_NConstituents[x] = mypfjet_container[x].getPFConstituents().size();
+     
+ 
+       // b-tagging
+       pfjet_TrackCountHiEffBJetTags[x] = mypfjet_container[x].bDiscriminator("trackCountingHighEffBJetTags");
+       pfjet_TrackCountHiPurBJetTags[x] = mypfjet_container[x].bDiscriminator("trackCountingHighPurBJetTags");
+       pfjet_SimpleSVHiEffBJetTags[x]   = mypfjet_container[x].bDiscriminator("simpleSecondaryVertexHighEffBJetTags");
+       pfjet_SimpleSVHiPurBJetTags[x]   = mypfjet_container[x].bDiscriminator("simpleSecondaryVertexHighPurBJetTags");
+
+
          //jet energy uncertiany
          pfjecUnc->setJetEta(pfjet_eta[x]);
          pfjecUnc->setJetPt(pfjet_pt[x]);
@@ -2863,7 +2885,7 @@ if(rungenjets_){
 }//if(runcaloTowers){
 
 
-// Rho correction
+// Rho correction with 2.5
   edm::Handle<double> rhoHandle;
   iEvent.getByLabel(rhoLabel_, rhoHandle);
    rho=0.;
@@ -2878,6 +2900,25 @@ if(rungenjets_){
  if(sigmaHandle.isValid()) {      
      sigma = *(sigmaHandle.product());
   }                 
+
+
+
+// Rho correction with max eta 4.4
+  edm::Handle<double> rhoHandle44;
+  iEvent.getByLabel(rhoLabel44_, rhoHandle44);
+   rho44=0.;
+  if(rhoHandle44.isValid()) {
+     rho44= *(rhoHandle44.product());
+  }
+
+
+  edm::Handle<double> sigmaHandle44;
+  iEvent.getByLabel(sigmaLabel44_, sigmaHandle44);
+   sigma44 =0.;
+ if(sigmaHandle44.isValid()) {      
+     sigma44 = *(sigmaHandle44.product());
+  }                 
+
 
 
 
@@ -2911,11 +2952,11 @@ void Analyzer::beginJob(){
   if(runHLT_){
   myEvent->Branch("triggerprescales","vector<int>",&triggerprescales);
   myEvent->Branch("ifTriggerpassed","vector<bool>",&ifTriggerpassed);
-  myEvent->Branch("trobjpt",trobjpt,"trobjpt[ntriggers][100][10]/F");   
-  myEvent->Branch("trobjeta",trobjeta,"trobjeta[ntriggers][100][10]/F");
-  myEvent->Branch("trobjphi",trobjphi,"trobjphi[ntriggers][100][10]/F");
-  myEvent->Branch("lastFilterIndex",lastFilterIndex,"lastFilterIndex[ntriggers]/I");
-  myEvent->Branch("lastFilterIndexHLT135",lastFilterIndexHLT135,"lastFilterIndexHLT135[ntriggers]/I"); 
+  //myEvent->Branch("trobjpt",trobjpt,"trobjpt[ntriggers][100][10]/F");   
+  //myEvent->Branch("trobjeta",trobjeta,"trobjeta[ntriggers][100][10]/F");
+  //myEvent->Branch("trobjphi",trobjphi,"trobjphi[ntriggers][100][10]/F");
+  //myEvent->Branch("lastFilterIndex",lastFilterIndex,"lastFilterIndex[ntriggers]/I");
+  //myEvent->Branch("lastFilterIndexHLT135",lastFilterIndexHLT135,"lastFilterIndexHLT135[ntriggers]/I"); 
   }
   
   if(runvertex_){
@@ -2932,14 +2973,19 @@ void Analyzer::beginJob(){
   
   if(runscraping_){
     myEvent->Branch("Scraping_isScrapingEvent",&Scraping_isScrapingEvent,"Scraping_isScrapingEvent/O");
-    myEvent->Branch("Scraping_numOfTracks",&Scraping_numOfTracks,"Scraping_numOfTracks/I");
-    myEvent->Branch("Scraping_fractionOfGoodTracks",&Scraping_fractionOfGoodTracks,"Scraping_fractionOfGoodTracks/F");
+    //myEvent->Branch("Scraping_numOfTracks",&Scraping_numOfTracks,"Scraping_numOfTracks/I");
+    //myEvent->Branch("Scraping_fractionOfGoodTracks",&Scraping_fractionOfGoodTracks,"Scraping_fractionOfGoodTracks/F");
   }
 
- if(runPileUp_){
+
+if(runPileUp_){      
     myEvent->Branch("npuVertices",&npuVertices,"npuVertices/I");
-    myEvent->Branch("ootnpuVertices",&ootnpuVertices,"ootnpuVertices/I");
-  }
+    myEvent->Branch("npuVerticesp1",&npuVerticesp1,"npuVerticesp1/I");
+    myEvent->Branch("npuVerticesm1",&npuVerticesm1,"npuVerticesm1/I");
+    myEvent->Branch("ootnpuVertices",&ootnpuVertices,"ootnpuVertices/I");                                                                             
+    myEvent->Branch("trueInteractions",&trueInteractions,"trueInteractions/F");
+  }        
+
 	
   if (runtracks_){
     myEvent->Branch("Track_n",&Track_n,"Track_n/I");
@@ -2998,16 +3044,23 @@ void Analyzer::beginJob(){
     myEvent->Branch("pfJet_pt",pfjet_pt,"pfjet_pt[pfJet_n]/F");
     myEvent->Branch("pfJet_eta",pfjet_eta,"pfjet_eta[pfJet_n]/F");
     myEvent->Branch("pfJet_phi",pfjet_phi,"pfjet_phi[pfJet_n]/F");
-    /*
-    myEvent->Branch("pfJet_emEnergyFraction",pfjet_emEnergyFraction,"pfjet_emEnergyFraction[pfJet_n]/F");
-    myEvent->Branch("pfJet_energyFractionHadronic",pfjet_energyFractionHadronic,"pfjet_energyFractionHadronic[pfJet_n]/F");
-    myEvent->Branch("pfJet_hitsInN90",pfjet_hitsInN90,"pfjet_hitsInN90[pfJet_n]/I");
-    myEvent->Branch("pfJet_n90Hits",pfjet_n90Hits,"pfjet_n90Hits[pfJet_n]/I");
-    myEvent->Branch("pfJet_nTowers",pfjet_nTowers,"pfjet_nTowers[pfJet_n]/I");
-    myEvent->Branch("pfJet_fHPD",pfjet_fHPD,"pfjet_fHPD[pfJet_n]/F");
-    myEvent->Branch("pfJet_fRBX",pfjet_fRBX,"pfjet_fRBX[pfJet_n]/F");
-    myEvent->Branch("pfJet_RHF",pfjet_RHF,"pfjet_RHF[pfJet_n]/F");
-  */
+
+    myEvent->Branch("pfjet_CEF", pfjet_CEF, "pfjet_CEF[pfJet_n]/F");
+    myEvent->Branch("pfjet_CHF",pfjet_CHF,"pfjet_CHF[pfJet_n]/F");                                                                                            
+    myEvent->Branch("pfjet_NEF", pfjet_NEF, "pfjet_NEF[pfJet_n]/F");
+    myEvent->Branch("pfjet_NHF",pfjet_NHF,"pfjet_NHF[pfJet_n]/F");                                                                                            
+    myEvent->Branch("pfjet_NCH", pfjet_NCH, "pfjet_NCH[pfJet_n]/I");
+    myEvent->Branch("pfjet_HFHAE", pfjet_HFHAE, "pfjet_HFHAE[pfJet_n]/F");
+    myEvent->Branch("pfjet_HFEME", pfjet_HFEME, "pfjet_HFEME[pfJet_n]/F");
+    myEvent->Branch("pfjet_NConstituents", pfjet_NConstituents, "pfjet_NConstituents[pfJet_n]/I");
+
+
+    myEvent->Branch("pfjet_TrackCountHiEffBJetTags", pfjet_TrackCountHiEffBJetTags, "pfjet_TrackCountHiEffBJetTags[pfJet_n]/F");
+    myEvent->Branch("pfjet_TrackCountHiPurBJetTags", pfjet_TrackCountHiPurBJetTags, "pfjet_TrackCountHiPurBJetTags[pfJet_n]/F");
+    myEvent->Branch("pfjet_SimpleSVHiEffBJetTags", pfjet_SimpleSVHiEffBJetTags, "pfjet_SimpleSVHiEffBJetTags[pfJet_n]/F");
+    myEvent->Branch("pfjet_SimpleSVHiPurBJetTags", pfjet_SimpleSVHiPurBJetTags, "pfjet_SimpleSVHiPurBJetTags[pfJet_n]/F");
+
+
     myEvent->Branch("pfJet_jecUncer",pfjet_jecUncer,"pfjet_jecUncer[pfJet_n]/F");
     myEvent->Branch("pfJet_jecCorr",pfjet_jecCorr,"pfjet_jecCorr[pfJet_n]/F");
     //uncorrected jet info
@@ -3486,7 +3539,7 @@ if(runDetailTauInfo_){
     
     if(runHErechit_){
       myEvent->Branch("HERecHit_subset_n",&HERecHit_subset_n,"HERecHit_subset_n/I");
-      myEvent->Branch("HERecHit_subset_detid",HERecHit_subset_detid,"HERecHit_subset_detid[HERecHit_subset_n]/i");
+      //myEvent->Branch("HERecHit_subset_detid",HERecHit_subset_detid,"HERecHit_subset_detid[HERecHit_subset_n]/i");
       myEvent->Branch("HERecHit_subset_energy",HERecHit_subset_energy,"HERecHit_subset_energy[HERecHit_subset_n]/F");
       myEvent->Branch("HERecHit_subset_time",HERecHit_subset_time,"HERecHit_subset_time[HERecHit_subset_n]/F");
       myEvent->Branch("HERecHit_subset_depth",HERecHit_subset_depth,"HERecHit_subset_depth[HERecHit_subset_n]/I");
@@ -3496,7 +3549,16 @@ if(runDetailTauInfo_){
       myEvent->Branch("HERecHit_subset_y",HERecHit_subset_y,"HERecHit_subset_y[HERecHit_subset_n]/F");
       myEvent->Branch("HERecHit_subset_z",HERecHit_subset_z,"HERecHit_subset_z[HERecHit_subset_n]/F");
     }
-    
+   
+    //MIP Variables
+    myEvent->Branch("Photon_mipChi2",pho_mipChi2,"pho_mipChi2[Photon_n]/F");
+    myEvent->Branch("Photon_mipTotEnergy",pho_mipTotEnergy,"pho_mipTotEnergy[Photon_n]/F");
+    myEvent->Branch("Photon_mipSlope",pho_mipSlope,"pho_mipSlope[Photon_n]/F");
+    myEvent->Branch("Photon_mipIntercept",pho_mipIntercept,"pho_mipIntercept[Photon_n]/F");
+    myEvent->Branch("Photon_mipNhitCone",pho_mipNhitCone,"pho_mipNhitCone[Photon_n]/I");
+    myEvent->Branch("Photon_mipIsHalo",pho_mipIsHalo,"pho_mipIsHalo[Photon_n]/O");
+
+ 
   }//end of if (runphotons_)
 
   if(runrechit_){
@@ -3562,19 +3624,19 @@ if(runDetailTauInfo_){
 
   if(runmet_){
     //Calomet variables
-    myEvent->Branch("CaloMetSigma",&CaloMetSig,"CaloMetSig/F");
-    myEvent->Branch("CaloMetEz",&CaloMetEz,"CaloMetEz/F");
-    myEvent->Branch("CaloEtFractionHadronic",&CaloEtFractionHadronic,"CaloEtFractionHadronic/F");
-    myEvent->Branch("CaloEmEtFraction",&CaloEmEtFraction,"CaloEmEtFraction/F");
-    myEvent->Branch("CaloHadEtInHB",&CaloHadEtInHB,"CaloHadEtInHB/F");
-    myEvent->Branch("CaloHadEtInHE",&CaloHadEtInHE,"CaloHadEtInHE/F");
-    myEvent->Branch("CaloHadEtInHO",&CaloHadEtInHO,"CaloHadEtInHO/F");
-    myEvent->Branch("CaloHadEtInHF",&CaloHadEtInHF,"CaloHadEtInHF/F");
-    myEvent->Branch("CaloEmEtInEB",&CaloEmEtInEB,"CaloEmEtInEB/F");
-    myEvent->Branch("CaloEmEtInEE",&CaloEmEtInEE,"CaloEmEtInEE/F");
-    myEvent->Branch("CaloEmEtInHF",&CaloEmEtInHF,"CaloEmEtInHF/F");
-    myEvent->Branch("CaloMaxEtInEmTowers",&CaloMaxEtInEmTowers,"CaloMaxEtInEmTowers/F");
-    myEvent->Branch("CaloMaxEtInHadTowers",&CaloMaxEtInHadTowers,"CaloMaxEtInHadTowers/F");
+    //myEvent->Branch("CaloMetSigma",&CaloMetSig,"CaloMetSig/F");
+    //myEvent->Branch("CaloMetEz",&CaloMetEz,"CaloMetEz/F");
+    //myEvent->Branch("CaloEtFractionHadronic",&CaloEtFractionHadronic,"CaloEtFractionHadronic/F");
+    //myEvent->Branch("CaloEmEtFraction",&CaloEmEtFraction,"CaloEmEtFraction/F");
+    //myEvent->Branch("CaloHadEtInHB",&CaloHadEtInHB,"CaloHadEtInHB/F");
+    //myEvent->Branch("CaloHadEtInHE",&CaloHadEtInHE,"CaloHadEtInHE/F");
+    //myEvent->Branch("CaloHadEtInHO",&CaloHadEtInHO,"CaloHadEtInHO/F");
+    //myEvent->Branch("CaloHadEtInHF",&CaloHadEtInHF,"CaloHadEtInHF/F");
+    //myEvent->Branch("CaloEmEtInEB",&CaloEmEtInEB,"CaloEmEtInEB/F");
+    //myEvent->Branch("CaloEmEtInEE",&CaloEmEtInEE,"CaloEmEtInEE/F");
+    //myEvent->Branch("CaloEmEtInHF",&CaloEmEtInHF,"CaloEmEtInHF/F");
+    //myEvent->Branch("CaloMaxEtInEmTowers",&CaloMaxEtInEmTowers,"CaloMaxEtInEmTowers/F");
+    //myEvent->Branch("CaloMaxEtInHadTowers",&CaloMaxEtInHadTowers,"CaloMaxEtInHadTowers/F");
     myEvent->Branch("CaloMetPt",CaloMetPt,"CaloMetPt[6]/F");
     myEvent->Branch("CaloMetPx",CaloMetPx,"CaloMetPx[6]/F");
     myEvent->Branch("CaloMetPy",CaloMetPy,"CaloMetPy[6]/F");
@@ -3668,12 +3730,6 @@ if(runDetailTauInfo_){
     myEvent->Branch("ucPhoton_isEBEEGap",ucpho_isEBEEGap,"ucpho_isEBEEGap[ucPhoton_n]/O");
     myEvent->Branch("ucPhoton_e2e9",ucpho_e2e9,"ucpho_e2e9[ucPhoton_n]/F");
                                                                
-   //sushil 
-    if(rungenParticleCandidates_){
-    myEvent->Branch("Photon_nummoth",pho_nummoth,"pho_nummoth[Photon_n]/I");
-    myEvent->Branch("Photon_mGenpdgId",pho_mGenpdgId,"pho_mGenpdgId[Photon_n]/I");
-    myEvent->Branch("Photon_mGenmompdgId",pho_mGenmompdgId,"pho_mGenmompdgId[Photon_n][100]/I");
-   }//--   
     myEvent->Branch("ucPhoton_HoE",ucpho_HoE,"ucpho_HoE[ucPhoton_n]/F");
     myEvent->Branch("ucPhoton_px",ucpho_px,"ucpho_px[ucPhoton_n]/F");  
     myEvent->Branch("ucPhoton_py",ucpho_py,"ucpho_py[ucPhoton_n]/F");  
@@ -3748,6 +3804,12 @@ if(runDetailTauInfo_){
   }//end of if (runucphotons_)                              
 
 
+   //sushil 
+    if(rungenParticleCandidates_){
+    myEvent->Branch("Photon_nummoth",pho_nummoth,"pho_nummoth[Photon_n]/I");
+    myEvent->Branch("Photon_mGenpdgId",pho_mGenpdgId,"pho_mGenpdgId[Photon_n]/I");
+    myEvent->Branch("Photon_mGenmompdgId",pho_mGenmompdgId,"pho_mGenmompdgId[Photon_n][100]/I");
+   }//--   
 
   if(runcaloTower_){
      myEvent->Branch("CaloTower_n",&CaloTower_n,"CaloTower_n/I");
@@ -3778,6 +3840,8 @@ if(runDetailTauInfo_){
    myEvent->Branch("rho", &rho, "rho/F");
    myEvent->Branch("sigma", &sigma, "sigma/F"); 
 
+   myEvent->Branch("rho44", &rho44, "rho44/F");
+   myEvent->Branch("sigma44", &sigma44, "sigma44/F"); 
 
 }
 

@@ -132,6 +132,8 @@ class Analyzer : public edm::EDAnalyzer {
   edm::InputTag pileupLabel_;
   edm::InputTag rhoLabel_;
   edm::InputTag sigmaLabel_;
+  edm::InputTag rhoLabel44_;
+  edm::InputTag sigmaLabel44_;
 
   std::string outFile_;
   std::string hltlabel_;
@@ -245,16 +247,22 @@ class Analyzer : public edm::EDAnalyzer {
   float pfjet_phi[200];
   float pfjet_jecUncer[200];
   float pfjet_jecCorr[200];
-  /*
-  float pfjet_emEnergyFraction[100];
-  float pfjet_energyFractionHadronic[100];
-  int   pfjet_hitsInN90[100];
-  int   pfjet_n90Hits[100];
-  float pfjet_fHPD[100];
-  float pfjet_fRBX[100];
-  float pfjet_RHF[100];
-  int   pfjet_nTowers[100];
- */
+
+  float  pfjet_Charge[200];
+  float  pfjet_CHF[200];
+  float  pfjet_NHF[200];
+  float  pfjet_CEF[200];                                                                                                                             
+  float  pfjet_NEF[200];
+  int    pfjet_NCH[200];
+  float  pfjet_HFHAE[200];
+  float  pfjet_HFEME[200];
+  int    pfjet_PartonID[200];
+  int    pfjet_NConstituents[200];
+  float  pfjet_TrackCountHiEffBJetTags[200];
+  float  pfjet_TrackCountHiPurBJetTags[200];
+  float  pfjet_SimpleSVHiEffBJetTags[200];
+  float  pfjet_SimpleSVHiPurBJetTags[200];
+
  
   //some uncorrected jet infor
   float ucpfjet_pt[200];
@@ -616,6 +624,16 @@ class Analyzer : public edm::EDAnalyzer {
   float pho_e4e1[200];
   bool  pho_isConverted[200];
   bool  pho_hasConvTrk[200]; 
+
+  //MIP Variables
+  float pho_mipChi2[200];
+  float pho_mipTotEnergy[200];
+  float pho_mipSlope[200];
+  float pho_mipIntercept[200];
+  int   pho_mipNhitCone[200];
+  bool  pho_mipIsHalo[200];
+
+
  
   //isolation variables
   float pho_ecalRecHitSumEtConeDR03[200];
@@ -812,10 +830,13 @@ class Analyzer : public edm::EDAnalyzer {
   int EERecHit_flag[10000];
   float EERecHit_time[10000];
 
- //pileup info
- int npuVertices;
- int ootnpuVertices;
 
+//pileup info
+ int npuVertices;
+ int npuVerticesp1;
+ int npuVerticesm1;
+ int ootnpuVertices;                                                                                                                                  
+ float trueInteractions;
 
 
 
@@ -961,12 +982,16 @@ class Analyzer : public edm::EDAnalyzer {
   float caloTower_HE_E[5000];
   float caloTower_HB_E[5000];
   float caloTower_EMTime[5000];
-  float caloTower_HadTime[5000];
+  float caloTower_HadTime[5000];    
   //float caloTower_recoFlag[5000];
 
 
   float rho;
   float sigma;
+
+  float rho44;
+  float sigma44;
+
  
 };
 
