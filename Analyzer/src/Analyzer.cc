@@ -1,4 +1,3 @@
-
 // -*- C++ -*-
 //
 // Package:    Analyzer
@@ -41,6 +40,16 @@
 #include "DataFormats/PatCandidates/interface/Tau.h"
 #include "DataFormats/PatCandidates/interface/Photon.h"
 #include "DataFormats/PatCandidates/interface/MET.h"
+#include "DataFormats/CaloRecHit/interface/CaloCluster.h"
+#include "DataFormats/CaloRecHit/interface/CaloClusterFwd.h"
+
+
+#include "DataFormats/ParticleFlowReco/interface/PFClusterFwd.h"
+#include "DataFormats/ParticleFlowReco/interface/PFCluster.h"
+#include "DataFormats/ParticleFlowCandidate/interface/PFCandidate.h"
+#include "DataFormats/ParticleFlowCandidate/interface/PFCandidateFwd.h"
+#include "DataFormats/ParticleFlowCandidate/interface/PFCandidatePhotonExtraFwd.h"
+#include "DataFormats/ParticleFlowCandidate/interface/PFCandidatePhotonExtra.h"
 
 #include "DataFormats/MuonReco/interface/Muon.h"
 #include "DataFormats/MuonReco/interface/MuonFwd.h"
@@ -57,8 +66,6 @@
 #include "DataFormats/L1GlobalTrigger/interface/L1GlobalTriggerReadoutRecord.h"
 #include "CondFormats/L1TObjects/interface/L1GtTriggerMenu.h"
 #include "CondFormats/DataRecord/interface/L1GtTriggerMenuRcd.h"
-#include "RecoEcal/EgammaCoreTools/interface/EcalClusterLazyTools.h"
-#include "RecoEcal/EgammaCoreTools/interface/EcalTools.h"
 #include "RecoEcal/EgammaCoreTools/interface/EcalClusterTools.h"
 #include "RecoEcal/EgammaCoreTools/interface/EcalClusterLazyTools.h"
 #include "DataFormats/Common/interface/TriggerResults.h"
@@ -75,6 +82,8 @@
 #include "Geometry/CaloTopology/interface/EcalEndcapTopology.h"
 #include "DataFormats/EcalRecHit/interface/EcalRecHitCollections.h"
 #include "RecoLocalCalo/EcalRecAlgos/interface/EcalSeverityLevelAlgo.h"
+#include "RecoEcal/EgammaCoreTools/interface/EcalClusterLazyTools.h"
+#include "RecoEcal/EgammaCoreTools/interface/EcalTools.h"
 //#include "RecoLocalCalo/EcalRecAlgos/interface/EcalCleaningAlgo.h"
 #include <DataFormats/CSCRecHit/interface/CSCSegmentCollection.h>
 #include "DataFormats/GeometryVector/interface/GlobalPoint.h"
@@ -86,6 +95,7 @@
 #include "Geometry/CSCGeometry/interface/CSCLayer.h"
 #include "Geometry/CSCGeometry/interface/CSCLayerGeometry.h"
 #include "Geometry/Records/interface/MuonGeometryRecord.h"
+//#include "Geometry/CommonDetUnit/interface/GlobalTrackingGeometry.h"
 #include "Geometry/CommonDetUnit/interface/GeomDet.h"
 #include "DataFormats/RPCRecHit/interface/RPCRecHitCollection.h"
 #include <Geometry/RPCGeometry/interface/RPCGeometry.h>
@@ -107,6 +117,9 @@
 #include "JetMETCorrections/Objects/interface/JetCorrectionsRecord.h"
 #include "CondFormats/JetMETObjects/interface/JetCorrectorParameters.h"
 
+#include "RecoEcal/EgammaCoreTools/interface/Mustache.h"
+
+
 #include "TString.h"
 #include "TH1D.h"
 #include "TTree.h"
@@ -118,6 +131,7 @@
 
 
 #include "ADDmonophoton/Analyzer/interface/Analyzer.h"
+
 
 #include <iostream>
 #include <fstream>
@@ -256,10 +270,17 @@ Analyzer::Analyzer(const edm::ParameterSet& iConfig):
   sigmaLabel44_(iConfig.getUntrackedParameter<edm::InputTag>("sigmaLabel44")),
   runcaloTower_(iConfig.getUntrackedParameter<bool>("runcaloTower")),
   isAOD_(iConfig.getUntrackedParameter<bool>("isAOD")),
+  //added for PFiso
+  inputTagPhotons_(iConfig.getParameter<edm::InputTag>("Photons")),
+  inputTagIsoDepPhotons_(iConfig.getParameter< std::vector<edm::InputTag> >("IsoDepPhoton")),
+  inputTagIsoValPhotonsPFId_(iConfig.getParameter< std::vector<edm::InputTag> >("IsoValPhoton")),
   debug_(iConfig.getUntrackedParameter<bool>("debug")),
+  
   init_(false)
 {
-  //now do what ever initialization is needed
+  
+
+
   all_triggers.clear();
   all_triggerprescales.clear();
   all_ifTriggerpassed.clear();
@@ -469,7 +490,7 @@ Analyzer::beginRun(const edm::Run& iRun, const edm::EventSetup& iSetup){
 // ------------ method called to for each event  ------------
 void Analyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup){
 
-
+  
 //--now do what ever initialization is needed
   n_signal_events    = 0; 
   n_Z_events         = 0; 
@@ -879,6 +900,7 @@ void Analyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup){
       else L1_chosen[ L1name ]=0;
     } 
   }  
+
 
 
 if(runHLT_)
@@ -1359,11 +1381,90 @@ if(!isAOD_){
    // declare outside of runphotons_ so that we can use this container inside other "bools_"
    std::vector<pat::Photon> myphoton_container;
    myphoton_container.clear();
+   
+   std::vector<reco::PFCandidate> mypfphoton_container;
+   mypfphoton_container.clear();
+   
    if(runphotons_){
+     
+     
+     //PFIsolation
+     edm::Handle<reco::PhotonCollection> photonH;
+     bool found = iEvent.getByLabel(inputTagPhotons_,photonH);
+     if(!found ) {
+       std::ostringstream  err;
+       err<<" cannot get Photons: "
+	  <<inputTagPhotons_<<std::endl;
+       edm::LogError("Analyzer")<<err.str();
+       throw cms::Exception( "MissingProduct", err.str());
+     }  
+     
+     
+     // get the iso deposits. 3 (charged hadrons, photons, neutral hadrons)
+     unsigned nTypes=3;
+     IsoDepositMaps photonIsoDep(nTypes);
+     for (size_t j = 0; j<inputTagIsoDepPhotons_.size(); ++j) {
+       iEvent.getByLabel(inputTagIsoDepPhotons_[j], photonIsoDep[j]);
+     }
+
+     IsoDepositVals photonIsoValPFId(nTypes);
+     for (size_t j = 0; j<inputTagIsoValPhotonsPFId_.size(); ++j) {
+       iEvent.getByLabel(inputTagIsoValPhotonsPFId_[j], photonIsoValPFId[j]);
+     }
+
+     
+     const IsoDepositVals * photonIsoVals = &photonIsoValPFId;
+     nrecopho=photonH->size();
+     //std::cout<<"no of photons "<<nrecopho<<std::endl;
+     for(unsigned int ipho=0; ipho<nrecopho;ipho++) {
+       reco::PhotonRef myPhotonRef(photonH,ipho);
+       
+       charged =  (*(*photonIsoVals)[0])[myPhotonRef];
+       photon = (*(*photonIsoVals)[1])[myPhotonRef];
+       neutral = (*(*photonIsoVals)[2])[myPhotonRef];
+       
+       if(myPhotonRef->isEB()) {
+	 PFisochargedBarrel[ipho] =  ((*(*photonIsoVals)[0])[myPhotonRef]/myPhotonRef->pt());
+	 PFisophotonBarrel[ipho]  = ((*(*photonIsoVals)[1])[myPhotonRef]/myPhotonRef->pt());
+	 PFisoneutralBarrel[ipho] = ((*(*photonIsoVals)[2])[myPhotonRef]/myPhotonRef->pt());
+	 PFphotonssumBarrel[ipho] = (charged+photon+neutral)/myPhotonRef->pt();
+       }else{
+	 PFisochargedEndcap[ipho] =  ((*(*photonIsoVals)[0])[myPhotonRef]/myPhotonRef->pt());
+	 PFisophotonEndcap[ipho]  = ((*(*photonIsoVals)[1])[myPhotonRef]/myPhotonRef->pt());
+	 PFisoneutralEndcap[ipho] = ((*(*photonIsoVals)[2])[myPhotonRef]/myPhotonRef->pt());
+	 PFphotonssumEndcap[ipho] = (charged+photon+neutral)/myPhotonRef->pt();
+       }
+       
+
+       /*std::cout<<"Charged barrel isolation for["<<ipho<<"]photon"<<PFisochargedBarrel[ipho]<<std::endl;
+       std::cout<<"Photon barrel isolation for["<<ipho<<"]photon"<<PFisophotonBarrel[ipho]<<std::endl;
+       std::cout<<"Charged endcap isolation for["<<ipho<<"]photon"<<PFisochargedEndcap[ipho]<<std::endl;
+       std::cout<<"Photon endcap isolation for["<<ipho<<"]photon"<<PFisophotonEndcap[ipho]<<std::endl;
+       */
+
+       
+     }
+     
+
+
+
+     //for PFPhoton
+     edm::Handle<std::vector<reco::PFCandidate> >  PFCandidateHandle;
+     iEvent.getByLabel(std::string("particleFlow"),PFCandidateHandle);
+     std::vector<reco::PFCandidate>::const_iterator pfparticle;
+     for(pfparticle = PFCandidateHandle->begin();pfparticle!=PFCandidateHandle->end();++pfparticle){
+       if(pfparticle->pdgId()==22 && pfparticle->mva_nothing_gamma()>0.1) {
+	 //std::cout<<"photon pt = "<<pfparticle->pt()<<std::endl;
+         mypfphoton_container.push_back(*pfparticle);
+       }
+     }
+     
+     
+     
      edm::Handle<edm::View<pat::Photon> > phoHandle;
      iEvent.getByLabel(phoLabel_,phoHandle);
      edm::View<pat::Photon>::const_iterator photon;
-
+     
      set<DetId> HERecHitSet;
      HERecHit_subset_n = 0;
      
@@ -1377,6 +1478,8 @@ if(!isAOD_){
        for(unsigned int x=0; x < min(myphoton_container.size(), MaxN);x++){
 	 pho_E[x]                     =  myphoton_container[x].energy();
 	 pho_pt[x]                    =  myphoton_container[x].pt();
+
+	 //	 std::cout<<"charged hardon iso = "<<myphoton_container[x].chargedHadronIso()<<std::endl;
 	 pho_px[x]                    =  myphoton_container[x].px();
 	 pho_py[x]                    =  myphoton_container[x].py();
 	 pho_pz[x]                    =  myphoton_container[x].pz();
@@ -1665,6 +1768,10 @@ if(!isAOD_){
 	     pho_recoFlag_xtalEB[x][y]           = crystalinfo_container[y].recoFlag;
 	   }//end of for (unsigned int y =0; y < crystalinfo_container.size();y++
            const reco::BasicCluster& seedClus = *(myphoton_container[x].superCluster()->seed());
+
+           //edm::ESHandle<CaloGeometry> geoHandle;	       
+	   //iSetup.get<CaloGeometryRecord>().get(geoHandle);
+	   //const CaloGeometry* caloGeom = geoHandle.product();
 
 	   if(myphoton_container[x].isEB()){
 	     std::vector<float> showershapes_barrel = EcalClusterTools::roundnessBarrelSuperClusters(*(myphoton_container[x].superCluster()),*barrelRecHits,0);
@@ -2952,11 +3059,11 @@ void Analyzer::beginJob(){
   if(runHLT_){
   myEvent->Branch("triggerprescales","vector<int>",&triggerprescales);
   myEvent->Branch("ifTriggerpassed","vector<bool>",&ifTriggerpassed);
-  //myEvent->Branch("trobjpt",trobjpt,"trobjpt[ntriggers][100][10]/F");   
-  //myEvent->Branch("trobjeta",trobjeta,"trobjeta[ntriggers][100][10]/F");
-  //myEvent->Branch("trobjphi",trobjphi,"trobjphi[ntriggers][100][10]/F");
-  //myEvent->Branch("lastFilterIndex",lastFilterIndex,"lastFilterIndex[ntriggers]/I");
-  //myEvent->Branch("lastFilterIndexHLT135",lastFilterIndexHLT135,"lastFilterIndexHLT135[ntriggers]/I"); 
+  myEvent->Branch("trobjpt",trobjpt,"trobjpt[ntriggers][100][10]/F");   
+  myEvent->Branch("trobjeta",trobjeta,"trobjeta[ntriggers][100][10]/F");
+  myEvent->Branch("trobjphi",trobjphi,"trobjphi[ntriggers][100][10]/F");
+  myEvent->Branch("lastFilterIndex",lastFilterIndex,"lastFilterIndex[ntriggers]/I");
+  myEvent->Branch("lastFilterIndexHLT135",lastFilterIndexHLT135,"lastFilterIndexHLT135[ntriggers]/I"); 
   }
   
   if(runvertex_){
@@ -2973,8 +3080,8 @@ void Analyzer::beginJob(){
   
   if(runscraping_){
     myEvent->Branch("Scraping_isScrapingEvent",&Scraping_isScrapingEvent,"Scraping_isScrapingEvent/O");
-    //myEvent->Branch("Scraping_numOfTracks",&Scraping_numOfTracks,"Scraping_numOfTracks/I");
-    //myEvent->Branch("Scraping_fractionOfGoodTracks",&Scraping_fractionOfGoodTracks,"Scraping_fractionOfGoodTracks/F");
+    myEvent->Branch("Scraping_numOfTracks",&Scraping_numOfTracks,"Scraping_numOfTracks/I");
+    myEvent->Branch("Scraping_fractionOfGoodTracks",&Scraping_fractionOfGoodTracks,"Scraping_fractionOfGoodTracks/F");
   }
 
 
@@ -3525,6 +3632,19 @@ if(runDetailTauInfo_){
     myEvent->Branch("Photon_dPhiTracksAtVtx",pho_dPhiTracksAtVtx,"pho_dPhiTracksAtVtx[Photon_n]/F");
     myEvent->Branch("Photon_dPhiTracksAtEcal",pho_dPhiTracksAtEcal,"pho_dPhiTracksAtEcal[Photon_n]/F");
     myEvent->Branch("Photon_dEtaTracksAtEcal",pho_dEtaTracksAtEcal,"pho_dEtaTracksAtEcal[Photon_n]/F");
+
+    //Pfisolation variables
+    /*
+    myEvent->Branch("nrecopho",&nrecopho,"nrecopho/I");
+    myEvent->Branch("PFiso_ChargedBarrel",PFisochargedBarrel,"PFisochargedBarrel[nrecopho]/F");
+    myEvent->Branch("PFiso_PhotonBarrel",PFisophotonBarrel,"PFisophotonBarrel[nrecopho]/F");
+    myEvent->Branch("PFiso_NeutralBarrel",PFisoneutralBarrel,"PFisoneutralBarrel[nrecopho]/F");
+    myEvent->Branch("PFiso_SumBarrel",PFphotonssumBarrel,"PFphotonssumBarrel[nrecopho]/F");
+    myEvent->Branch("PFiso_ChargedEndcap",PFisochargedEndcap,"PFisochargedEndcap[nrecopho]/F");
+    myEvent->Branch("PFiso_PhotonEndcap",PFisophotonEndcap,"PFisophotonEndcap[nrecopho]/F");
+    myEvent->Branch("PFiso_NeutralEndcap",PFisoneutralEndcap,"PFisoneutralEndcap[nrecopho]/F");
+    myEvent->Branch("PFiso_SumEndcap",PFphotonssumEndcap,"PFphotonssumEndcap[nrecopho]/F");
+    */
     if(runrechit_){
       myEvent->Branch("Photon_ncrys",ncrysPhoton,"ncrysPhoton[Photon_n]/I");
       myEvent->Branch("Photon_timing_xtal",pho_timing_xtal,"pho_timing_xtal[Photon_n][100]/F");
@@ -3539,7 +3659,7 @@ if(runDetailTauInfo_){
     
     if(runHErechit_){
       myEvent->Branch("HERecHit_subset_n",&HERecHit_subset_n,"HERecHit_subset_n/I");
-      //myEvent->Branch("HERecHit_subset_detid",HERecHit_subset_detid,"HERecHit_subset_detid[HERecHit_subset_n]/i");
+      myEvent->Branch("HERecHit_subset_detid",HERecHit_subset_detid,"HERecHit_subset_detid[HERecHit_subset_n]/i");
       myEvent->Branch("HERecHit_subset_energy",HERecHit_subset_energy,"HERecHit_subset_energy[HERecHit_subset_n]/F");
       myEvent->Branch("HERecHit_subset_time",HERecHit_subset_time,"HERecHit_subset_time[HERecHit_subset_n]/F");
       myEvent->Branch("HERecHit_subset_depth",HERecHit_subset_depth,"HERecHit_subset_depth[HERecHit_subset_n]/I");
@@ -3624,19 +3744,19 @@ if(runDetailTauInfo_){
 
   if(runmet_){
     //Calomet variables
-    //myEvent->Branch("CaloMetSigma",&CaloMetSig,"CaloMetSig/F");
-    //myEvent->Branch("CaloMetEz",&CaloMetEz,"CaloMetEz/F");
-    //myEvent->Branch("CaloEtFractionHadronic",&CaloEtFractionHadronic,"CaloEtFractionHadronic/F");
-    //myEvent->Branch("CaloEmEtFraction",&CaloEmEtFraction,"CaloEmEtFraction/F");
-    //myEvent->Branch("CaloHadEtInHB",&CaloHadEtInHB,"CaloHadEtInHB/F");
-    //myEvent->Branch("CaloHadEtInHE",&CaloHadEtInHE,"CaloHadEtInHE/F");
-    //myEvent->Branch("CaloHadEtInHO",&CaloHadEtInHO,"CaloHadEtInHO/F");
-    //myEvent->Branch("CaloHadEtInHF",&CaloHadEtInHF,"CaloHadEtInHF/F");
-    //myEvent->Branch("CaloEmEtInEB",&CaloEmEtInEB,"CaloEmEtInEB/F");
-    //myEvent->Branch("CaloEmEtInEE",&CaloEmEtInEE,"CaloEmEtInEE/F");
-    //myEvent->Branch("CaloEmEtInHF",&CaloEmEtInHF,"CaloEmEtInHF/F");
-    //myEvent->Branch("CaloMaxEtInEmTowers",&CaloMaxEtInEmTowers,"CaloMaxEtInEmTowers/F");
-    //myEvent->Branch("CaloMaxEtInHadTowers",&CaloMaxEtInHadTowers,"CaloMaxEtInHadTowers/F");
+    myEvent->Branch("CaloMetSigma",&CaloMetSig,"CaloMetSig/F");
+    myEvent->Branch("CaloMetEz",&CaloMetEz,"CaloMetEz/F");
+    myEvent->Branch("CaloEtFractionHadronic",&CaloEtFractionHadronic,"CaloEtFractionHadronic/F");
+    myEvent->Branch("CaloEmEtFraction",&CaloEmEtFraction,"CaloEmEtFraction/F");
+    myEvent->Branch("CaloHadEtInHB",&CaloHadEtInHB,"CaloHadEtInHB/F");
+    myEvent->Branch("CaloHadEtInHE",&CaloHadEtInHE,"CaloHadEtInHE/F");
+    myEvent->Branch("CaloHadEtInHO",&CaloHadEtInHO,"CaloHadEtInHO/F");
+    myEvent->Branch("CaloHadEtInHF",&CaloHadEtInHF,"CaloHadEtInHF/F");
+    myEvent->Branch("CaloEmEtInEB",&CaloEmEtInEB,"CaloEmEtInEB/F");
+    myEvent->Branch("CaloEmEtInEE",&CaloEmEtInEE,"CaloEmEtInEE/F");
+    myEvent->Branch("CaloEmEtInHF",&CaloEmEtInHF,"CaloEmEtInHF/F");
+    myEvent->Branch("CaloMaxEtInEmTowers",&CaloMaxEtInEmTowers,"CaloMaxEtInEmTowers/F");
+    myEvent->Branch("CaloMaxEtInHadTowers",&CaloMaxEtInHadTowers,"CaloMaxEtInHadTowers/F");
     myEvent->Branch("CaloMetPt",CaloMetPt,"CaloMetPt[6]/F");
     myEvent->Branch("CaloMetPx",CaloMetPx,"CaloMetPx[6]/F");
     myEvent->Branch("CaloMetPy",CaloMetPy,"CaloMetPy[6]/F");

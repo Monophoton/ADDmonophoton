@@ -17,7 +17,7 @@ removeMCMatching(process, ['All'],
 
 
 #runOnData(process)
-                                                                         
+
 from PhysicsTools.PatAlgos.tools.metTools import *                       
 addPfMET(process,'PF')
 addTcMET(process,"TC")       
@@ -62,6 +62,12 @@ process.fastjetSequence44 = cms.Sequence( process.kt6PFJets44 )
 process.load("RecoJets.JetProducers.ak5PFJets_cfi")
 process.ak5PFJets.doAreaFastjet = True 
 
+
+
+from CommonTools.ParticleFlow.Tools.pfIsolation import  setupPFPhotonIso
+process.phoIsoSequence = setupPFPhotonIso(process, 'photons')
+
+
 # HB + HE noise filtering Needed?
 process.load('CommonTools/RecoAlgos/HBHENoiseFilter_cfi')
 
@@ -71,7 +77,10 @@ process.load('CommonTools/RecoAlgos/HBHENoiseFilter_cfi')
 readFiles = cms.untracked.vstring()
 secFiles = cms.untracked.vstring()
 readFiles.extend( [
-        '/store/data/Run2011B/Photon/RECO/19Nov2011-v1/0001/52FF2274-7014-E111-A1DF-003048D4779C.root'
+        '/store/data/Run2012A/Photon/AOD/PromptReco-v1/000/190/993/1A9C620D-1186-E111-A12A-001D09F2B2CF.root',
+        '/store/data/Run2012A/Photon/AOD/PromptReco-v1/000/190/949/2ACEE413-7386-E111-8C27-E0CB4E55367F.root',
+        #'/store/data/Run2012A/Photon/AOD/PromptReco-v1/000/190/949/C69F8113-7386-E111-BA28-BCAEC518FF62.root',
+        
     ] );
 
 process.source = cms.Source("PoolSource",
@@ -145,7 +154,14 @@ process.demo = cms.EDAnalyzer('Analyzer',
                               runPileUp         = cms.untracked.bool(False),
                               isAOD             = cms.untracked.bool(True),
                               debug            = cms.untracked.bool(False),
-                              outFile          = cms.untracked.string('Data_2011B.root')
+                              outFile          = cms.untracked.string('Histo_AOD.root'),
+                              IsoDepPhoton = cms.VInputTag(cms.InputTag('phPFIsoDepositChargedPFIso'),
+                                                           cms.InputTag('phPFIsoDepositGammaPFIso'),
+                                                           cms.InputTag('phPFIsoDepositNeutralPFIso')),
+                              IsoValPhoton = cms.VInputTag(cms.InputTag('phPFIsoValueCharged03PFIdPFIso'),
+                                                           cms.InputTag('phPFIsoValueGamma03PFIdPFIso'),
+                                                           cms.InputTag('phPFIsoValueNeutral03PFIdPFIso')),
+                              Photons = cms.InputTag('photons')
                               )
 
 
@@ -153,19 +169,20 @@ process.demo = cms.EDAnalyzer('Analyzer',
 
 #All paths are here
 process.p = cms.Path(
-  process.HBHENoiseFilter *
-   process.fastjetSequence25 *
-   process.fastjetSequence44 *
-   process.ak5PFJets *
-   process.patDefaultSequence *
-   process.demo
-   )
+    process.HBHENoiseFilter *
+    process.fastjetSequence25 *
+    process.fastjetSequence44 *
+    process.ak5PFJets *
+    (process.pfParticleSelectionSequence+process.phoIsoSequence)*
+    process.patDefaultSequence *
+    process.demo
+    )
 
 
 # reduce verbosity
 process.MessageLogger.cerr.FwkReport.reportEvery = cms.untracked.int32(1)
 
 # process all the events
-process.maxEvents = cms.untracked.PSet( input = cms.untracked.int32(10) )
+process.maxEvents = cms.untracked.PSet( input = cms.untracked.int32(2000) )
 
 process.schedule=cms.Schedule(process.p)

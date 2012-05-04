@@ -8,6 +8,7 @@
 #include "ADDmonophoton/Analyzer/interface/CrystalInfo.h"
 #include "DataFormats/EgammaReco/interface/SuperCluster.h"
 #include "DataFormats/EcalRecHit/interface/EcalRecHitCollections.h"
+
 //#include "FWCore/Framework/interface/TriggerNames.h"
 #include "FWCore/Common/interface/TriggerNames.h"
 #include "HLTrigger/HLTcore/interface/HLTConfigProvider.h"
@@ -24,6 +25,11 @@ class Analyzer : public edm::EDAnalyzer {
   
   
  private:
+  //PFisolation
+  typedef std::vector< edm::Handle< edm::ValueMap<reco::IsoDeposit> > > IsoDepositMaps;
+  typedef std::vector< edm::Handle< edm::ValueMap<double> > > IsoDepositVals;
+
+
   virtual void beginJob() ;
   virtual void beginRun(const edm::Run& , const edm::EventSetup&);
   virtual void analyze(const edm::Event&, const edm::EventSetup&);
@@ -105,7 +111,12 @@ class Analyzer : public edm::EDAnalyzer {
   std::map<std::string,int> L1_chosen;
   
   std::vector<std::string> JET_CORR;
-  
+
+  //pfisolation  
+  edm::InputTag inputTagPhotons_;
+  std::vector<edm::InputTag> inputTagIsoDepPhotons_;
+  std::vector<edm::InputTag> inputTagIsoValPhotonsPFId_;   
+
   edm::InputTag eleLabel_;
   edm::InputTag muoLabel_;
   edm::InputTag cosMuoLabel_;
@@ -625,6 +636,21 @@ class Analyzer : public edm::EDAnalyzer {
   bool  pho_isConverted[200];
   bool  pho_hasConvTrk[200]; 
 
+  //Pfiso variables
+  float  charged;
+  float photon;
+  float neutral;
+  float PFisochargedBarrel[200];
+  float PFisophotonBarrel[200];
+  float PFisoneutralBarrel[200];
+  float PFphotonssumBarrel[200];
+  float PFisochargedEndcap[200];
+  float PFisophotonEndcap[200];
+  float PFisoneutralEndcap[200];
+  float PFphotonssumEndcap[200];
+  unsigned nrecopho;
+
+
   //MIP Variables
   float pho_mipChi2[200];
   float pho_mipTotEnergy[200];
@@ -982,7 +1008,7 @@ class Analyzer : public edm::EDAnalyzer {
   float caloTower_HE_E[5000];
   float caloTower_HB_E[5000];
   float caloTower_EMTime[5000];
-  float caloTower_HadTime[5000];    
+  float caloTower_HadTime[5000];
   //float caloTower_recoFlag[5000];
 
 
