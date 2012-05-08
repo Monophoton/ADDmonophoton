@@ -12,7 +12,7 @@
 //
 // Original Author:  Sandhya Jain
 //         Created:  Fri Apr 17 11:00:06 CEST 2009
-// $Id: Analyzer.cc,v 1.62 2011/09/26 15:29:08 schauhan Exp $
+// $Id: Analyzer.cc,v 1.64 2012/05/04 07:01:17 gomber Exp $
 //
 //
 
@@ -3634,7 +3634,7 @@ if(runDetailTauInfo_){
     myEvent->Branch("Photon_dEtaTracksAtEcal",pho_dEtaTracksAtEcal,"pho_dEtaTracksAtEcal[Photon_n]/F");
 
     //Pfisolation variables
-    /*
+    
     myEvent->Branch("nrecopho",&nrecopho,"nrecopho/I");
     myEvent->Branch("PFiso_ChargedBarrel",PFisochargedBarrel,"PFisochargedBarrel[nrecopho]/F");
     myEvent->Branch("PFiso_PhotonBarrel",PFisophotonBarrel,"PFisophotonBarrel[nrecopho]/F");
@@ -3644,7 +3644,7 @@ if(runDetailTauInfo_){
     myEvent->Branch("PFiso_PhotonEndcap",PFisophotonEndcap,"PFisophotonEndcap[nrecopho]/F");
     myEvent->Branch("PFiso_NeutralEndcap",PFisoneutralEndcap,"PFisoneutralEndcap[nrecopho]/F");
     myEvent->Branch("PFiso_SumEndcap",PFphotonssumEndcap,"PFphotonssumEndcap[nrecopho]/F");
-    */
+    
     if(runrechit_){
       myEvent->Branch("Photon_ncrys",ncrysPhoton,"ncrysPhoton[Photon_n]/I");
       myEvent->Branch("Photon_timing_xtal",pho_timing_xtal,"pho_timing_xtal[Photon_n][100]/F");
