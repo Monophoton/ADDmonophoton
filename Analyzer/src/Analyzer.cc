@@ -12,7 +12,7 @@
 //
 // Original Author:  Sandhya Jain
 //         Created:  Fri Apr 17 11:00:06 CEST 2009
-// $Id: Analyzer.cc,v 1.64 2012/05/04 07:01:17 gomber Exp $
+// $Id: Analyzer.cc,v 1.62 2011/09/26 15:29:08 schauhan Exp $
 //
 //
 
@@ -315,7 +315,9 @@ Analyzer::Analyzer(const edm::ParameterSet& iConfig):
   CosmicMuon_n	   = 0;
   Tau_n            = 0;
   genJet_n         = 0;
+  npho_            =0;
 }
+
 
 
 Analyzer::~Analyzer(){
@@ -1387,64 +1389,36 @@ if(!isAOD_){
    
    if(runphotons_){
      
-     
-     //PFIsolation
      edm::Handle<reco::PhotonCollection> photonH;
      bool found = iEvent.getByLabel(inputTagPhotons_,photonH);
      if(!found ) {
        std::ostringstream  err;
        err<<" cannot get Photons: "
-	  <<inputTagPhotons_<<std::endl;
+          <<inputTagPhotons_<<std::endl;
        edm::LogError("Analyzer")<<err.str();
        throw cms::Exception( "MissingProduct", err.str());
-     }  
-     
-     
-     // get the iso deposits. 3 (charged hadrons, photons, neutral hadrons)
+     }
+
+
      unsigned nTypes=3;
      IsoDepositMaps photonIsoDep(nTypes);
      for (size_t j = 0; j<inputTagIsoDepPhotons_.size(); ++j) {
        iEvent.getByLabel(inputTagIsoDepPhotons_[j], photonIsoDep[j]);
      }
 
-     IsoDepositVals photonIsoValPFId(nTypes);
+     IsoDepositVals photonIsoValPFId(6);
      for (size_t j = 0; j<inputTagIsoValPhotonsPFId_.size(); ++j) {
        iEvent.getByLabel(inputTagIsoValPhotonsPFId_[j], photonIsoValPFId[j]);
      }
 
-     
+     // Photons - from reco
      const IsoDepositVals * photonIsoVals = &photonIsoValPFId;
-     nrecopho=photonH->size();
-     //std::cout<<"no of photons "<<nrecopho<<std::endl;
-     for(unsigned int ipho=0; ipho<nrecopho;ipho++) {
-       reco::PhotonRef myPhotonRef(photonH,ipho);
-       
-       charged =  (*(*photonIsoVals)[0])[myPhotonRef];
-       photon = (*(*photonIsoVals)[1])[myPhotonRef];
-       neutral = (*(*photonIsoVals)[2])[myPhotonRef];
-       
-       if(myPhotonRef->isEB()) {
-	 PFisochargedBarrel[ipho] =  ((*(*photonIsoVals)[0])[myPhotonRef]/myPhotonRef->pt());
-	 PFisophotonBarrel[ipho]  = ((*(*photonIsoVals)[1])[myPhotonRef]/myPhotonRef->pt());
-	 PFisoneutralBarrel[ipho] = ((*(*photonIsoVals)[2])[myPhotonRef]/myPhotonRef->pt());
-	 PFphotonssumBarrel[ipho] = (charged+photon+neutral)/myPhotonRef->pt();
-       }else{
-	 PFisochargedEndcap[ipho] =  ((*(*photonIsoVals)[0])[myPhotonRef]/myPhotonRef->pt());
-	 PFisophotonEndcap[ipho]  = ((*(*photonIsoVals)[1])[myPhotonRef]/myPhotonRef->pt());
-	 PFisoneutralEndcap[ipho] = ((*(*photonIsoVals)[2])[myPhotonRef]/myPhotonRef->pt());
-	 PFphotonssumEndcap[ipho] = (charged+photon+neutral)/myPhotonRef->pt();
-       }
-       
+     unsigned nrecopho=photonH->size();
 
-       /*std::cout<<"Charged barrel isolation for["<<ipho<<"]photon"<<PFisochargedBarrel[ipho]<<std::endl;
-       std::cout<<"Photon barrel isolation for["<<ipho<<"]photon"<<PFisophotonBarrel[ipho]<<std::endl;
-       std::cout<<"Charged endcap isolation for["<<ipho<<"]photon"<<PFisochargedEndcap[ipho]<<std::endl;
-       std::cout<<"Photon endcap isolation for["<<ipho<<"]photon"<<PFisophotonEndcap[ipho]<<std::endl;
-       */
 
-       
-     }
      
+     
+	    
 
 
 
@@ -1464,12 +1438,49 @@ if(!isAOD_){
      edm::Handle<edm::View<pat::Photon> > phoHandle;
      iEvent.getByLabel(phoLabel_,phoHandle);
      edm::View<pat::Photon>::const_iterator photon;
-     
+
+
+
+
      set<DetId> HERecHitSet;
      HERecHit_subset_n = 0;
      
      for(photon = phoHandle->begin();photon!=phoHandle->end();++photon){
-  
+
+       for(unsigned ipho=0; ipho<nrecopho;++ipho) {
+	 reco::PhotonRef myPhotonRef(photonH,ipho);
+         if (myPhotonRef->et() != photon->et()) continue;
+
+         charged04 =  (*(*photonIsoVals)[0])[myPhotonRef];
+         photon04 = (*(*photonIsoVals)[1])[myPhotonRef];
+         neutral04 = (*(*photonIsoVals)[2])[myPhotonRef];
+
+
+         charged03 =  (*(*photonIsoVals)[3])[myPhotonRef];
+         photon03 = (*(*photonIsoVals)[4])[myPhotonRef];
+         neutral03 = (*(*photonIsoVals)[5])[myPhotonRef];
+
+         PFisocharged04[npho_] =  ((*(*photonIsoVals)[0])[myPhotonRef]/myPhotonRef->pt());
+         PFisophoton04[npho_]  = ((*(*photonIsoVals)[1])[myPhotonRef]/myPhotonRef->pt());
+         PFisoneutral04[npho_] = ((*(*photonIsoVals)[2])[myPhotonRef]/myPhotonRef->pt());
+         PFphotonssum04[npho_] = (charged04+photon04+neutral04)/myPhotonRef->pt();
+
+
+         PFisocharged03[npho_] =  ((*(*photonIsoVals)[3])[myPhotonRef]/myPhotonRef->pt());
+         PFisophoton03[npho_]  = ((*(*photonIsoVals)[4])[myPhotonRef]/myPhotonRef->pt());
+         PFisoneutral03[npho_] = ((*(*photonIsoVals)[5])[myPhotonRef]/myPhotonRef->pt());
+         PFphotonssum03[npho_] = (charged03+photon03+neutral03)/myPhotonRef->pt();
+
+
+	 std::cout << "Photon: " << " run " << iEvent.id().run() << " lumi " << iEvent.id().luminosityBlock() << " event " << iEvent.id().event();
+	 std::cout << " pt " <<  myPhotonRef->pt() << " eta " << myPhotonRef->eta() << " phi " << myPhotonRef->phi() << " charge " << myPhotonRef->charge()<< " : ";
+	 std::cout << " ChargedIso " << charged03 ;
+	 std::cout << " PhotonIso " <<  photon03 ;
+	 std::cout << " NeutralHadron Iso " << neutral03 << std::endl;
+
+         npho_++;
+       }
+
        //cout<<(photon->triggerObjectMatchesByPath("HLT_Photon90_CaloIdVL_IsoL_v3",true,false))<<endl;
        myphoton_container.push_back(*photon) ;
      }
@@ -1702,7 +1713,7 @@ if(!isAOD_){
 	   vector< std::pair<DetId, float> >::const_iterator detitr;
 	   for(detitr = PhotonHit_DetIds.begin(); detitr != PhotonHit_DetIds.end(); ++detitr)
            {
-
+	     
 	     if (((*detitr).first).det() == DetId::Ecal && ((*detitr).first).subdetId() == EcalBarrel) {
 	       EcalRecHitCollection::const_iterator j= Brechit->find(((*detitr).first));
 	       EcalRecHitCollection::const_iterator thishit;
@@ -3634,16 +3645,23 @@ if(runDetailTauInfo_){
     myEvent->Branch("Photon_dEtaTracksAtEcal",pho_dEtaTracksAtEcal,"pho_dEtaTracksAtEcal[Photon_n]/F");
 
     //Pfisolation variables
-    
-    myEvent->Branch("nrecopho",&nrecopho,"nrecopho/I");
-    myEvent->Branch("PFiso_ChargedBarrel",PFisochargedBarrel,"PFisochargedBarrel[nrecopho]/F");
-    myEvent->Branch("PFiso_PhotonBarrel",PFisophotonBarrel,"PFisophotonBarrel[nrecopho]/F");
-    myEvent->Branch("PFiso_NeutralBarrel",PFisoneutralBarrel,"PFisoneutralBarrel[nrecopho]/F");
-    myEvent->Branch("PFiso_SumBarrel",PFphotonssumBarrel,"PFphotonssumBarrel[nrecopho]/F");
-    myEvent->Branch("PFiso_ChargedEndcap",PFisochargedEndcap,"PFisochargedEndcap[nrecopho]/F");
-    myEvent->Branch("PFiso_PhotonEndcap",PFisophotonEndcap,"PFisophotonEndcap[nrecopho]/F");
-    myEvent->Branch("PFiso_NeutralEndcap",PFisoneutralEndcap,"PFisoneutralEndcap[nrecopho]/F");
-    myEvent->Branch("PFiso_SumEndcap",PFphotonssumEndcap,"PFphotonssumEndcap[nrecopho]/F");
+
+    myEvent->Branch("npho_",&npho_,"npho_/I");
+    myEvent->Branch("PFiso_Charged03",PFisocharged03,"PFisocharged03[npho_]/F");
+    myEvent->Branch("PFiso_Photon03",PFisophoton03,"PFisophoton03[npho_]/F");
+    myEvent->Branch("PFiso_Neutral03",PFisoneutral03,"PFisoneutral03[npho_]/F");
+    myEvent->Branch("PFiso_Sum03",PFphotonssum03,"PFphotonssum03[npho_]/F");
+
+    myEvent->Branch("PFiso_Charged04",PFisocharged04,"PFisocharged04[npho_]/F");
+    myEvent->Branch("PFiso_Photon04",PFisophoton04,"PFisophoton04[npho_]/F");
+    myEvent->Branch("PFiso_Neutral04",PFisoneutral04,"PFisoneutral04[npho_]/F");
+    myEvent->Branch("PFiso_Sum04",PFphotonssum04,"PFphotonssum04[npho_]/F");
+    /*
+    myEvent->Branch("PFDB_03",PF_DB03,"PF_DB03[npho_]/F");
+    myEvent->Branch("PFDB_04",PF_DB04,"PF_DB04[npho_]/F");
+    */
+
+
     
     if(runrechit_){
       myEvent->Branch("Photon_ncrys",ncrysPhoton,"ncrysPhoton[Photon_n]/I");
