@@ -22,12 +22,14 @@ class Analyzer : public edm::EDAnalyzer {
  public:
   explicit Analyzer(const edm::ParameterSet&);
   ~Analyzer();
-  
-  
- private:
   //PFisolation
   typedef std::vector< edm::Handle< edm::ValueMap<reco::IsoDeposit> > > IsoDepositMaps;
   typedef std::vector< edm::Handle< edm::ValueMap<double> > > IsoDepositVals;
+
+  
+  
+ private:
+
 
 
   virtual void beginJob() ;
@@ -73,7 +75,7 @@ class Analyzer : public edm::EDAnalyzer {
   float avgInsDelLumi, avgInsDelLumiErr, avgInsRecLumi, avgInsRecLumiErr;
   int ngenphotons;
   int nhardphotons;
-  int Photon_n;
+  int Photon_n,npho_;
   int ucPhoton_n;
   int CaloTower_n;
   int Vertex_n;
@@ -112,10 +114,11 @@ class Analyzer : public edm::EDAnalyzer {
   
   std::vector<std::string> JET_CORR;
 
-  //pfisolation  
+  //pfiso
   edm::InputTag inputTagPhotons_;
   std::vector<edm::InputTag> inputTagIsoDepPhotons_;
-  std::vector<edm::InputTag> inputTagIsoValPhotonsPFId_;   
+  std::vector<edm::InputTag> inputTagIsoValPhotonsPFId_;
+
 
   edm::InputTag eleLabel_;
   edm::InputTag muoLabel_;
@@ -637,18 +640,22 @@ class Analyzer : public edm::EDAnalyzer {
   bool  pho_hasConvTrk[200]; 
 
   //Pfiso variables
-  float  charged;
-  float photon;
-  float neutral;
-  float PFisochargedBarrel[200];
-  float PFisophotonBarrel[200];
-  float PFisoneutralBarrel[200];
-  float PFphotonssumBarrel[200];
-  float PFisochargedEndcap[200];
-  float PFisophotonEndcap[200];
-  float PFisoneutralEndcap[200];
-  float PFphotonssumEndcap[200];
+  float  charged03;
+  float photon03;
+  float neutral03;
+  float  charged04;
+  float photon04;
+  float neutral04;
   unsigned nrecopho;
+  float PFisocharged03[200];
+  float PFisophoton03[200];
+  float PFisoneutral03[200];
+  float PFphotonssum03[200];
+
+  float PFisocharged04[200];
+  float PFisophoton04[200];
+  float PFisoneutral04[200];
+  float PFphotonssum04[200];
 
 
   //MIP Variables
