@@ -77,10 +77,11 @@ process.load('CommonTools/RecoAlgos/HBHENoiseFilter_cfi')
 readFiles = cms.untracked.vstring()
 secFiles = cms.untracked.vstring()
 readFiles.extend( [
-        '/store/data/Run2012A/Photon/AOD/PromptReco-v1/000/190/993/1A9C620D-1186-E111-A12A-001D09F2B2CF.root',
-        '/store/data/Run2012A/Photon/AOD/PromptReco-v1/000/190/949/2ACEE413-7386-E111-8C27-E0CB4E55367F.root',
-        #'/store/data/Run2012A/Photon/AOD/PromptReco-v1/000/190/949/C69F8113-7386-E111-BA28-BCAEC518FF62.root',
-        
+    #'dcap://cmsdca.fnal.gov:24137/pnfs/fnal.gov/usr/cms/WAX/11/store/user/weinberg/monoPhoton/skims/promptReco_8Tev_collisions12/monoPhotonSkim_16_1_hvv.root'
+    '/store/data/Run2012A/Photon/AOD/PromptReco-v1/000/190/993/1A9C620D-1186-E111-A12A-001D09F2B2CF.root',
+    '/store/data/Run2012A/Photon/AOD/PromptReco-v1/000/190/949/2ACEE413-7386-E111-8C27-E0CB4E55367F.root',
+    '/store/data/Run2012A/Photon/AOD/PromptReco-v1/000/190/949/C69F8113-7386-E111-BA28-BCAEC518FF62.root',
+    
     ] );
 
 process.source = cms.Source("PoolSource",
@@ -155,13 +156,18 @@ process.demo = cms.EDAnalyzer('Analyzer',
                               isAOD             = cms.untracked.bool(True),
                               debug            = cms.untracked.bool(False),
                               outFile          = cms.untracked.string('Histo_AOD.root'),
+                              Photons = cms.InputTag('photons'),
                               IsoDepPhoton = cms.VInputTag(cms.InputTag('phPFIsoDepositChargedPFIso'),
                                                            cms.InputTag('phPFIsoDepositGammaPFIso'),
                                                            cms.InputTag('phPFIsoDepositNeutralPFIso')),
-                              IsoValPhoton = cms.VInputTag(cms.InputTag('phPFIsoValueCharged03PFIdPFIso'),
+                              IsoValPhoton = cms.VInputTag(cms.InputTag('phPFIsoValueCharged04PFIdPFIso'),
+                                                           cms.InputTag('phPFIsoValueGamma04PFIdPFIso'),
+                                                           cms.InputTag('phPFIsoValueNeutral04PFIdPFIso'),
+                                                           cms.InputTag('phPFIsoValueCharged03PFIdPFIso'),
                                                            cms.InputTag('phPFIsoValueGamma03PFIdPFIso'),
-                                                           cms.InputTag('phPFIsoValueNeutral03PFIdPFIso')),
-                              Photons = cms.InputTag('photons')
+                                                           cms.InputTag('phPFIsoValueNeutral03PFIdPFIso')
+                                                                                                                                                    ),
+                              
                               )
 
 
@@ -183,6 +189,6 @@ process.p = cms.Path(
 process.MessageLogger.cerr.FwkReport.reportEvery = cms.untracked.int32(1)
 
 # process all the events
-process.maxEvents = cms.untracked.PSet( input = cms.untracked.int32(2000) )
+process.maxEvents = cms.untracked.PSet( input = cms.untracked.int32(300) )
 
 process.schedule=cms.Schedule(process.p)
