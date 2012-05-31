@@ -12,7 +12,7 @@
 //
 // Original Author:  Sandhya Jain
 //         Created:  Fri Apr 17 11:00:06 CEST 2009
-// $Id: Analyzer.cc,v 1.62 2011/09/26 15:29:08 schauhan Exp $
+// $Id: Analyzer.cc,v 1.66 2012/05/14 13:37:39 gomber Exp $
 //
 //
 
@@ -2669,7 +2669,16 @@ if(rungenjets_){
 	 ucpho_isEEGap[x_uc]                      = ucphoton_container[x_uc].isEEGap(); 
 	 ucpho_isEBEEGap[x_uc]                    = ucphoton_container[x_uc].isEBEEGap(); 
          ucpho_hasConvTrk[x_uc]                   = ucphoton_container[x_uc].hasConversionTracks();
-	 
+	
+         //Add MIP Variable for each unclenaed photon
+         ucpho_mipChi2[x_uc]                      = ucphoton_container[x_uc].mipChi2();                                                                                      
+         ucpho_mipTotEnergy[x_uc]                 = ucphoton_container[x_uc].mipTotEnergy();
+         ucpho_mipSlope[x_uc]                     = ucphoton_container[x_uc].mipSlope();
+         ucpho_mipIntercept[x_uc]                 = ucphoton_container[x_uc].mipIntercept();
+         ucpho_mipNhitCone[x_uc]                  = ucphoton_container[x_uc].mipNhitCone();
+         ucpho_mipIsHalo[x_uc]                    = ucphoton_container[x_uc].mipIsHalo();
+
+ 
 	 if(ucphoton_container[x_uc].genParticleRef().isNonnull()){
 	   matchucpho_E[x_uc]                =  ucphoton_container[x_uc].genPhoton()->energy();
 	   matchucpho_pt[x_uc]               =  ucphoton_container[x_uc].genPhoton()->pt();
@@ -3938,7 +3947,17 @@ if(runDetailTauInfo_){
       myEvent->Branch("ucHERecHit_subset_y",ucHERecHit_subset_y,"ucHERecHit_subset_y[ucHERecHit_subset_n]/F");
       myEvent->Branch("ucHERecHit_subset_z",ucHERecHit_subset_z,"ucHERecHit_subset_z[ucHERecHit_subset_n]/F");
     }                                                          
-                                                               
+                                            
+
+    //MIP Variables for uncleaned photons         
+    myEvent->Branch("ucPhoton_mipChi2",ucpho_mipChi2,"ucpho_mipChi2[ucPhoton_n]/F");
+    myEvent->Branch("ucPhoton_mipTotEnergy",ucpho_mipTotEnergy,"ucpho_mipTotEnergy[ucPhoton_n]/F");
+    myEvent->Branch("ucPhoton_mipSlope",ucpho_mipSlope,"ucpho_mipSlope[ucPhoton_n]/F");
+    myEvent->Branch("ucPhoton_mipIntercept",ucpho_mipIntercept,"ucpho_mipIntercept[ucPhoton_n]/F");
+    myEvent->Branch("ucPhoton_mipNhitCone",ucpho_mipNhitCone,"ucpho_mipNhitCone[ucPhoton_n]/I");
+    myEvent->Branch("ucPhoton_mipIsHalo",ucpho_mipIsHalo,"ucpho_mipIsHalo[ucPhoton_n]/O");
+
+                   
   }//end of if (runucphotons_)                              
 
 

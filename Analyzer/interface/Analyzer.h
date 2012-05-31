@@ -983,7 +983,17 @@ class Analyzer : public edm::EDAnalyzer {
   float ucpho_rookFraction[200];
   float ucpho_s9[200];
   float ucpho_e2e9[200];
-             
+        
+  //MIP Variables
+  float ucpho_mipChi2[200];
+  float ucpho_mipTotEnergy[200];
+  float ucpho_mipSlope[200];
+  float ucpho_mipIntercept[200];
+  int   ucpho_mipNhitCone[200];
+  bool  ucpho_mipIsHalo[200];
+
+
+     
   //HErechit information
   unsigned int ucHERecHit_subset_detid[10000];
   float ucHERecHit_subset_energy[10000];
