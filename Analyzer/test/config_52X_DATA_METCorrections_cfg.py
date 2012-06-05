@@ -31,7 +31,8 @@ process.patType1CorrectedPFMet.srcType1Corrections = cms.VInputTag(
        cms.InputTag('patPFMETtype0Corr'),
        cms.InputTag('pfMEtSysShiftCorr') 
 )      
-
+#make sure it is 2012 one
+process.pfMEtSysShiftCorr.parameter = process.pfMEtSysShiftCorrParameters_2012runAvsNvtx_data
 #tell which  pf-jet otherwise it will complaint that jet is not tuype of PF!!
 process.selectedPatJetsForMETtype1p2Corr.src = cms.InputTag('patJetsAK5PF')
 process.patPFJetMETtype1p2Corr.jetCorrLabel = cms.string("L2L3Residual") # NOTE: use "L3Absolute" for MC 
