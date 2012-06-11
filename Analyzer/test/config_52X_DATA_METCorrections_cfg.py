@@ -80,8 +80,9 @@ process.load("RecoJets.JetProducers.ak5PFJets_cfi")
 process.ak5PFJets.doAreaFastjet = True 
 
 
-from CommonTools.ParticleFlow.Tools.pfIsolation import  setupPFPhotonIso
-process.phoIsoSequence = setupPFPhotonIso(process, 'photons')
+process.load('EGamma.EGammaAnalysisTools.photonIsoProducer_cfi')
+process.phoPFIso.verbose = True
+
 
 
 
@@ -210,17 +211,11 @@ process.demo = cms.EDAnalyzer('Analyzer',
                               debug            = cms.untracked.bool(False),
                               outFile          = cms.untracked.string('Histo_AOD.root'),
                               Photons = cms.InputTag('photons'),
-                              IsoDepPhoton = cms.VInputTag(cms.InputTag('phPFIsoDepositChargedPFIso'),
-                                                           cms.InputTag('phPFIsoDepositGammaPFIso'),
-                                                           cms.InputTag('phPFIsoDepositNeutralPFIso')
-                                                          ),
-                              IsoValPhoton = cms.VInputTag(cms.InputTag('phPFIsoValueCharged04PFIdPFIso'),
-                                                           cms.InputTag('phPFIsoValueGamma04PFIdPFIso'),
-                                                           cms.InputTag('phPFIsoValueNeutral04PFIdPFIso'),
-                                                           cms.InputTag('phPFIsoValueCharged03PFIdPFIso'),
-                                                           cms.InputTag('phPFIsoValueGamma03PFIdPFIso'),
-                                                           cms.InputTag('phPFIsoValueNeutral03PFIdPFIso')
-                                                          ),
+                              IsoValPhoton = cms.VInputTag(cms.InputTag('phoPFIso:chIsoForGsfEle'),
+                                                           cms.InputTag('phoPFIso:phIsoForGsfEle'),
+                                                           cms.InputTag('phoPFIso:nhIsoForGsfEle'),
+                                                           ),
+                              
                               
                               )
 
@@ -233,7 +228,7 @@ process.p = cms.Path(
     process.fastjetSequence25*
     process.fastjetSequence44*
     process.ak5PFJets*
-   (process.pfParticleSelectionSequence+process.phoIsoSequence)*
+    process.phoPFIso *
     process.pfMEtSysShiftCorrSequence*
     process.patDefaultSequence*
     process.producePatPFMETCorrections*    #Produce MET corrections
@@ -245,7 +240,7 @@ process.p = cms.Path(
 process.MessageLogger.cerr.FwkReport.reportEvery = cms.untracked.int32(1000)
 
 # process all the events
-process.maxEvents = cms.untracked.PSet( input = cms.untracked.int32(-1) )
+process.maxEvents = cms.untracked.PSet( input = cms.untracked.int32(50) )
 
 process.schedule=cms.Schedule(process.p)
 

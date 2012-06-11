@@ -23,7 +23,6 @@ class Analyzer : public edm::EDAnalyzer {
   explicit Analyzer(const edm::ParameterSet&);
   ~Analyzer();
   //PFisolation
-  typedef std::vector< edm::Handle< edm::ValueMap<reco::IsoDeposit> > > IsoDepositMaps;
   typedef std::vector< edm::Handle< edm::ValueMap<double> > > IsoDepositVals;
 
   
@@ -116,7 +115,6 @@ class Analyzer : public edm::EDAnalyzer {
 
   //pfiso
   edm::InputTag inputTagPhotons_;
-  std::vector<edm::InputTag> inputTagIsoDepPhotons_;
   std::vector<edm::InputTag> inputTagIsoValPhotonsPFId_;
 
 
@@ -638,24 +636,19 @@ class Analyzer : public edm::EDAnalyzer {
   float pho_e4e1[200];
   bool  pho_isConverted[200];
   bool  pho_hasConvTrk[200]; 
+  bool  phoElectronveto[200];
+
 
   //Pfiso variables
   float  charged03;
   float photon03;
   float neutral03;
-  float  charged04;
-  float photon04;
-  float neutral04;
   unsigned nrecopho;
   float PFisocharged03[200];
   float PFisophoton03[200];
   float PFisoneutral03[200];
   float PFphotonssum03[200];
 
-  float PFisocharged04[200];
-  float PFisophoton04[200];
-  float PFisoneutral04[200];
-  float PFphotonssum04[200];
 
 
   //MIP Variables
@@ -686,6 +679,7 @@ class Analyzer : public edm::EDAnalyzer {
   int   pho_nTrkSolidConeDR04[200];
   int   pho_nTrkHollowConeDR04[200];
   float pho_HoE[200];
+  float pho_HoEnew[200];
   bool  pho_hasPixelSeed[200];   
  int  pho_mGenmompdgId[200][100];
  int  pho_mGenpdgId[200];
@@ -931,6 +925,7 @@ class Analyzer : public edm::EDAnalyzer {
   int   ucpho_nTrkSolidConeDR04[200];
   int   ucpho_nTrkHollowConeDR04[200];
   float ucpho_HoE[200];
+  float ucpho_HoEnew[200];
   bool  ucpho_hasPixelSeed[200];   
              
   //SC variables

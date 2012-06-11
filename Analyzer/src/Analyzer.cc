@@ -12,7 +12,7 @@
 //
 // Original Author:  Sandhya Jain
 //         Created:  Fri Apr 17 11:00:06 CEST 2009
-// $Id: Analyzer.cc,v 1.66 2012/05/14 13:37:39 gomber Exp $
+// $Id: Analyzer.cc,v 1.67 2012/05/31 23:22:07 schauhan Exp $
 //
 //
 
@@ -117,8 +117,9 @@
 #include "JetMETCorrections/Objects/interface/JetCorrectionsRecord.h"
 #include "CondFormats/JetMETObjects/interface/JetCorrectorParameters.h"
 
-#include "RecoEcal/EgammaCoreTools/interface/Mustache.h"
 
+#include "RecoEcal/EgammaCoreTools/interface/Mustache.h"
+#include "RecoEgamma/EgammaTools/interface/ConversionTools.h" 
 
 #include "TString.h"
 #include "TH1D.h"
@@ -272,7 +273,6 @@ Analyzer::Analyzer(const edm::ParameterSet& iConfig):
   isAOD_(iConfig.getUntrackedParameter<bool>("isAOD")),
   //added for PFiso
   inputTagPhotons_(iConfig.getParameter<edm::InputTag>("Photons")),
-  inputTagIsoDepPhotons_(iConfig.getParameter< std::vector<edm::InputTag> >("IsoDepPhoton")),
   inputTagIsoValPhotonsPFId_(iConfig.getParameter< std::vector<edm::InputTag> >("IsoValPhoton")),
   debug_(iConfig.getUntrackedParameter<bool>("debug")),
   
@@ -315,7 +315,7 @@ Analyzer::Analyzer(const edm::ParameterSet& iConfig):
   CosmicMuon_n	   = 0;
   Tau_n            = 0;
   genJet_n         = 0;
-  npho_            =0;
+  
 }
 
 
@@ -1384,9 +1384,6 @@ if(!isAOD_){
    std::vector<pat::Photon> myphoton_container;
    myphoton_container.clear();
    
-   std::vector<reco::PFCandidate> mypfphoton_container;
-   mypfphoton_container.clear();
-   
    if(runphotons_){
      
      edm::Handle<reco::PhotonCollection> photonH;
@@ -1399,14 +1396,8 @@ if(!isAOD_){
        throw cms::Exception( "MissingProduct", err.str());
      }
 
-
      unsigned nTypes=3;
-     IsoDepositMaps photonIsoDep(nTypes);
-     for (size_t j = 0; j<inputTagIsoDepPhotons_.size(); ++j) {
-       iEvent.getByLabel(inputTagIsoDepPhotons_[j], photonIsoDep[j]);
-     }
-
-     IsoDepositVals photonIsoValPFId(6);
+     IsoDepositVals photonIsoValPFId(nTypes);
      for (size_t j = 0; j<inputTagIsoValPhotonsPFId_.size(); ++j) {
        iEvent.getByLabel(inputTagIsoValPhotonsPFId_[j], photonIsoValPFId[j]);
      }
@@ -1415,24 +1406,15 @@ if(!isAOD_){
      const IsoDepositVals * photonIsoVals = &photonIsoValPFId;
      unsigned nrecopho=photonH->size();
 
+     edm::Handle<reco::BeamSpot> bsHandle;
+     iEvent.getByLabel("offlineBeamSpot", bsHandle);
+     const reco::BeamSpot &beamspot = *bsHandle.product();
 
-     
-     
-	    
+     edm::Handle<reco::ConversionCollection> hConversions;
+     iEvent.getByLabel("allConversions", hConversions);
 
-
-
-     //for PFPhoton
-     edm::Handle<std::vector<reco::PFCandidate> >  PFCandidateHandle;
-     iEvent.getByLabel(std::string("particleFlow"),PFCandidateHandle);
-     std::vector<reco::PFCandidate>::const_iterator pfparticle;
-     for(pfparticle = PFCandidateHandle->begin();pfparticle!=PFCandidateHandle->end();++pfparticle){
-       if(pfparticle->pdgId()==22 && pfparticle->mva_nothing_gamma()>0.1) {
-	 //std::cout<<"photon pt = "<<pfparticle->pt()<<std::endl;
-         mypfphoton_container.push_back(*pfparticle);
-       }
-     }
-     
+     edm::Handle<reco::GsfElectronCollection> hElectrons;
+     iEvent.getByLabel("gsfElectrons", hElectrons);
      
      
      edm::Handle<edm::View<pat::Photon> > phoHandle;
@@ -1444,39 +1426,31 @@ if(!isAOD_){
 
      set<DetId> HERecHitSet;
      HERecHit_subset_n = 0;
-     
+     npho_=0;
      for(photon = phoHandle->begin();photon!=phoHandle->end();++photon){
 
        for(unsigned ipho=0; ipho<nrecopho;++ipho) {
 	 reco::PhotonRef myPhotonRef(photonH,ipho);
          if (myPhotonRef->et() != photon->et()) continue;
-
-         charged04 =  (*(*photonIsoVals)[0])[myPhotonRef];
-         photon04 = (*(*photonIsoVals)[1])[myPhotonRef];
-         neutral04 = (*(*photonIsoVals)[2])[myPhotonRef];
-
-
-         charged03 =  (*(*photonIsoVals)[3])[myPhotonRef];
-         photon03 = (*(*photonIsoVals)[4])[myPhotonRef];
-         neutral03 = (*(*photonIsoVals)[5])[myPhotonRef];
-
-         PFisocharged04[npho_] =  ((*(*photonIsoVals)[0])[myPhotonRef]/myPhotonRef->pt());
-         PFisophoton04[npho_]  = ((*(*photonIsoVals)[1])[myPhotonRef]/myPhotonRef->pt());
-         PFisoneutral04[npho_] = ((*(*photonIsoVals)[2])[myPhotonRef]/myPhotonRef->pt());
-         PFphotonssum04[npho_] = (charged04+photon04+neutral04)/myPhotonRef->pt();
-
-
-         PFisocharged03[npho_] =  ((*(*photonIsoVals)[3])[myPhotonRef]/myPhotonRef->pt());
-         PFisophoton03[npho_]  = ((*(*photonIsoVals)[4])[myPhotonRef]/myPhotonRef->pt());
-         PFisoneutral03[npho_] = ((*(*photonIsoVals)[5])[myPhotonRef]/myPhotonRef->pt());
+	 
+	 phoElectronveto[npho_] = !ConversionTools::hasMatchedPromptElectron(myPhotonRef->superCluster(), hElectrons, hConversions, beamspot.position());
+	 
+	 charged03 =  (*(*photonIsoVals)[0])[myPhotonRef];
+         photon03 = (*(*photonIsoVals)[1])[myPhotonRef];
+         neutral03 = (*(*photonIsoVals)[2])[myPhotonRef];
+	 
+         PFisocharged03[npho_] =  ((*(*photonIsoVals)[0])[myPhotonRef]/myPhotonRef->pt());
+         PFisophoton03[npho_]  = ((*(*photonIsoVals)[1])[myPhotonRef]/myPhotonRef->pt());
+         PFisoneutral03[npho_] = ((*(*photonIsoVals)[2])[myPhotonRef]/myPhotonRef->pt());
          PFphotonssum03[npho_] = (charged03+photon03+neutral03)/myPhotonRef->pt();
 
 
-	 std::cout << "Photon: " << " run " << iEvent.id().run() << " lumi " << iEvent.id().luminosityBlock() << " event " << iEvent.id().event();
-	 std::cout << " pt " <<  myPhotonRef->pt() << " eta " << myPhotonRef->eta() << " phi " << myPhotonRef->phi() << " charge " << myPhotonRef->charge()<< " : ";
-	 std::cout << " ChargedIso " << charged03 ;
-	 std::cout << " PhotonIso " <<  photon03 ;
-	 std::cout << " NeutralHadron Iso " << neutral03 << std::endl;
+
+	 std::cout<<"Charged isolation for photon["<<npho_<<"]"<<PFisocharged03[npho_]<<std::endl;
+	 std::cout<<"Photon isolation for photon["<<npho_<<"]"<<PFisophoton03[npho_]<<std::endl;
+	 std::cout<<"Neutral isolation for photon["<<npho_<<"]"<<PFisoneutral03[npho_]<<std::endl;
+	 std::cout<<"Electron Veto["<<npho_<<"]"<<phoElectronveto[npho_]<<std::endl;
+
 
          npho_++;
        }
@@ -1521,6 +1495,7 @@ if(!isAOD_){
 	 pho_sc_etaWidth[x]           =  myphoton_container[x].superCluster()->etaWidth();
 	 pho_sc_phiWidth[x]           =  myphoton_container[x].superCluster()->phiWidth();
 	 pho_HoE[x]                   =  myphoton_container[x].hadronicOverEm();              
+	 pho_HoEnew[x]                       = myphoton_container[x].hadTowOverEm();
 	 pho_ecalRecHitSumEtConeDR03[x]      =  myphoton_container[x].ecalRecHitSumEtConeDR03();
 	 pho_hcalTowerSumEtConeDR03[x]       =  myphoton_container[x].hcalTowerSumEtConeDR03();
 	 pho_trkSumPtHollowConeDR03[x]       =  myphoton_container[x].trkSumPtHollowConeDR03();
@@ -2646,6 +2621,7 @@ if(rungenjets_){
 	 ucpho_sc_etaWidth[x_uc]           =  ucphoton_container[x_uc].superCluster()->etaWidth();
 	 ucpho_sc_phiWidth[x_uc]           =  ucphoton_container[x_uc].superCluster()->phiWidth();
 	 ucpho_HoE[x_uc]                   =  ucphoton_container[x_uc].hadronicOverEm();              
+	 ucpho_HoEnew[x_uc]                   =  ucphoton_container[x_uc].hadTowOverEm();
 	 ucpho_ecalRecHitSumEtConeDR03[x_uc]      =  ucphoton_container[x_uc].ecalRecHitSumEtConeDR03();
 	 ucpho_hcalTowerSumEtConeDR03[x_uc]       =  ucphoton_container[x_uc].hcalTowerSumEtConeDR03();
 	 ucpho_trkSumPtHollowConeDR03[x_uc]       =  ucphoton_container[x_uc].trkSumPtHollowConeDR03();
@@ -3607,6 +3583,7 @@ if(runDetailTauInfo_){
     myEvent->Branch("Photon_e2e9",pho_e2e9,"pho_e2e9[Photon_n]/F");
     
     myEvent->Branch("Photon_HoE",pho_HoE,"pho_HoE[Photon_n]/F");
+    myEvent->Branch("Photon_HoEnew",pho_HoEnew,"pho_HoEnew[Photon_n]/F");
     myEvent->Branch("Photon_px",pho_px,"pho_px[Photon_n]/F");
     myEvent->Branch("Photon_py",pho_py,"pho_py[Photon_n]/F");
     myEvent->Branch("Photon_pz",pho_pz,"pho_pz[Photon_n]/F");
@@ -3656,19 +3633,12 @@ if(runDetailTauInfo_){
     //Pfisolation variables
 
     myEvent->Branch("npho_",&npho_,"npho_/I");
+    myEvent->Branch("Photon_Electronveto",phoElectronveto,"phoElectronveto[npho_]/O");
     myEvent->Branch("PFiso_Charged03",PFisocharged03,"PFisocharged03[npho_]/F");
     myEvent->Branch("PFiso_Photon03",PFisophoton03,"PFisophoton03[npho_]/F");
     myEvent->Branch("PFiso_Neutral03",PFisoneutral03,"PFisoneutral03[npho_]/F");
     myEvent->Branch("PFiso_Sum03",PFphotonssum03,"PFphotonssum03[npho_]/F");
 
-    myEvent->Branch("PFiso_Charged04",PFisocharged04,"PFisocharged04[npho_]/F");
-    myEvent->Branch("PFiso_Photon04",PFisophoton04,"PFisophoton04[npho_]/F");
-    myEvent->Branch("PFiso_Neutral04",PFisoneutral04,"PFisoneutral04[npho_]/F");
-    myEvent->Branch("PFiso_Sum04",PFphotonssum04,"PFphotonssum04[npho_]/F");
-    /*
-    myEvent->Branch("PFDB_03",PF_DB03,"PF_DB03[npho_]/F");
-    myEvent->Branch("PFDB_04",PF_DB04,"PF_DB04[npho_]/F");
-    */
 
 
     
@@ -3878,6 +3848,7 @@ if(runDetailTauInfo_){
     myEvent->Branch("ucPhoton_e2e9",ucpho_e2e9,"ucpho_e2e9[ucPhoton_n]/F");
                                                                
     myEvent->Branch("ucPhoton_HoE",ucpho_HoE,"ucpho_HoE[ucPhoton_n]/F");
+    myEvent->Branch("ucPhoton_HoEnew",ucpho_HoEnew,"ucpho_HoEnew[ucPhoton_n]/F");
     myEvent->Branch("ucPhoton_px",ucpho_px,"ucpho_px[ucPhoton_n]/F");  
     myEvent->Branch("ucPhoton_py",ucpho_py,"ucpho_py[ucPhoton_n]/F");  
     myEvent->Branch("ucPhoton_pz",ucpho_pz,"ucpho_pz[ucPhoton_n]/F");  
