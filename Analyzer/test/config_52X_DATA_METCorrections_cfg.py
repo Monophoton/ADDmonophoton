@@ -8,7 +8,7 @@ process.load("Configuration.StandardSequences.FrontierConditions_GlobalTag_cff")
 process.load("FWCore.MessageLogger.MessageLogger_cfi")
 
 ## global tag for data
-process.GlobalTag.globaltag = cms.string('GR_R_52_V7::All')
+process.GlobalTag.globaltag = cms.string('GR_R_52_V9::All')
 
 
 from PhysicsTools.PatAlgos.tools.coreTools import *

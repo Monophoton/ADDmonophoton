@@ -12,7 +12,7 @@
 //
 // Original Author:  Sandhya Jain
 //         Created:  Fri Apr 17 11:00:06 CEST 2009
-// $Id: Analyzer.cc,v 1.67 2012/05/31 23:22:07 schauhan Exp $
+// $Id: Analyzer.cc,v 1.68 2012/06/11 17:46:11 gomber Exp $
 //
 //
 
@@ -1444,14 +1444,8 @@ if(!isAOD_){
          PFisoneutral03[npho_] = ((*(*photonIsoVals)[2])[myPhotonRef]/myPhotonRef->pt());
          PFphotonssum03[npho_] = (charged03+photon03+neutral03)/myPhotonRef->pt();
 
-
-
-	 std::cout<<"Charged isolation for photon["<<npho_<<"]"<<PFisocharged03[npho_]<<std::endl;
-	 std::cout<<"Photon isolation for photon["<<npho_<<"]"<<PFisophoton03[npho_]<<std::endl;
-	 std::cout<<"Neutral isolation for photon["<<npho_<<"]"<<PFisoneutral03[npho_]<<std::endl;
-	 std::cout<<"Electron Veto["<<npho_<<"]"<<phoElectronveto[npho_]<<std::endl;
-
-
+	 
+	 
          npho_++;
        }
 
@@ -2352,6 +2346,7 @@ if(!isAOD_){
          pfjecUnc->setJetEta(pfjet_eta[x]);
          pfjecUnc->setJetPt(pfjet_pt[x]);
          pfjet_jecUncer[x] = pfjecUnc->getUncertainty(true);
+	 //std::cout<<"Jet uncertainity"<<pfjet_jecUncer[0]<<std::endl;
          //get the uncorrected jet and fill them
          pat::Jet uncpfjet = mypfjet_container[x].correctedJet("Uncorrected");
          ucpfjet_pt[x] = uncpfjet.pt();
