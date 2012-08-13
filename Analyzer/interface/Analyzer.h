@@ -52,6 +52,17 @@ class Analyzer : public edm::EDAnalyzer {
   std::vector<int> *triggerprescales;
   std::vector<bool> *ifTriggerpassed;
   int ntriggers;
+  std::vector<std::string>  FilterNames;
+
+  std::vector<int>  FilterStartPosition;
+  std::vector<int>  FilterEndPosition; 
+
+  std::vector<int>  ObjectStartPosition;
+  std::vector<int>  ObjectEndPosition;
+
+  std::vector<float>  ObjectPt;
+  std::vector<float>  ObjectEta;
+  std::vector<float>  ObjectPhi;
 
   // ----------member data ---------------------------
   edm::ESHandle<CaloTopology> theCaloTopo_;
@@ -144,8 +155,8 @@ class Analyzer : public edm::EDAnalyzer {
   edm::InputTag pileupLabel_;
   edm::InputTag rhoLabel_;
   edm::InputTag sigmaLabel_;
-  edm::InputTag rhoLabel44_;
-  edm::InputTag sigmaLabel44_;
+  edm::InputTag rhoLabel25_;
+  edm::InputTag sigmaLabel25_;
 
   std::string outFile_;
   std::string hltlabel_;
@@ -274,6 +285,23 @@ class Analyzer : public edm::EDAnalyzer {
   float  pfjet_TrackCountHiPurBJetTags[200];
   float  pfjet_SimpleSVHiEffBJetTags[200];
   float  pfjet_SimpleSVHiPurBJetTags[200];
+
+   //pu based jet Ids
+   float pujetIdCutBased_mva[200];
+   float pujetIdFull_mva[200];
+   float pujetIdSimple_mva[200];
+                          
+   int pujetIdFull_loose[200];
+   int pujetIdFull_medium[200];
+   int pujetIdFull_tight[200];
+                          
+   int pujetIdCutBased_loose[200];
+   int pujetIdCutBased_medium[200];
+   int pujetIdCutBased_tight[200];
+                          
+   int pujetIdSimple_loose[200];
+   int pujetIdSimple_medium[200];
+   int pujetIdSimple_tight[200];  
 
  
   //some uncorrected jet infor
@@ -1027,8 +1055,8 @@ class Analyzer : public edm::EDAnalyzer {
   float rho;
   float sigma;
 
-  float rho44;
-  float sigma44;
+  float rho25;
+  float sigma25;
 
  
 };

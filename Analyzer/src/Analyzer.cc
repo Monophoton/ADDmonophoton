@@ -12,7 +12,7 @@
 //
 // Original Author:  Sandhya Jain
 //         Created:  Fri Apr 17 11:00:06 CEST 2009
-// $Id: Analyzer.cc,v 1.68 2012/06/11 17:46:11 gomber Exp $
+// $Id: Analyzer.cc,v 1.69 2012/07/01 17:47:43 gomber Exp $
 //
 //
 
@@ -42,7 +42,7 @@
 #include "DataFormats/PatCandidates/interface/MET.h"
 #include "DataFormats/CaloRecHit/interface/CaloCluster.h"
 #include "DataFormats/CaloRecHit/interface/CaloClusterFwd.h"
-
+#include "DataFormats/Common/interface/RefToBase.h"
 
 #include "DataFormats/ParticleFlowReco/interface/PFClusterFwd.h"
 #include "DataFormats/ParticleFlowReco/interface/PFCluster.h"
@@ -120,6 +120,10 @@
 
 #include "RecoEcal/EgammaCoreTools/interface/Mustache.h"
 #include "RecoEgamma/EgammaTools/interface/ConversionTools.h" 
+
+#include "CMGTools/External/interface/PileupJetIdentifier.h"
+#include "CMGTools/External/interface/PileupJetIdAlgo.h"
+
 
 #include "TString.h"
 #include "TH1D.h"
@@ -267,8 +271,8 @@ Analyzer::Analyzer(const edm::ParameterSet& iConfig):
   runPileUp_(iConfig.getUntrackedParameter<bool>("runPileUp")),
   rhoLabel_(iConfig.getUntrackedParameter<edm::InputTag>("rhoLabel")),
   sigmaLabel_(iConfig.getUntrackedParameter<edm::InputTag>("sigmaLabel")),
-  rhoLabel44_(iConfig.getUntrackedParameter<edm::InputTag>("rhoLabel44")),
-  sigmaLabel44_(iConfig.getUntrackedParameter<edm::InputTag>("sigmaLabel44")),
+  rhoLabel25_(iConfig.getUntrackedParameter<edm::InputTag>("rhoLabel25")),
+  sigmaLabel25_(iConfig.getUntrackedParameter<edm::InputTag>("sigmaLabel25")),
   runcaloTower_(iConfig.getUntrackedParameter<bool>("runcaloTower")),
   isAOD_(iConfig.getUntrackedParameter<bool>("isAOD")),
   //added for PFiso
@@ -525,7 +529,8 @@ void Analyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup){
 //-----
 
 
-  if(debug_) cout<<"DEBUG: new event"<<endl;
+  if(debug_)cout<<"DEBUG: new event"<<endl;
+
   using namespace edm;
   using namespace reco;
 	
@@ -919,103 +924,144 @@ if(runHLT_)
       }
       
       if (HLTR.isValid())
-        { 
+        { //std::cout<<"Inside New event-----------------"<<std::endl; 
           all_triggerprescales.clear();
           all_ifTriggerpassed.clear();
+          FilterNames.clear();
+          FilterStartPosition.clear();
+          FilterEndPosition.clear();
+          ObjectStartPosition.clear();
+          ObjectEndPosition.clear();
+          ObjectPt.clear();
+          ObjectEta.clear();
+          ObjectPhi.clear(); 
 
           const edm::TriggerNames &triggerNames_ = iEvent.triggerNames(*HLTR);
           hlNames_=triggerNames_.triggerNames();
           vector<int> idx;
           vector<int> ModuleSize;
-          int indexhltobj;
-          int ikey;
  
-          for(int i = 0; i< ntriggers;i++){
-            for(int iIndex=0; iIndex<100;iIndex++)
-              {
 
-                for(int iKey = 0; iKey<10; iKey++)
-                  {
-                    trobjpt[i][iIndex][iKey] = -999.;
-                    trobjeta[i][iIndex][iKey] = -999.;
-                    trobjphi[i][iIndex][iKey] = -999.;
-                  }
-              }
-          }
+           int trigger_filterposition = -1;
+           int TO_n                   = -1;
+           int NFilterThisTrigger     = 0;
+           int NObjectThisFilter      = 0;
 
 
  
-         for(int i = 0; i< ntriggers;i++){
+         for(int i = 0; i< ntriggers;i++)
+       {
             all_triggerprescales.push_back(0);
             all_ifTriggerpassed.push_back(0);
             idx.push_back(triggerNames_.triggerIndex(all_triggers[i]));
-            if(debug_)cout<<"i = "<<i<<"   Trigger Path Name ="<<all_triggers[i]<<"  Trigger is pass/fail= "<<(HLTR->accept(idx[i]))<<endl;
-            if(debug_)cout<<"index = "<<idx[i]<<endl;
 
-            lastFilterIndex[i] = -99;
-            lastFilterIndexHLT135[i] = -99;
+            //std::cout<<"i = "<<i<<"   Trigger Path Name ="<<all_triggers[i]<<"  Trigger is pass/fail= "<<(HLTR->accept(idx[i]))<<std::endl;
 
-            ModuleSize.push_back(hltConfig_.size(idx[i]));
+            const std::vector<std::string>& saveTaggedModule(hltConfig_.saveTagsModules(idx[i]));
 
-            const std::vector<std::string>& moduleLabels(hltConfig_.moduleLabels(idx[i]));
-            const unsigned int moduleIndex(HLTR->index(idx[i]));
+                     //------just for check--
+                        ModuleSize.push_back(hltConfig_.size(idx[i]));
+                        const std::vector<std::string>& moduleLabels(hltConfig_.moduleLabels(idx[i]));
+                        const unsigned int moduleIndex(HLTR->index(idx[i]));
 
-            for(int ilab = 0; ilab < int(moduleLabels.size()); ilab++)
-                  { 
-                    if(debug_)cout<<"lab is =     "<<moduleLabels[ilab]<<endl;
-                  }
 
-            if(debug_)cout << " Last active module - label/type: "
-                 << moduleLabels[moduleIndex] << "/" << hltConfig_.moduleType(moduleLabels[moduleIndex])
-                 << " [" << moduleIndex << " out of 0-" << (ModuleSize[i]-1) << " on this path]"
-                 << endl;
-            assert (int(moduleIndex)<ModuleSize[i]);
-            indexhltobj=0; 
-            for (unsigned int j=0; j<=moduleIndex && j < 100; ++j)
-              {
-              const string& moduleLabel(moduleLabels[j]);
-              const string  moduleType(hltConfig_.moduleType(moduleLabel));
-              // check whether the module is packed up in TriggerEvent product
-              const unsigned int filterIndex(triggerEventHandle->filterIndex(InputTag(moduleLabel,"",hltlabel_)));
-              if (filterIndex< triggerEventHandle->sizeFilters()) 
-                {
+                                 for(int ilab = 0; ilab < int(moduleLabels.size()); ilab++)
+                                    { 
+                                        if(debug_)cout<<"lab is =     "<<moduleLabels[ilab]<<endl;
+                                      }
+
+                                   if(debug_)cout << " Last active module - label/type: "
+                                                  << moduleLabels[moduleIndex] << "/" << hltConfig_.moduleType(moduleLabels[moduleIndex])
+                                                  << " [" << moduleIndex << " out of 0-" << (ModuleSize[i]-1) << " on this path]"
+                                                  << endl;
+                                             assert (int(moduleIndex)<ModuleSize[i]);
+                     //------------just for check------
+
+
+            NFilterThisTrigger=0;
+      
+             //Loop over trigger events filter to pick the save tagged filters
+           for (unsigned int ifilter=0; ifilter<triggerEventHandle->sizeFilters(); ++ifilter) 
+	      {  
+                std::string label=triggerEventHandle->filterTag(ifilter).label();
+
+	        //Loop for save tagged filters for this trigger
+	         for(unsigned int ismodule = 0 ; ismodule < saveTaggedModule.size(); ismodule++)
+	           { 
+                      NObjectThisFilter=0; 
  
-                  module_type[indexhltobj] = hltConfig_.moduleType(moduleLabel);
-                  const trigger::Keys& KEYS = triggerEventHandle->filterKeys(filterIndex);
-                  const trigger::Vids& VIDS = triggerEventHandle->filterIds(filterIndex);
-                  const trigger::size_type nI= VIDS.size();
-                  const trigger::size_type nK= KEYS.size();
-                  assert(nI==nK);
-                  const trigger::size_type n(max(nI,nK));
-                  const trigger::TriggerObjectCollection& TOC(triggerEventHandle->getObjects());
-                  ikey=0;  //cout<<"Objects = "<<n<<endl;
-                 //store this filter
-                 if(moduleType=="HLTEgammaGenericQuadraticFilter" && (HLTR->accept(idx[i])))lastFilterIndex[i]=indexhltobj;
-                 if(moduleType=="HLTEgammaGenericFilter" && (HLTR->accept(idx[i])))lastFilterIndexHLT135[i]=indexhltobj;
-                  for (trigger::size_type k=0; k!=n && k< MaxN/20; ++k) 
-                      {
-                      const trigger::TriggerObject& TO(TOC[KEYS[k]]);
-                      trobjpt[i][indexhltobj][ikey]= TO.pt();
-                      trobjeta[i][indexhltobj][ikey]= TO.eta();
-                      trobjphi[i][indexhltobj][ikey]= TO.phi();
-             
+                     //check save tags                       
+                  if(label.find(saveTaggedModule[ismodule]) != std::string::npos) 
+		   {
 
-                    if(debug_)cout<<"trobjpt["<<i<<"]["<<ikey<<"]["<<indexhltobj<<"]=  "<<trobjpt[i][indexhltobj][ikey]<<endl;
+                       FilterNames.push_back((std::string)saveTaggedModule[ismodule]); 
+                      // std::cout<<saveTaggedModule[ismodule]<<std::endl;
+                       trigger_filterposition++;    
+                       NFilterThisTrigger++;
+                       NObjectThisFilter=0;  
 
-                      ikey++;
+                       const trigger::Keys& KEYS = triggerEventHandle->filterKeys(ifilter);
+                       const trigger::Vids& VIDS = triggerEventHandle->filterIds(ifilter);
+                       const trigger::size_type nI= VIDS.size();
+                       const trigger::size_type nK= KEYS.size();
+                       assert(nI==nK);
+                       const trigger::size_type n(max(nI,nK));
+                       const trigger::TriggerObjectCollection& TOC(triggerEventHandle->getObjects());
 
+                  for (trigger::size_type k=0; k<n; ++k) 
+                       {
+                          TO_n++;
+                          NObjectThisFilter++;
+                      
+                          const trigger::TriggerObject& TO(TOC[KEYS[k]]);
+                          ObjectPt.push_back( TO.pt());
+                          ObjectEta.push_back(TO.eta());
+                          ObjectPhi.push_back(TO.phi());
+                        }//for (size_type i=0; i!=n; ++i)
 
-                    }//for (size_type i=0; i!=n; ++i)
+		   
+                       //Lets save this object and its index
+		         if(NObjectThisFilter ==0 )          
+                            {  
+           		       //fill -1 if no object in this filter
+		               ObjectStartPosition.push_back(-1); 
+			       ObjectEndPosition.push_back(-1);  
+                              // std::cout<<" Look for Objec posiiton in Object Pt,Eta,Phi array at : -1 to -1 "<<std::endl;
+		            }
+		             else
+		                 {                              
+			          ObjectStartPosition.push_back((TO_n+1)-NObjectThisFilter);
+		                  ObjectEndPosition.push_back(TO_n);
+                                  //std::cout<<" Look for Objec posiiton in Object Pt,Eta,Phi array at :  "<< (TO_n+1)-NObjectThisFilter<<" - "<<TO_n<<std::endl;
+		                }   
+		               NObjectThisFilter=0; 
+
+                   }//check save tags
+                 }//loop over save tag filters
                   
-                indexhltobj++;
-                }//if (filterIndex<triggerEventHandle->sizeFilters())
               }//for (unsigned int j=0; j<=moduleIndex; ++j)
+
+                        if( NFilterThisTrigger ==0 )
+	                   {  
+                	       FilterStartPosition.push_back(-1);  //fill -1 for position if no filter in this trigger
+	                       FilterEndPosition.push_back(-1);
+	                       //std::cout<<" Look for Filter Name in FilterName array at postion at: -1 to -1 "<<std::endl;
+                            }
+                            else{
+	                           FilterStartPosition.push_back((trigger_filterposition+1)-NFilterThisTrigger);
+	                           FilterEndPosition.push_back(trigger_filterposition);
+	                           //std::cout<<" Look for Filter Name in FilterName array at postion at:  "<< (trigger_filterposition+1)-NFilterThisTrigger<<" - "<<trigger_filterposition<<std::endl;
+	                        }
+	
+                         	NFilterThisTrigger=0;
 
 
           }//for(int i = 0; i< ntriggers;i++)
-          
+
+         //-----------          
             Int_t hsize = Int_t(HLTR->size());
             for(int i=0;i<ntriggers;i++){
+
             //what if last trigger is needed//
               if(idx[i] < hsize){
                 all_ifTriggerpassed[i]=HLTR->accept(idx[i]);
@@ -1028,6 +1074,8 @@ if(runHLT_)
                 cout<<"if triggger passed for "<<all_triggers[i]<<" : "<<all_ifTriggerpassed[i]<<endl;
             }//loop over ntriggers
             }//debug
+         //-----------------
+
         }//if HLTR is Valid
     }//runHLT_
 
@@ -1388,6 +1436,7 @@ if(!isAOD_){
      
      edm::Handle<reco::PhotonCollection> photonH;
      bool found = iEvent.getByLabel(inputTagPhotons_,photonH);
+
      if(!found ) {
        std::ostringstream  err;
        err<<" cannot get Photons: "
@@ -1431,6 +1480,7 @@ if(!isAOD_){
 
        for(unsigned ipho=0; ipho<nrecopho;++ipho) {
 	 reco::PhotonRef myPhotonRef(photonH,ipho);
+
          if (myPhotonRef->et() != photon->et()) continue;
 	 
 	 phoElectronveto[npho_] = !ConversionTools::hasMatchedPromptElectron(myPhotonRef->superCluster(), hElectrons, hConversions, beamspot.position());
@@ -1439,10 +1489,10 @@ if(!isAOD_){
          photon03 = (*(*photonIsoVals)[1])[myPhotonRef];
          neutral03 = (*(*photonIsoVals)[2])[myPhotonRef];
 	 
-         PFisocharged03[npho_] =  ((*(*photonIsoVals)[0])[myPhotonRef]/myPhotonRef->pt());
-         PFisophoton03[npho_]  = ((*(*photonIsoVals)[1])[myPhotonRef]/myPhotonRef->pt());
-         PFisoneutral03[npho_] = ((*(*photonIsoVals)[2])[myPhotonRef]/myPhotonRef->pt());
-         PFphotonssum03[npho_] = (charged03+photon03+neutral03)/myPhotonRef->pt();
+         PFisocharged03[npho_] =  ((*(*photonIsoVals)[0])[myPhotonRef]);
+         PFisophoton03[npho_]  = ((*(*photonIsoVals)[1])[myPhotonRef]);
+         PFisoneutral03[npho_] = ((*(*photonIsoVals)[2])[myPhotonRef]);
+         PFphotonssum03[npho_] = (charged03+photon03+neutral03);
 
 	 
 	 
@@ -1452,13 +1502,14 @@ if(!isAOD_){
        //cout<<(photon->triggerObjectMatchesByPath("HLT_Photon90_CaloIdVL_IsoL_v3",true,false))<<endl;
        myphoton_container.push_back(*photon) ;
      }
+
      Photon_n = 0;
+
      if(myphoton_container.size()!=0){
        for(unsigned int x=0; x < min(myphoton_container.size(), MaxN);x++){
+
 	 pho_E[x]                     =  myphoton_container[x].energy();
 	 pho_pt[x]                    =  myphoton_container[x].pt();
-
-	 //	 std::cout<<"charged hardon iso = "<<myphoton_container[x].chargedHadronIso()<<std::endl;
 	 pho_px[x]                    =  myphoton_container[x].px();
 	 pho_py[x]                    =  myphoton_container[x].py();
 	 pho_pz[x]                    =  myphoton_container[x].pz();
@@ -1515,12 +1566,12 @@ if(!isAOD_){
          pho_hasConvTrk[x]                   = myphoton_container[x].hasConversionTracks();
 
         //Add MIP Variable for each photon
-         pho_mipChi2[x]       = myphoton_container[x].mipChi2();
-         pho_mipTotEnergy[x]  = myphoton_container[x].mipTotEnergy();
-         pho_mipSlope[x]      = myphoton_container[x].mipSlope();
-         pho_mipIntercept[x]  = myphoton_container[x].mipIntercept();
-         pho_mipNhitCone[x]   = myphoton_container[x].mipNhitCone();
-         pho_mipIsHalo[x]     = myphoton_container[x].mipIsHalo();
+         pho_mipChi2[x]                      = myphoton_container[x].mipChi2();
+         pho_mipTotEnergy[x]                 = myphoton_container[x].mipTotEnergy();
+         pho_mipSlope[x]                     = myphoton_container[x].mipSlope();
+         pho_mipIntercept[x]                 = myphoton_container[x].mipIntercept();
+         pho_mipNhitCone[x]                  = myphoton_container[x].mipNhitCone();
+         pho_mipIsHalo[x]                    = myphoton_container[x].mipIsHalo();
  
          //cout<<pho_eta[x]<<"   "<<pho_mipChi2[x]<<"  "<<pho_mipTotEnergy[x]<<"  "<<pho_mipSlope[x]<<"  "<<pho_mipNhitCone[x]<<"  "<<pho_mipIsHalo[x]<<endl;	
 
@@ -1634,7 +1685,7 @@ if(!isAOD_){
 		   HERecHit_subset_time[HERecHit_subset_n]   = hh->time();
 		   HERecHit_subset_depth[HERecHit_subset_n]  = id.depth();
 		   HERecHit_subset_phi[HERecHit_subset_n]    = correct_phi(hbhe_position.phi());
-		   HERecHit_subset_eta[HERecHit_subset_n]	  = hbhe_position.eta();
+		   HERecHit_subset_eta[HERecHit_subset_n]    = hbhe_position.eta();
 		   HERecHit_subset_x[HERecHit_subset_n]      = hbhe_position.x();
 		   HERecHit_subset_y[HERecHit_subset_n]      = hbhe_position.y();
 		   HERecHit_subset_z[HERecHit_subset_n]      = hbhe_position.z();
@@ -2283,7 +2334,6 @@ if(!isAOD_){
    }
 
 
-
    if(runpfjets_){
      //for jec uncert
      edm::ESHandle<JetCorrectorParametersCollection> JetCorParColl;
@@ -2291,19 +2341,37 @@ if(!isAOD_){
      JetCorrectorParameters const & JetCorPar = (*JetCorParColl)["Uncertainty"];
      JetCorrectionUncertainty *pfjecUnc = new JetCorrectionUncertainty(JetCorPar);
 
-
      edm::Handle<edm::View<pat::Jet> > pfjetHandle;
      iEvent.getByLabel(pfjetLabel_,pfjetHandle);
      const edm::View<pat::Jet> & pfjets = *pfjetHandle;
-  
+
+     //pileup based jetId:MVA
+     edm::Handle<ValueMap<float> > puJetIdMVAFull;
+     iEvent.getByLabel(edm::InputTag("puJetMva","fullDiscriminant"),puJetIdMVAFull);
+     edm::Handle<ValueMap<float> > puJetIdMVASimple;
+     iEvent.getByLabel(edm::InputTag("puJetMva","simpleDiscriminant"),puJetIdMVASimple);
+     edm::Handle<ValueMap<float> > puJetIdMVACutBased; 
+     iEvent.getByLabel(edm::InputTag("puJetMva","cutbasedDiscriminant"),puJetIdMVACutBased);
+     //ID Flags
+     edm::Handle<ValueMap<int> > puJetIdFlagFull;
+     iEvent.getByLabel(edm::InputTag("puJetMva","fullId"),puJetIdFlagFull);
+     edm::Handle<ValueMap<int> > puJetIdFlagCutBased;
+     iEvent.getByLabel(edm::InputTag("puJetMva","cutbasedId"),puJetIdFlagCutBased);
+     edm::Handle<ValueMap<int> > puJetIdFlagSimple;
+     iEvent.getByLabel(edm::InputTag("puJetMva","simpleId"),puJetIdFlagSimple);
+ 
+
      size_t npfjetscounter=0;
      std::vector<pat::Jet>  mypfjet_container;
      mypfjet_container.clear();
 
-      for(edm::View<pat::Jet>::const_iterator pfjet_iter = pfjets.begin(); pfjet_iter!=pfjets.end(); ++pfjet_iter){
-       if(pfjet_iter->pt()>30)  npfjetscounter++;
-       mypfjet_container.push_back(*pfjet_iter);
-     }
+     for(edm::View<pat::Jet>::const_iterator pfjet_iter = pfjets.begin(); pfjet_iter!=pfjets.end(); ++pfjet_iter)
+     {
+     if( pfjet_iter->pt()>30)npfjetscounter++;
+
+         mypfjet_container.push_back(*pfjet_iter);
+      }
+
 
      pfJet_n = 0;  
      //std::cout<<" PF Jet Container size "<<mypfjet_container.size()<<std::endl;
@@ -2322,8 +2390,8 @@ if(!isAOD_){
          
         if(mypfjet_container[x].jecFactor("Uncorrected")!= 0)
          {pfjet_jecCorr[x]  = (1.0/mypfjet_container[x].jecFactor("Uncorrected")); 
-         }
-         else{pfjet_jecCorr[x] =0.;}
+           }
+            else{pfjet_jecCorr[x] =0.;}
 
        pfjet_CEF[x]    = mypfjet_container[x].chargedEmEnergyFraction();
        pfjet_NEF[x]    = mypfjet_container[x].neutralEmEnergyFraction();
@@ -2333,7 +2401,6 @@ if(!isAOD_){
        pfjet_HFEME[x]  = mypfjet_container[x].HFEMEnergy();
        pfjet_NCH[x]    = mypfjet_container[x].chargedMultiplicity();
        pfjet_NConstituents[x] = mypfjet_container[x].getPFConstituents().size();
-     
  
        // b-tagging
        pfjet_TrackCountHiEffBJetTags[x] = mypfjet_container[x].bDiscriminator("trackCountingHighEffBJetTags");
@@ -2342,11 +2409,51 @@ if(!isAOD_){
        pfjet_SimpleSVHiPurBJetTags[x]   = mypfjet_container[x].bDiscriminator("simpleSecondaryVertexHighPurBJetTags");
 
 
+       //------------------------
+       //Store PU-based jet ID 
+       //------------------------
+       float mva_full     = (*puJetIdMVAFull)[pfjetHandle->refAt(x)];
+       float mva_cutbased = (*puJetIdMVACutBased)[pfjetHandle->refAt(x)];
+       float mva_simple   = (*puJetIdMVASimple)[pfjetHandle->refAt(x)];
+
+       pujetIdCutBased_mva[x] = mva_cutbased;
+       pujetIdFull_mva[x]     = mva_full;
+       pujetIdSimple_mva[x]   = mva_simple;
+
+       int  idflag_full     = (*puJetIdFlagCutBased)[pfjetHandle->refAt(x)];
+       int  idflag_cutbased = (*puJetIdFlagCutBased)[pfjetHandle->refAt(x)];
+       int  idflag_simple   = (*puJetIdFlagCutBased)[pfjetHandle->refAt(x)];
+
+       pujetIdFull_loose[x] =0;
+       pujetIdFull_medium[x]=0;
+       pujetIdFull_tight[x] =0;
+
+       pujetIdCutBased_loose[x] =0;
+       pujetIdCutBased_medium[x]=0;
+       pujetIdCutBased_tight[x] =0;
+
+       pujetIdSimple_loose[x] =0;
+       pujetIdSimple_medium[x]=0;
+       pujetIdSimple_tight[x] =0;  
+
+       if( PileupJetIdentifier::passJetId( idflag_full, PileupJetIdentifier::kLoose ))pujetIdFull_loose[x]  =1; 
+       if( PileupJetIdentifier::passJetId( idflag_full, PileupJetIdentifier::kMedium ))pujetIdFull_medium[x]=1; 
+       if( PileupJetIdentifier::passJetId( idflag_full, PileupJetIdentifier::kTight ))pujetIdFull_tight[x]  =1;
+
+       if( PileupJetIdentifier::passJetId( idflag_cutbased, PileupJetIdentifier::kLoose ))pujetIdCutBased_loose[x]  =1; 
+       if( PileupJetIdentifier::passJetId( idflag_cutbased, PileupJetIdentifier::kMedium ))pujetIdCutBased_medium[x]=1; 
+       if( PileupJetIdentifier::passJetId( idflag_cutbased, PileupJetIdentifier::kTight ))pujetIdCutBased_tight[x]  =1;
+
+       if( PileupJetIdentifier::passJetId( idflag_simple, PileupJetIdentifier::kLoose ))pujetIdSimple_loose[x]  =1; 
+       if( PileupJetIdentifier::passJetId( idflag_simple, PileupJetIdentifier::kMedium ))pujetIdSimple_medium[x]=1; 
+       if( PileupJetIdentifier::passJetId( idflag_simple, PileupJetIdentifier::kTight ))pujetIdSimple_tight[x]  =1;
+
+         //---------------------- 
          //jet energy uncertiany
          pfjecUnc->setJetEta(pfjet_eta[x]);
          pfjecUnc->setJetPt(pfjet_pt[x]);
          pfjet_jecUncer[x] = pfjecUnc->getUncertainty(true);
-	 //std::cout<<"Jet uncertainity"<<pfjet_jecUncer[0]<<std::endl;
+         //std::cout<<"Jet uncertainity"<<pfjet_jecUncer[0]<<std::endl;
          //get the uncorrected jet and fill them
          pat::Jet uncpfjet = mypfjet_container[x].correctedJet("Uncorrected");
          ucpfjet_pt[x] = uncpfjet.pt();
@@ -2356,8 +2463,9 @@ if(!isAOD_){
          ucpfjet_E[x]  = uncpfjet.energy();
          ucpfjet_eta[x]= uncpfjet.eta();
          ucpfjet_phi[x]= uncpfjet.phi();
- 
+       
          pfJet_n++;
+
        }//end of for loop
      }
    }
@@ -2983,7 +3091,7 @@ if(rungenjets_){
 }//if(runcaloTowers){
 
 
-// Rho correction with 2.5
+// Rho correction without eta coverage
   edm::Handle<double> rhoHandle;
   iEvent.getByLabel(rhoLabel_, rhoHandle);
    rho=0.;
@@ -3001,20 +3109,20 @@ if(rungenjets_){
 
 
 
-// Rho correction with max eta 4.4
-  edm::Handle<double> rhoHandle44;
-  iEvent.getByLabel(rhoLabel44_, rhoHandle44);
-   rho44=0.;
-  if(rhoHandle44.isValid()) {
-     rho44= *(rhoHandle44.product());
+// Rho correction with max eta 2.5
+  edm::Handle<double> rhoHandle25;
+  iEvent.getByLabel(rhoLabel25_, rhoHandle25);
+   rho25=0.;
+  if(rhoHandle25.isValid()) {
+     rho25= *(rhoHandle25.product());
   }
 
 
-  edm::Handle<double> sigmaHandle44;
-  iEvent.getByLabel(sigmaLabel44_, sigmaHandle44);
-   sigma44 =0.;
- if(sigmaHandle44.isValid()) {      
-     sigma44 = *(sigmaHandle44.product());
+  edm::Handle<double> sigmaHandle25;
+  iEvent.getByLabel(sigmaLabel25_, sigmaHandle25);
+   sigma25 =0.;
+ if(sigmaHandle25.isValid()) {      
+     sigma25 = *(sigmaHandle25.product());
   }                 
 
 
@@ -3050,12 +3158,17 @@ void Analyzer::beginJob(){
   if(runHLT_){
   myEvent->Branch("triggerprescales","vector<int>",&triggerprescales);
   myEvent->Branch("ifTriggerpassed","vector<bool>",&ifTriggerpassed);
-  myEvent->Branch("trobjpt",trobjpt,"trobjpt[ntriggers][100][10]/F");   
-  myEvent->Branch("trobjeta",trobjeta,"trobjeta[ntriggers][100][10]/F");
-  myEvent->Branch("trobjphi",trobjphi,"trobjphi[ntriggers][100][10]/F");
-  myEvent->Branch("lastFilterIndex",lastFilterIndex,"lastFilterIndex[ntriggers]/I");
-  myEvent->Branch("lastFilterIndexHLT135",lastFilterIndexHLT135,"lastFilterIndexHLT135[ntriggers]/I"); 
-  }
+  myEvent->Branch("ObjectPt","ObjectPt<float>",&ObjectPt);   
+  myEvent->Branch("ObjectEta","ObjectEta<float>",&ObjectEta);
+  myEvent->Branch("ObjectPhi","ObjectPhi<float>",&ObjectPhi);
+  myEvent->Branch("FilterNames","FilterNames<std::string>",&FilterNames);
+  myEvent->Branch("FilterStartPosition","vector<int>",&FilterStartPosition);
+  myEvent->Branch("FilterEndPosition","vector<int>",&FilterEndPosition);
+  myEvent->Branch("ObjectStartPosition","vector<int>",&ObjectStartPosition);
+  myEvent->Branch("ObjectEndPosition","vector<int>",&ObjectEndPosition);
+ 
+
+ }
   
   if(runvertex_){
     myEvent->Branch("Vertex_n",&Vertex_n,"Vertex_n/I");
@@ -3152,15 +3265,31 @@ if(runPileUp_){
     myEvent->Branch("pfjet_HFEME", pfjet_HFEME, "pfjet_HFEME[pfJet_n]/F");
     myEvent->Branch("pfjet_NConstituents", pfjet_NConstituents, "pfjet_NConstituents[pfJet_n]/I");
 
+   //PU based Jet ID
+    myEvent->Branch("pujetIdFull_mva", pujetIdFull_mva,"pujetIdFull_mva[pfJet_n]/F");
+    myEvent->Branch("pujetIdSimple_mva", pujetIdSimple_mva,"pujetIdSimple_mva[pfJet_n]/F");
+    myEvent->Branch("pujetIdCutBased_mva", pujetIdCutBased_mva,"pujetIdCutBased_mva[pfJet_n]/F");
 
+    myEvent->Branch("pujetIdFull_loose",pujetIdFull_loose,"pujetIdFull_loose[pfJet_n]/I");
+    myEvent->Branch("pujetIdFull_medium",pujetIdFull_medium,"pujetIdFull_medium[pfJet_n]/I");
+    myEvent->Branch("pujetIdFull_tight",pujetIdFull_tight,"pujetIdFull_tight[pfJet_n]/I");
+
+    myEvent->Branch("pujetIdSimple_loose",pujetIdSimple_loose,"pujetIdSimple_loose[pfJet_n]/I");
+    myEvent->Branch("pujetIdSimple_medium",pujetIdSimple_medium,"pujetIdSimple_medium[pfJet_n]/I");
+    myEvent->Branch("pujetIdSimple_tight",pujetIdSimple_tight,"pujetIdSimple_tight[pfJet_n]/I");
+
+    myEvent->Branch("pujetIdCutBased_loose",pujetIdCutBased_loose,"pujetIdCutBased_loose[pfJet_n]/I");
+    myEvent->Branch("pujetIdCutBased_medium",pujetIdCutBased_medium,"pujetIdCutBased_medium[pfJet_n]/I");
+    myEvent->Branch("pujetIdCutBased_tight",pujetIdCutBased_tight,"pujetIdCutBased_tight[pfJet_n]/I");
+    //----
     myEvent->Branch("pfjet_TrackCountHiEffBJetTags", pfjet_TrackCountHiEffBJetTags, "pfjet_TrackCountHiEffBJetTags[pfJet_n]/F");
     myEvent->Branch("pfjet_TrackCountHiPurBJetTags", pfjet_TrackCountHiPurBJetTags, "pfjet_TrackCountHiPurBJetTags[pfJet_n]/F");
     myEvent->Branch("pfjet_SimpleSVHiEffBJetTags", pfjet_SimpleSVHiEffBJetTags, "pfjet_SimpleSVHiEffBJetTags[pfJet_n]/F");
     myEvent->Branch("pfjet_SimpleSVHiPurBJetTags", pfjet_SimpleSVHiPurBJetTags, "pfjet_SimpleSVHiPurBJetTags[pfJet_n]/F");
 
-
     myEvent->Branch("pfJet_jecUncer",pfjet_jecUncer,"pfjet_jecUncer[pfJet_n]/F");
     myEvent->Branch("pfJet_jecCorr",pfjet_jecCorr,"pfjet_jecCorr[pfJet_n]/F");
+
     //uncorrected jet info
     myEvent->Branch("ucpfJet_px",ucpfjet_px,"ucpfjet_px[pfJet_n]/F");
     myEvent->Branch("ucpfJet_py",ucpfjet_py,"ucpfjet_py[pfJet_n]/F");
@@ -3170,8 +3299,6 @@ if(runPileUp_){
     myEvent->Branch("ucpfJet_eta",ucpfjet_eta,"ucpfjet_eta[pfJet_n]/F");
     myEvent->Branch("ucpfJet_phi",ucpfjet_phi,"ucpfjet_phi[pfJet_n]/F");
 }
-
-
 
 
   if(rungenjets_){
@@ -3963,8 +4090,8 @@ if(runDetailTauInfo_){
    myEvent->Branch("rho", &rho, "rho/F");
    myEvent->Branch("sigma", &sigma, "sigma/F"); 
 
-   myEvent->Branch("rho44", &rho44, "rho44/F");
-   myEvent->Branch("sigma44", &sigma44, "sigma44/F"); 
+   myEvent->Branch("rho25", &rho25, "rho25/F");
+   myEvent->Branch("sigma25", &sigma25, "sigma25/F"); 
 
 }
 
