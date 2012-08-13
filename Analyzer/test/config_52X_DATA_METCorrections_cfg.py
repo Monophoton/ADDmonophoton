@@ -2,7 +2,7 @@ import FWCore.ParameterSet.Config as cms
 
 process = cms.Process("ADDtuple")
 process.load("PhysicsTools.PatAlgos.patSequences_cff")
-process.load("Configuration.StandardSequences.Geometry_cff")
+process.load("Configuration.Geometry.GeometryIdeal_cff")
 process.load("Configuration.StandardSequences.MagneticField_cff")
 process.load("Configuration.StandardSequences.FrontierConditions_GlobalTag_cff")
 process.load("FWCore.MessageLogger.MessageLogger_cfi")
@@ -10,11 +10,9 @@ process.load("FWCore.MessageLogger.MessageLogger_cfi")
 ## global tag for data
 process.GlobalTag.globaltag = cms.string('GR_R_52_V9::All')
 
-
 from PhysicsTools.PatAlgos.tools.coreTools import *
 removeMCMatching(process, ['All'],
                  outputModules = [])
-
 
 
 # Add MET collection for PAT
@@ -31,6 +29,7 @@ process.patType1CorrectedPFMet.srcType1Corrections = cms.VInputTag(
        cms.InputTag('patPFMETtype0Corr'),
        cms.InputTag('pfMEtSysShiftCorr') 
 )      
+
 #make sure it is 2012 one
 process.pfMEtSysShiftCorr.parameter = process.pfMEtSysShiftCorrParameters_2012runAvsNvtx_data
 #tell which  pf-jet otherwise it will complaint that jet is not tuype of PF!!
@@ -54,12 +53,18 @@ addJetCollection(process,cms.InputTag('ak5PFJets'),
                  doL1Cleaning  = True,
                  doL1Counters  = False,
                  genJetCollection=cms.InputTag("ak5GenJets"),
-                 doJetID       = False,
+                 doJetID       = True,
                  jetIdLabel    = "ak5"
                 )
 
 process.selectedPatJetsAK5PF.cut = cms.string('pt > 10')
 
+# load the PU JetID sequence
+process.load("CMGTools.External.pujetidsequence_cff")
+##Need this for valumap to know which jet 
+process.puJetId.jets=cms.InputTag("selectedPatJetsAK5PF")
+process.puJetMva.jets=cms.InputTag("selectedPatJetsAK5PF")
+process.pileupJetIdProducer.jets=cms.InputTag("selectedPatJetsAK5PF")
 
 #---------Fast Rho calculation-------------------------
 #Rho for eta= 2.5 
@@ -67,13 +72,10 @@ process.load('RecoJets.Configuration.RecoPFJets_cff')
 process.kt6PFJets25 = process.kt4PFJets.clone( rParam = 0.6, doRhoFastjet = True )
 process.kt6PFJets25.Rho_EtaMax = cms.double(2.5)
 process.kt6PFJets25.Ghost_EtaMax = cms.double(2.5)
+process.kt6PFJets25.doAreaFastjet = True 
+process.kt6PFJets25.voronoiRfact = 0.9
 process.fastjetSequence25 = cms.Sequence( process.kt6PFJets25 )
 
-#Rho for eta=4.4                 
-process.kt6PFJets44 = process.kt4PFJets.clone( rParam = 0.6, doRhoFastjet = True )
-process.kt6PFJets44.Rho_EtaMax = cms.double(4.4)
-process.kt6PFJets44.Ghost_EtaMax = cms.double(5.0) 
-process.fastjetSequence44 = cms.Sequence( process.kt6PFJets44 )
 
 #Fast jet correction
 process.load("RecoJets.JetProducers.ak5PFJets_cfi")
@@ -81,7 +83,7 @@ process.ak5PFJets.doAreaFastjet = True
 
 
 process.load('EGamma.EGammaAnalysisTools.photonIsoProducer_cfi')
-process.phoPFIso.verbose = True
+process.phoPFIso.verbose = False
 
 
 
@@ -91,6 +93,8 @@ process.phoPFIso.verbose = True
 process.load('CommonTools/RecoAlgos/HBHENoiseFilter_cfi')
 #hcalLaserFilter
 process.load("RecoMET.METFilters.hcalLaserEventFilter_cfi")
+process.hcalLaserEventFilter.vetoByRunEventNumber=cms.untracked.bool(False)
+process.hcalLaserEventFilter.vetoByHBHEOccupancy=cms.untracked.bool(True)
 #Bad EE SC filter, not needed but goot to have them 
 process.load('RecoMET.METFilters.eeBadScFilter_cfi')
 #Tracking Failure filter
@@ -130,7 +134,6 @@ process.AllMETFilters= cms.Sequence( process.HBHENoiseFilter
 readFiles = cms.untracked.vstring()
 secFiles = cms.untracked.vstring()
 readFiles.extend( [
-    '/store/data/Run2012A/Photon/AOD/PromptReco-v1/000/190/993/1A9C620D-1186-E111-A12A-001D09F2B2CF.root',
     '/store/data/Run2012A/Photon/AOD/PromptReco-v1/000/190/949/2ACEE413-7386-E111-8C27-E0CB4E55367F.root',
     '/store/data/Run2012A/Photon/AOD/PromptReco-v1/000/190/949/C69F8113-7386-E111-BA28-BCAEC518FF62.root'
     
@@ -144,6 +147,7 @@ process.source = cms.Source("PoolSource",
 process.options = cms.untracked.PSet(
 	fileMode = cms.untracked.string('NOMERGE')
 )
+
 
 
 ##---input to analyzer
@@ -174,10 +178,10 @@ process.demo = cms.EDAnalyzer('Analyzer',
                               Vertices         = cms.untracked.InputTag("offlinePrimaryVertices","",""),
                               BeamHaloSummary  = cms.untracked.InputTag("BeamHaloSummary"),
                               pileup           = cms.untracked.InputTag("addPileupInfo"),
-                              rhoLabel         = cms.untracked.InputTag("kt6PFJets25", "rho"),
-                              sigmaLabel       = cms.untracked.InputTag("kt6PFJets25", "sigma"),
-                              rhoLabel44       = cms.untracked.InputTag("kt6PFJets44", "rho"),
-                              sigmaLabel44     = cms.untracked.InputTag("kt6PFJets44", "sigma"),
+                              rhoLabel         = cms.untracked.InputTag("kt6PFJets", "rho"),
+                              sigmaLabel       = cms.untracked.InputTag("kt6PFJets", "sigma"),
+                              rhoLabel25      = cms.untracked.InputTag("kt6PFJets25", "rho"),
+                              sigmaLabel25     = cms.untracked.InputTag("kt6PFJets25", "sigma"),
                               runphotons       = cms.untracked.bool(True),
                               rununcleanphotons= cms.untracked.bool(False),
                               runHErechit      = cms.untracked.bool(True),
@@ -224,23 +228,22 @@ process.demo = cms.EDAnalyzer('Analyzer',
 
 #All paths are here
 process.p = cms.Path(
-    process.AllMETFilters*
-    process.fastjetSequence25*
-    process.fastjetSequence44*
-    process.ak5PFJets*
+    process.AllMETFilters *
+    process.fastjetSequence25 *
+    process.ak5PFJets *
     process.phoPFIso *
-    process.pfMEtSysShiftCorrSequence*
-    process.patDefaultSequence*
-    process.producePatPFMETCorrections*    #Produce MET corrections
+    process.pfMEtSysShiftCorrSequence *
+    process.patDefaultSequence *
+    process.producePatPFMETCorrections *    # Produce MET corrections
+    process.puJetIdSqeuence *               # pileup based jet id
     process.demo
-    )
+  )
 
 
 # reduce verbosity
-process.MessageLogger.cerr.FwkReport.reportEvery = cms.untracked.int32(1000)
+process.MessageLogger.cerr.FwkReport.reportEvery = cms.untracked.int32(1)
 
 # process all the events
-process.maxEvents = cms.untracked.PSet( input = cms.untracked.int32(50) )
+process.maxEvents = cms.untracked.PSet( input = cms.untracked.int32(-1) )
 
-process.schedule=cms.Schedule(process.p)
 
