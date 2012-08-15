@@ -118,14 +118,14 @@ process.EcalDeadCellBoundaryEnergyFilter.enableGap=cms.untracked.bool(False)
 process.EcalDeadCellBoundaryEnergyFilter.limitDeadCellToChannelStatusEB = cms.vint32(12,14)
 process.EcalDeadCellBoundaryEnergyFilter.limitDeadCellToChannelStatusEE = cms.vint32(12,14)
 #CSC Halo Filters
-process.load('RecoMET.METAnalyzers.CSCHaloFilter_cfi')
+#process.load('RecoMET.METAnalyzers.CSCHaloFilter_cfi')
 
 process.AllMETFilters= cms.Sequence( process.HBHENoiseFilter
                                     *process.hcalLaserEventFilter
                                      *process.eeBadScFilter
                                      *(process.goodVertices*process.trackingFailureFilter)
                                      *process.EcalDeadCellTriggerPrimitiveFilter
-                                     *process.CSCTightHaloFilter 
+                                     #*process.CSCTightHaloFilter 
                                      )
 
 process.patPhotons.photonSource = cms.InputTag("photons::RECO")
