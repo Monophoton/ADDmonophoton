@@ -12,7 +12,7 @@
 //
 // Original Author:  Sandhya Jain
 //         Created:  Fri Apr 17 11:00:06 CEST 2009
-// $Id: Analyzer.cc,v 1.69 2012/07/01 17:47:43 gomber Exp $
+// $Id: Analyzer.cc,v 1.70 2012/08/13 23:10:32 schauhan Exp $
 //
 //
 
@@ -4102,6 +4102,33 @@ void Analyzer::endJob() {
 }
 
 double Analyzer::GetE2OverE9( const DetId id, const EcalRecHitCollection & recHits)
+{
+  float e2e9 = 0;
+  if ( id.subdetId() == EcalBarrel ) {
+    EBDetId ebId( id ); 
+    float e1  = recHitE( id, recHits );
+    float e2  = 0;
+    float s9  = 0;
+    
+    for ( int deta = -1; deta <= +1; deta++ ) 
+      {
+	for ( int dphi = -1; dphi <= +1; dphi++ ) 
+	  {
+	    float etmp=recHitE( id, recHits, deta, dphi );
+	    s9 += etmp;
+	    if (etmp > e2 && !(deta==0 && dphi==0)) {
+	      e2=etmp;
+	    }
+	  }
+      }
+    
+    float s2=e1+e2;
+    if (s9!=0) e2e9= s2/s9;
+  }
+  return e2e9;
+}
+/*
+double Analyzer::GetE2OverE9( const DetId id, const EcalRecHitCollection & recHits)
 { ///////////start calculating e2/e9
   ////http://cmslxr.fnal.gov/lxr/source/RecoLocalCalo/EcalRecAlgos/src/EcalSeverityLevelAlgo.cc#240
   // compute e2overe9
@@ -4119,7 +4146,7 @@ double Analyzer::GetE2OverE9( const DetId id, const EcalRecHitCollection & recHi
 
 
 float recHitEtThreshold = 10.0; 
-float recHitEtThreshold2 = 1.0;
+ float recHitEtThreshold2 = 1.0;
 bool avoidIeta85=false;
 bool KillSecondHit=true;
 
@@ -4220,7 +4247,7 @@ if ( id.subdetId() == EcalBarrel ) {
  }
 return 0;
 }
-
+*/
 
 //to remove double spikes: IN RECO double splikes are if e6e2< 0.04
 double Analyzer::Gete6e2(const DetId& id, 
@@ -4267,7 +4294,7 @@ double Analyzer::e4e1(const DetId& id,
    const std::vector<DetId>& neighs =  neighbours(id);
    for (size_t i=0; i<neighs.size(); ++i)
      // avoid hits out of time when making s4
-     s4+=recHitE(neighs[i],rhs, true);
+     s4+=recHitE(neighs[i],rhs, false);
   
    return s4 / e1;
    

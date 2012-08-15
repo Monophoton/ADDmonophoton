@@ -2,16 +2,17 @@ import FWCore.ParameterSet.Config as cms
 
 process = cms.Process("ADDtuple")
 process.load("PhysicsTools.PatAlgos.patSequences_cff")
-process.load("Configuration.StandardSequences.Geometry_cff")
+process.load("Configuration.Geometry.GeometryIdeal_cff")
 process.load("Configuration.StandardSequences.MagneticField_cff")
 process.load("Configuration.StandardSequences.FrontierConditions_GlobalTag_cff")
 process.load("FWCore.MessageLogger.MessageLogger_cfi")
 
-## global tag for MC
-process.GlobalTag.globaltag = cms.string('MC_52_V11::All')
-
+## global tag for data
+process.GlobalTag.globaltag = cms.string('GR_P_V40_AN1::All')
 
 from PhysicsTools.PatAlgos.tools.coreTools import *
+removeMCMatching(process, ['All'],
+                 outputModules = [])
 
 
 # Add MET collection for PAT
@@ -28,15 +29,16 @@ process.patType1CorrectedPFMet.srcType1Corrections = cms.VInputTag(
        cms.InputTag('patPFMETtype0Corr'),
        cms.InputTag('pfMEtSysShiftCorr') 
 )      
+
 #make sure it is 2012 one
 process.pfMEtSysShiftCorr.parameter = process.pfMEtSysShiftCorrParameters_2012runAvsNvtx_data
 #tell which  pf-jet otherwise it will complaint that jet is not tuype of PF!!
 process.selectedPatJetsForMETtype1p2Corr.src = cms.InputTag('patJetsAK5PF')
-process.patPFJetMETtype1p2Corr.jetCorrLabel = cms.string("L3Absolute") # NOTE: use "L3Absolute" for MC 
+process.patPFJetMETtype1p2Corr.jetCorrLabel = cms.string("L2L3Residual") # NOTE: use "L3Absolute" for MC 
 
 
 # Select calo jets
-process.patJetCorrFactors.levels = cms.vstring(['L1Offset','L2Relative','L3Absolute'])
+process.patJetCorrFactors.levels = cms.vstring(['L1Offset','L2Relative','L3Absolute','L2L3Residual'])
 process.selectedPatJets.cut = cms.string('pt > 10 & abs(eta) < 3.0')
 
 # Add PF jets this also apply MET-1 corrections
@@ -46,25 +48,31 @@ addJetCollection(process,cms.InputTag('ak5PFJets'),
                  'AK5', 'PF',
                  doJTA        = True,
                  doBTagging   = True,
-                 jetCorrLabel = ('AK5PF', cms.vstring(['L1FastJet','L2Relative', 'L3Absolute'])),
+                 jetCorrLabel = ('AK5PF', cms.vstring(['L1FastJet','L2Relative', 'L3Absolute','L2L3Residual'])),
                  doType1MET    = True,
                  doL1Cleaning  = True,
                  doL1Counters  = False,
                  genJetCollection=cms.InputTag("ak5GenJets"),
-                 doJetID       = False,
+                 doJetID       = True,
                  jetIdLabel    = "ak5"
                 )
 
 process.selectedPatJetsAK5PF.cut = cms.string('pt > 10')
 
+# load the PU JetID sequence
+process.load("CMGTools.External.pujetidsequence_cff")
+##Need this for valumap to know which jet 
+process.puJetId.jets=cms.InputTag("selectedPatJetsAK5PF")
+process.puJetMva.jets=cms.InputTag("selectedPatJetsAK5PF")
+process.pileupJetIdProducer.jets=cms.InputTag("selectedPatJetsAK5PF")
 
 #---------Fast Rho calculation-------------------------
-#Rho for eta= 2.5
+#Rho for eta= 2.5 
 process.load('RecoJets.Configuration.RecoPFJets_cff')
 process.kt6PFJets25 = process.kt4PFJets.clone( rParam = 0.6, doRhoFastjet = True )
 process.kt6PFJets25.Rho_EtaMax = cms.double(2.5)
 process.kt6PFJets25.Ghost_EtaMax = cms.double(2.5)
-process.kt6PFJets25.doAreaFastjet = True
+process.kt6PFJets25.doAreaFastjet = True 
 process.kt6PFJets25.voronoiRfact = 0.9
 process.fastjetSequence25 = cms.Sequence( process.kt6PFJets25 )
 
@@ -75,7 +83,7 @@ process.ak5PFJets.doAreaFastjet = True
 
 
 process.load('EGamma.EGammaAnalysisTools.photonIsoProducer_cfi')
-process.phoPFIso.verbose = True
+process.phoPFIso.verbose = False
 
 
 
@@ -87,7 +95,6 @@ process.load('CommonTools/RecoAlgos/HBHENoiseFilter_cfi')
 process.load("RecoMET.METFilters.hcalLaserEventFilter_cfi")
 process.hcalLaserEventFilter.vetoByRunEventNumber=cms.untracked.bool(False)
 process.hcalLaserEventFilter.vetoByHBHEOccupancy=cms.untracked.bool(True)
-
 #Bad EE SC filter, not needed but goot to have them 
 process.load('RecoMET.METFilters.eeBadScFilter_cfi')
 #Tracking Failure filter
@@ -115,21 +122,30 @@ process.load('RecoMET.METAnalyzers.CSCHaloFilter_cfi')
 
 process.AllMETFilters= cms.Sequence( process.HBHENoiseFilter
                                     *process.hcalLaserEventFilter
-                                    *process.eeBadScFilter
-                                    *(process.goodVertices*process.trackingFailureFilter)
+                                     *process.eeBadScFilter
+                                     *(process.goodVertices*process.trackingFailureFilter)
                                      *process.EcalDeadCellTriggerPrimitiveFilter
-                                    *process.CSCTightHaloFilter 
-                                  )
+                                     *process.CSCTightHaloFilter 
+                                     )
 
+process.patPhotons.photonSource = cms.InputTag("photons::RECO")
+process.patPhotons.photonIDSources = cms.PSet(
+    PhotonCutBasedIDTight =
+    cms.InputTag("PhotonIDProd","PhotonCutBasedIDTight","RECO"),
+    PhotonCutBasedIDLoose =
+    cms.InputTag("PhotonIDProd","PhotonCutBasedIDLoose","RECO")
+    )
 
 
 # Add the files 
 readFiles = cms.untracked.vstring()
 secFiles = cms.untracked.vstring()
 readFiles.extend( [
-       '/store/mc/Summer12/QCD_Pt_80_170_EMEnriched_TuneZ2star_8TeV_pythia6/AODSIM/PU_S7_START52_V9-v1/0003/B435A840-5D97-E111-B0E9-003048678FFE.root',
-       '/store/mc/Summer12/QCD_Pt_80_170_EMEnriched_TuneZ2star_8TeV_pythia6/AODSIM/PU_S7_START52_V9-v1/0003/B2567DDC-4097-E111-AC4B-001A92811728.root'    
-] );
+    'dcap://cmsgridftp.fnal.gov:24125/pnfs/fnal.gov/usr/cms/WAX/11/store/user/weinberg/monoPhoton/skims/singlePhoton_run2012C_promptReco_v1/monoPhotonSkim_10_2_fmK.root'
+
+
+    
+    ] );
 
 process.source = cms.Source("PoolSource",
     fileNames = readFiles
@@ -139,6 +155,7 @@ process.source = cms.Source("PoolSource",
 process.options = cms.untracked.PSet(
 	fileMode = cms.untracked.string('NOMERGE')
 )
+
 
 
 ##---input to analyzer
@@ -178,18 +195,18 @@ process.demo = cms.EDAnalyzer('Analyzer',
                               runHErechit      = cms.untracked.bool(True),
                               runrechit        = cms.untracked.bool(True),
                               runmet           = cms.untracked.bool(True),
-                              rungenmet        = cms.untracked.bool(True),
+                              rungenmet        = cms.untracked.bool(False),
                               runPFmet         = cms.untracked.bool(True),
                               runTCmet         = cms.untracked.bool(True),
                               runjets          = cms.untracked.bool(True),
                               runpfjets        = cms.untracked.bool(True),
-                              rungenjets        = cms.untracked.bool(True),
+                              rungenjets        = cms.untracked.bool(False),
                               runelectrons     = cms.untracked.bool(True),
                               runtaus          = cms.untracked.bool(True),
                               runDetailTauInfo = cms.untracked.bool(True),
                               runmuons         = cms.untracked.bool(True),
                               runcosmicmuons   = cms.untracked.bool(True),
-                              rungenParticleCandidates = cms.untracked.bool(True),
+                              rungenParticleCandidates = cms.untracked.bool(False),
                               runHLT           = cms.untracked.bool(True),
                               runL1            = cms.untracked.bool(True),
                               runscraping      = cms.untracked.bool(True),
@@ -201,7 +218,7 @@ process.demo = cms.EDAnalyzer('Analyzer',
                               #---------------
                               runcaloTower     = cms.untracked.bool(True),
                               runBeamHaloSummary= cms.untracked.bool(True),
-                              runPileUp         = cms.untracked.bool(True),
+                              runPileUp         = cms.untracked.bool(False),
                               isAOD             = cms.untracked.bool(True),
                               debug            = cms.untracked.bool(False),
                               outFile          = cms.untracked.string('Histo_AOD.root'),
@@ -219,15 +236,16 @@ process.demo = cms.EDAnalyzer('Analyzer',
 
 #All paths are here
 process.p = cms.Path(
-    process.AllMETFilters*
-    process.fastjetSequence25*
-    process.ak5PFJets*
+    process.AllMETFilters *
+    process.fastjetSequence25 *
+    process.ak5PFJets *
     process.phoPFIso *
-    process.pfMEtSysShiftCorrSequence*
-    process.patDefaultSequence*
-    process.producePatPFMETCorrections*    #Produce MET corrections
+    process.pfMEtSysShiftCorrSequence *
+    process.patDefaultSequence *
+    process.producePatPFMETCorrections *    # Produce MET corrections
+    process.puJetIdSqeuence *               # pileup based jet id
     process.demo
-    )
+  )
 
 
 # reduce verbosity
@@ -236,5 +254,4 @@ process.MessageLogger.cerr.FwkReport.reportEvery = cms.untracked.int32(1)
 # process all the events
 process.maxEvents = cms.untracked.PSet( input = cms.untracked.int32(50) )
 
-process.schedule=cms.Schedule(process.p)
 

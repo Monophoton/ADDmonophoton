@@ -76,7 +76,7 @@ float recHitE( const DetId id, const EcalRecHitCollection &recHits, bool useTimi
  //These values are taken from:RecoLocalCalo/EcalRecAlgos/python/ecalCleaningAlgo.py
  double e4e1Threshold_barrel_  = 0.080;
  double e4e1Threshold_endcap_  = 0.300;
- double ignoreOutOfTimeThresh_ = 2.0;
+ double ignoreOutOfTimeThresh_ = 1e9;
  
  
    float threshold = e4e1Threshold_barrel_;
