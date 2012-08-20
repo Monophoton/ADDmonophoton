@@ -84,6 +84,8 @@ process.ak5PFJets.doAreaFastjet = True
 
 process.load('EGamma.EGammaAnalysisTools.photonIsoProducer_cfi')
 process.phoPFIso.verbose = False
+process.phoPFIso.photonTag= 'photons::RECO'
+
 
 
 
@@ -222,7 +224,7 @@ process.demo = cms.EDAnalyzer('Analyzer',
                               isAOD             = cms.untracked.bool(True),
                               debug            = cms.untracked.bool(False),
                               outFile          = cms.untracked.string('Histo_AOD.root'),
-                              Photons = cms.InputTag('photons'),
+                              Photons = cms.InputTag('photons::RECO'),
                               IsoValPhoton = cms.VInputTag(cms.InputTag('phoPFIso:chIsoForGsfEle'),
                                                            cms.InputTag('phoPFIso:phIsoForGsfEle'),
                                                            cms.InputTag('phoPFIso:nhIsoForGsfEle'),

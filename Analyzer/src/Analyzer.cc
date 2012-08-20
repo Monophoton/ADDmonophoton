@@ -12,7 +12,7 @@
 //
 // Original Author:  Sandhya Jain
 //         Created:  Fri Apr 17 11:00:06 CEST 2009
-// $Id: Analyzer.cc,v 1.70 2012/08/13 23:10:32 schauhan Exp $
+// $Id: Analyzer.cc,v 1.71 2012/08/15 10:49:41 gomber Exp $
 //
 //
 
@@ -1479,9 +1479,15 @@ if(!isAOD_){
      for(photon = phoHandle->begin();photon!=phoHandle->end();++photon){
 
        for(unsigned ipho=0; ipho<nrecopho;++ipho) {
+	 
 	 reco::PhotonRef myPhotonRef(photonH,ipho);
+	 std::cout<<"Reco photon pt: "<<myPhotonRef->pt()<<" and pat photon et:"<<photon->pt()<<std::endl;
+	 std::cout<<"Reco photon eta: "<<myPhotonRef->eta()<<" and pat photon eta:"<<photon->eta()<<std::endl;
+	 std::cout<<"Reco photon phi: "<<myPhotonRef->phi()<<" and pat photon phi:"<<photon->phi()<<std::endl;
+	 
 
          if (myPhotonRef->et() != photon->et()) continue;
+
 	 
 	 phoElectronveto[npho_] = !ConversionTools::hasMatchedPromptElectron(myPhotonRef->superCluster(), hElectrons, hConversions, beamspot.position());
 	 
@@ -2344,7 +2350,7 @@ if(!isAOD_){
      edm::Handle<edm::View<pat::Jet> > pfjetHandle;
      iEvent.getByLabel(pfjetLabel_,pfjetHandle);
      const edm::View<pat::Jet> & pfjets = *pfjetHandle;
-
+     
      //pileup based jetId:MVA
      edm::Handle<ValueMap<float> > puJetIdMVAFull;
      iEvent.getByLabel(edm::InputTag("puJetMva","fullDiscriminant"),puJetIdMVAFull);
