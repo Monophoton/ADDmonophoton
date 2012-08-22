@@ -7,9 +7,8 @@ process.load("Configuration.StandardSequences.MagneticField_cff")
 process.load("Configuration.StandardSequences.FrontierConditions_GlobalTag_cff")
 process.load("FWCore.MessageLogger.MessageLogger_cfi")
 
-## global tag for MC
+## global tag for 52XMC
 process.GlobalTag.globaltag = cms.string('MC_52_V11::All')
-
 
 from PhysicsTools.PatAlgos.tools.coreTools import *
 
@@ -56,7 +55,12 @@ addJetCollection(process,cms.InputTag('ak5PFJets'),
                 )
 
 process.selectedPatJetsAK5PF.cut = cms.string('pt > 10')
-
+# load the PU JetID sequence
+process.load("CMGTools.External.pujetidsequence_cff")
+##Need this for valumap to know which jet 
+process.puJetId.jets=cms.InputTag("selectedPatJetsAK5PF")
+process.puJetMva.jets=cms.InputTag("selectedPatJetsAK5PF")
+process.pileupJetIdProducer.jets=cms.InputTag("selectedPatJetsAK5PF")
 
 #---------Fast Rho calculation-------------------------
 #Rho for eta= 2.5
@@ -78,15 +82,15 @@ process.load('EGamma.EGammaAnalysisTools.photonIsoProducer_cfi')
 process.phoPFIso.verbose = True
 
 
-
+process.load('EGamma.EGammaAnalysisTools.photonIsoProducer_cfi')
+process.phoPFIso.verbose = False
+process.phoPFIso.photonTag= 'photons'
 
 #-------------ALL MET and other Cleaning Filters are here------------
 # HB + HE noise filtering 
 process.load('CommonTools/RecoAlgos/HBHENoiseFilter_cfi')
 #hcalLaserFilter
 process.load("RecoMET.METFilters.hcalLaserEventFilter_cfi")
-process.hcalLaserEventFilter.vetoByRunEventNumber=cms.untracked.bool(False)
-process.hcalLaserEventFilter.vetoByHBHEOccupancy=cms.untracked.bool(True)
 
 #Bad EE SC filter, not needed but goot to have them 
 process.load('RecoMET.METFilters.eeBadScFilter_cfi')
@@ -118,7 +122,7 @@ process.AllMETFilters= cms.Sequence( process.HBHENoiseFilter
                                     *process.eeBadScFilter
                                     *(process.goodVertices*process.trackingFailureFilter)
                                      *process.EcalDeadCellTriggerPrimitiveFilter
-                                    *process.CSCTightHaloFilter 
+                                    #*process.CSCTightHaloFilter 
                                   )
 
 
@@ -127,8 +131,8 @@ process.AllMETFilters= cms.Sequence( process.HBHENoiseFilter
 readFiles = cms.untracked.vstring()
 secFiles = cms.untracked.vstring()
 readFiles.extend( [
-       '/store/mc/Summer12/QCD_Pt_80_170_EMEnriched_TuneZ2star_8TeV_pythia6/AODSIM/PU_S7_START52_V9-v1/0003/B435A840-5D97-E111-B0E9-003048678FFE.root',
-       '/store/mc/Summer12/QCD_Pt_80_170_EMEnriched_TuneZ2star_8TeV_pythia6/AODSIM/PU_S7_START52_V9-v1/0003/B2567DDC-4097-E111-AC4B-001A92811728.root'    
+      # '/store/mc/Summer12/QCD_Pt_80_170_EMEnriched_TuneZ2star_8TeV_pythia6/AODSIM/PU_S7_START52_V9-v1/0003/B2567DDC-4097-E111-AC4B-001A92811728.root',
+       '/store/mc/Summer12_DR53X/QCD_Pt_20_30_BCtoE_TuneZ2star_8TeV_pythia6/AODSIM/PU_S10_START53_V7A-v1/0000/A0B93F57-A3DD-E111-9E86-003048D3C010.root'
 ] );
 
 process.source = cms.Source("PoolSource",
@@ -226,6 +230,7 @@ process.p = cms.Path(
     process.pfMEtSysShiftCorrSequence*
     process.patDefaultSequence*
     process.producePatPFMETCorrections*    #Produce MET corrections
+    process.puJetIdSqeuence *               # pileup based jet id
     process.demo
     )
 
@@ -234,7 +239,7 @@ process.p = cms.Path(
 process.MessageLogger.cerr.FwkReport.reportEvery = cms.untracked.int32(1)
 
 # process all the events
-process.maxEvents = cms.untracked.PSet( input = cms.untracked.int32(50) )
+process.maxEvents = cms.untracked.PSet( input = cms.untracked.int32(5) )
 
 process.schedule=cms.Schedule(process.p)
 
