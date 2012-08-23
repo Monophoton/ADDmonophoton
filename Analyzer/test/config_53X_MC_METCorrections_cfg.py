@@ -8,7 +8,9 @@ process.load("Configuration.StandardSequences.FrontierConditions_GlobalTag_cff")
 process.load("FWCore.MessageLogger.MessageLogger_cfi")
 
 ## global tag for 53XMC
-process.GlobalTag.globaltag = cms.string('MC_53_V9::All')
+process.GlobalTag.globaltag = cms.string('START53_V7E::All')
+## global tag for 53XMC
+#process.GlobalTag.globaltag = cms.string('START53_V10::All')
 
 from PhysicsTools.PatAlgos.tools.coreTools import *
 
@@ -79,10 +81,6 @@ process.ak5PFJets.doAreaFastjet = True
 
 
 process.load('EGamma.EGammaAnalysisTools.photonIsoProducer_cfi')
-process.phoPFIso.verbose = True
-
-
-process.load('EGamma.EGammaAnalysisTools.photonIsoProducer_cfi')
 process.phoPFIso.verbose = False
 process.phoPFIso.photonTag= 'photons'
 
@@ -131,8 +129,8 @@ process.AllMETFilters= cms.Sequence( process.HBHENoiseFilter
 readFiles = cms.untracked.vstring()
 secFiles = cms.untracked.vstring()
 readFiles.extend( [
-      # '/store/mc/Summer12/QCD_Pt_80_170_EMEnriched_TuneZ2star_8TeV_pythia6/AODSIM/PU_S7_START52_V9-v1/0003/B2567DDC-4097-E111-AC4B-001A92811728.root',
-       '/store/mc/Summer12_DR53X/QCD_Pt_20_30_BCtoE_TuneZ2star_8TeV_pythia6/AODSIM/PU_S10_START53_V7A-v1/0000/A0B93F57-A3DD-E111-9E86-003048D3C010.root'
+        '/store/mc/Summer12/G_Pt-80to120_TuneZ2star_8TeV_pythia6/AODSIM/PU_S7_START52_V9-v1/0000/DEB06525-349C-E111-8123-0030487F1BD5.root' 
+       #'/store/mc/Summer12_DR53X/QCD_Pt_20_30_BCtoE_TuneZ2star_8TeV_pythia6/AODSIM/PU_S10_START53_V7A-v1/0000/A0B93F57-A3DD-E111-9E86-003048D3C010.root'
 ] );
 
 process.source = cms.Source("PoolSource",
@@ -223,7 +221,7 @@ process.demo = cms.EDAnalyzer('Analyzer',
 
 #All paths are here
 process.p = cms.Path(
-    process.AllMETFilters*
+    #process.AllMETFilters*
     process.fastjetSequence25*
     process.ak5PFJets*
     process.phoPFIso *
