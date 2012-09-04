@@ -30,7 +30,7 @@ process.patType1CorrectedPFMet.srcType1Corrections = cms.VInputTag(
        cms.InputTag('pfMEtSysShiftCorr') 
 )      
 #make sure it is 2012 one
-process.pfMEtSysShiftCorr.parameter = process.pfMEtSysShiftCorrParameters_2012runAvsNvtx_data
+process.pfMEtSysShiftCorr.parameter = process.pfMEtSysShiftCorrParameters_2012runAvsNvtx_mc
 #tell which  pf-jet otherwise it will complaint that jet is not tuype of PF!!
 process.selectedPatJetsForMETtype1p2Corr.src = cms.InputTag('patJetsAK5PF')
 process.patPFJetMETtype1p2Corr.jetCorrLabel = cms.string("L3Absolute") # NOTE: use "L3Absolute" for MC 
@@ -221,7 +221,7 @@ process.demo = cms.EDAnalyzer('Analyzer',
 
 #All paths are here
 process.p = cms.Path(
-    #process.AllMETFilters*
+    process.AllMETFilters*
     process.fastjetSequence25*
     process.ak5PFJets*
     process.phoPFIso *
