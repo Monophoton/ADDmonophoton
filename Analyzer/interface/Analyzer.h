@@ -85,7 +85,7 @@ class Analyzer : public edm::EDAnalyzer {
   float avgInsDelLumi, avgInsDelLumiErr, avgInsRecLumi, avgInsRecLumiErr;
   int ngenphotons;
   int nhardphotons;
-  int Photon_n,npho_;
+  int Photon_n,npho, ucnpho;
   int ucPhoton_n;
   int CaloTower_n;
   int Vertex_n;
@@ -125,8 +125,8 @@ class Analyzer : public edm::EDAnalyzer {
   std::vector<std::string> JET_CORR;
 
   //pfiso
-  edm::InputTag inputTagPhotons_;
-  std::vector<edm::InputTag> inputTagIsoValPhotonsPFId_;
+  edm::InputTag inputTagPhotons_, inputTagUCPhotons_;
+  std::vector<edm::InputTag> inputTagIsoValPhotonsPFId_, inputTagIsoValUCPhotonsPFId_;
 
 
   edm::InputTag eleLabel_;
@@ -679,6 +679,8 @@ class Analyzer : public edm::EDAnalyzer {
 
 
 
+
+
   //MIP Variables
   float pho_mipChi2[200];
   float pho_mipTotEnergy[200];
@@ -934,7 +936,19 @@ class Analyzer : public edm::EDAnalyzer {
   float ucpho_e4e1[200];
   bool  ucpho_isConverted[200];
   bool  ucpho_hasConvTrk[200]; 
-             
+  bool  ucphoElectronveto[200];
+
+
+  //Pfiso variables
+  float  uccharged03;
+  float ucphoton03;
+  float ucneutral03;
+  //unsigned nrecopho;
+  float ucpho_PFisocharged03[200];
+  float ucpho_PFisophoton03[200];
+  float ucpho_PFisoneutral03[200];
+  float ucpho_PFphotonssum03[200];
+  
   //isolation variables
   float ucpho_ecalRecHitSumEtConeDR03[200];
   float ucpho_hcalTowerSumEtConeDR03[200];
