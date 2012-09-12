@@ -12,7 +12,7 @@
 //
 // Original Author:  Sandhya Jain
 //         Created:  Fri Apr 17 11:00:06 CEST 2009
-// $Id: Analyzer.cc,v 1.71 2012/08/15 10:49:41 gomber Exp $
+// $Id: Analyzer.cc,v 1.73 2012/09/12 17:18:12 sandhya Exp $
 //
 //
 
@@ -1497,8 +1497,8 @@ if(!isAOD_){
          PFisoneutral03[npho] = ((*(*photonIsoVals)[2])[myPhotonRef]);
          PFphotonssum03[npho] = (charged03+photon03+neutral03);
 	 npho++;
-	 std::cout<<"inside npho loop" << std::endl;
-	 std::cout<<"Photon pt/eta/phi:" << photon->et()<<"\t"<<photon->eta() <<"\t"<< photon->phi()<<  std::endl;
+	 //std::cout<<"inside npho loop" << std::endl;
+	 //std::cout<<"Photon pt/eta/phi:" << photon->et()<<"\t"<<photon->eta() <<"\t"<< photon->phi()<<  std::endl;
        }
        myphoton_container.push_back(*photon) ;
      }
@@ -1506,7 +1506,7 @@ if(!isAOD_){
      Photon_n = 0;
 
      if(myphoton_container.size()!=0){
-       std::cout<<"inside x loop" << std::endl;
+       //std::cout<<"inside x loop" << std::endl;
        for(unsigned int x=0; x < min(myphoton_container.size(), MaxN);x++){
 	 std::cout<<"Photon pt/eta/phi:" << myphoton_container[x].et()<<"\t"<<myphoton_container[x].eta() << "\t"<<myphoton_container[x].phi()<<  std::endl;
 	 pho_E[x]                     =  myphoton_container[x].energy();
@@ -2718,14 +2718,14 @@ if(rungenjets_){
          ucpho_PFisoneutral03[ucnpho] = ((*(*photonIsoVals)[2])[myPhotonRef]);
          ucpho_PFphotonssum03[ucnpho] = (uccharged03+ucphoton03+ucneutral03);
 	 ucnpho++;
-	 std::cout<<"inside npho loop" << std::endl;
-	 std::cout<<"UC Photon pt/eta/phi:" << ucphoton->et()<<"\t"<< ucphoton->eta() << "\t"<< ucphoton->phi()<<  std::endl;
+	 //std::cout<<"inside npho loop" << std::endl;
+	 //std::cout<<"UC Photon pt/eta/phi:" << ucphoton->et()<<"\t"<< ucphoton->eta() << "\t"<< ucphoton->phi()<<  std::endl;
        }
        ucphoton_container.push_back(*ucphoton) ;
      }
      ucPhoton_n = 0;
      if(ucphoton_container.size()!=0){
-       std::cout<<"inside x loop" << std::endl;
+       //std::cout<<"inside x loop" << std::endl;
        for(unsigned int x_uc=0; x_uc < min(ucphoton_container.size(), MaxN);x_uc++){
 	 std::cout<<"UCPhoton pt/eta/phi:" << ucphoton_container[x_uc].et()<<"\t"<<ucphoton_container[x_uc].eta() << "\t"<< ucphoton_container[x_uc].phi()<<  std::endl;
 	 ucpho_E[x_uc]                     =  ucphoton_container[x_uc].energy();
