@@ -12,7 +12,7 @@
 //
 // Original Author:  Sandhya Jain
 //         Created:  Fri Apr 17 11:00:06 CEST 2009
-// $Id: Analyzer.cc,v 1.73 2012/09/12 17:18:12 sandhya Exp $
+// $Id: Analyzer.cc,v 1.74 2012/09/12 17:24:45 sandhya Exp $
 //
 //
 
@@ -1145,7 +1145,7 @@ if(runHLT_)
      myTrack_container.clear();
      for(reco::TrackCollection::const_iterator Track_iter = tracks->begin();
 	 Track_iter != tracks->end(); ++Track_iter) {
-       if(Track_iter->pt()>1.){
+       if(Track_iter->pt()>0.5){
 	 myTrack_container.push_back(*Track_iter);
        }
      }
@@ -1154,7 +1154,7 @@ if(runHLT_)
      if(myTrack_container.size()>1)
        std::sort(myTrack_container.begin(),myTrack_container.end(),PtSortCriterium3());
      Track_n = 0;
-     for(unsigned int x=0;x < min(myTrack_container.size(),(2*MaxN)); x++){
+     for(unsigned int x=0;x < min(myTrack_container.size(),(5*MaxN)); x++){
        trk_pt[x]  = myTrack_container[x].pt();
        trk_px[x]  = myTrack_container[x].px();
        trk_py[x]  = myTrack_container[x].py();
@@ -1508,7 +1508,7 @@ if(!isAOD_){
      if(myphoton_container.size()!=0){
        //std::cout<<"inside x loop" << std::endl;
        for(unsigned int x=0; x < min(myphoton_container.size(), MaxN);x++){
-	 std::cout<<"Photon pt/eta/phi:" << myphoton_container[x].et()<<"\t"<<myphoton_container[x].eta() << "\t"<<myphoton_container[x].phi()<<  std::endl;
+	 //std::cout<<"Photon pt/eta/phi:" << myphoton_container[x].et()<<"\t"<<myphoton_container[x].eta() << "\t"<<myphoton_container[x].phi()<<  std::endl;
 	 pho_E[x]                     =  myphoton_container[x].energy();
 	 pho_pt[x]                    =  myphoton_container[x].pt();
 	 pho_px[x]                    =  myphoton_container[x].px();
