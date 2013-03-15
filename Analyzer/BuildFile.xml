@@ -30,8 +30,9 @@
 <use   name="RecoLocalCalo/EcalRecAlgos"/>
 <use   name="PhysicsTools/JetMCUtils"/>
 <use   name="DataFormats/CaloTowers"/>
-<use   name ="DataFormats/ParticleFlowCandidate">
-<use   name ="DataFormats/ParticleFlowReco">
+<use   name="DataFormats/ParticleFlowCandidate"/>
+<use   name="DataFormats/ParticleFlowReco"/>
+<use   name="EGamma/EGammaAnalysisTools"/>
 <flags   EDM_PLUGIN="1"/>
 <export>
 </export>
