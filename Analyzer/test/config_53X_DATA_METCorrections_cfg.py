@@ -1,4 +1,7 @@
 import FWCore.ParameterSet.Config as cms
+import string
+import os
+import gzip
 
 process = cms.Process("ADDtuple")
 process.load("PhysicsTools.PatAlgos.patSequences_cff")
@@ -7,8 +10,40 @@ process.load("Configuration.StandardSequences.MagneticField_cff")
 process.load("Configuration.StandardSequences.FrontierConditions_GlobalTag_cff")
 process.load("FWCore.MessageLogger.MessageLogger_cfi")
 
-## global tag for data
-process.GlobalTag.globaltag = cms.string('GR_P_V40_AN1::All')
+##--hcal laser filter
+process.load("EventFilter.HcalRawToDigi.hcallasereventfilter2012_cfi")
+#--- taking events list from the release area
+file = gzip.GzipFile(os.getenv('CMSSW_RELEASE_BASE')+"/src/EventFilter/HcalRawToDigi/data/AllBadHCALLaser.txt.gz")
+#--- alternatively - taking events list from local area
+#file = gzip.GzipFile(os.getenv('CMSSW_BASE')+"/src/EventFilter/HcalRawToDigi/data/AllBadHCALLaser.txt.gz")
+ 
+mylist=file.readlines()  # read all lines in the inputfile
+for j in mylist:
+        process.hcallasereventfilter2012.EventList.append(string.strip(j))
+ 
+#----------------------------------------------------
+## USE only one depending on different run periods
+#----------------------------------------------------
+#--2012A+B (Jul13 rereco, 53X)
+#process.GlobalTag.globaltag = cms.string('FT_53_V6C_AN4::All')                                                                                                                     
+#process.load('RecoMET.METFilters.ecalLaserCorrFilter_cfi')
+#if not this dataset then REMOVE this from path =>process.ecalLaserCorrFilter
+ 
+#--2012A (5 runs with special ECAL reco, Aug06 rereco, 53X)
+#process.GlobalTag.globaltag = cms.string('FT_53_V6C_AN4::All')
+ 
+#--2012Cv1 (Aug24 rereco, 53X) 
+#process.GlobalTag.globaltag = cms.string('FT_53_V10A_AN4::All')
+ 
+#--2012Cv2 (prompt reco, 53X) 
+#process.GlobalTag.globaltag = cms.string('GR_P_V42_AN4::All')
+ 
+#--2012C (Only Run 201191) Ecal Recovery
+#process.GlobalTag.globaltag = cms.string('FT_P_V42C_AN4::All')
+ 
+#--2012D (prompt reco, 53X) 
+process.GlobalTag.globaltag = cms.string('GR_P_V42_AN4::All')
+
 
 from PhysicsTools.PatAlgos.tools.coreTools import *
 removeMCMatching(process, ['All'],
@@ -93,12 +128,13 @@ process.phoPFIso.photonTag= 'photons::RECO'
 #-------------ALL MET and other Cleaning Filters are here------------
 # HB + HE noise filtering 
 process.load('CommonTools/RecoAlgos/HBHENoiseFilter_cfi')
+
 #hcalLaserFilter
 process.load("RecoMET.METFilters.hcalLaserEventFilter_cfi")
-process.hcalLaserEventFilter.vetoByRunEventNumber=cms.untracked.bool(False)
-process.hcalLaserEventFilter.vetoByHBHEOccupancy=cms.untracked.bool(True)
+
 #Bad EE SC filter, not needed but goot to have them 
 process.load('RecoMET.METFilters.eeBadScFilter_cfi')
+
 #Tracking Failure filter
 process.load('RecoMET.METFilters.trackingFailureFilter_cfi')
 process.goodVertices = cms.EDFilter("VertexSelector",
@@ -106,29 +142,24 @@ process.goodVertices = cms.EDFilter("VertexSelector",
   src = cms.InputTag("offlinePrimaryVertices"),
   cut = cms.string("!isFake && ndof > 4 && abs(z) <= 24 && position.rho < 2")
  )
+
 ##ECAL dead cell filter 
 process.load('RecoMET.METFilters.EcalDeadCellTriggerPrimitiveFilter_cfi')
-## For AOD and RECO recommendation to use recovered rechits
-process.EcalDeadCellTriggerPrimitiveFilter.tpDigiCollection = cms.InputTag("ecalTPSkimNA")
-process.load('RecoMET.METFilters.EcalDeadCellBoundaryEnergyFilter_cfi')
-process.EcalDeadCellBoundaryEnergyFilter.taggingMode = cms.bool(False)
-process.EcalDeadCellBoundaryEnergyFilter.cutBoundEnergyDeadCellsEB=cms.untracked.double(10)
-process.EcalDeadCellBoundaryEnergyFilter.cutBoundEnergyDeadCellsEE=cms.untracked.double(10)
-process.EcalDeadCellBoundaryEnergyFilter.cutBoundEnergyGapEB=cms.untracked.double(100)
-process.EcalDeadCellBoundaryEnergyFilter.cutBoundEnergyGapEE=cms.untracked.double(100)
-process.EcalDeadCellBoundaryEnergyFilter.enableGap=cms.untracked.bool(False)
-process.EcalDeadCellBoundaryEnergyFilter.limitDeadCellToChannelStatusEB = cms.vint32(12,14)
-process.EcalDeadCellBoundaryEnergyFilter.limitDeadCellToChannelStatusEE = cms.vint32(12,14)
-#CSC Halo Filters
-#process.load('RecoMET.METAnalyzers.CSCHaloFilter_cfi')
 
-process.AllMETFilters= cms.Sequence( process.HBHENoiseFilter
-                                    *process.hcalLaserEventFilter
+
+## The tracking POG filters 
+process.load('RecoMET.METFilters.trackingPOGFilters_cff')
+
+process.AllMETFilters= cms.Sequence(  process.HBHENoiseFilter
+                                     *process.hcalLaserEventFilter
                                      *process.eeBadScFilter
-                                     *(process.goodVertices*process.trackingFailureFilter)
+                                     *process.goodVertices*process.trackingFailureFilter
                                      *process.EcalDeadCellTriggerPrimitiveFilter
-                                     #*process.CSCTightHaloFilter 
+                                     *process.trkPOGFilters 
                                      )
+
+
+
 
 process.patPhotons.photonSource = cms.InputTag("photons::RECO")
 process.patPhotons.photonIDSources = cms.PSet(
@@ -143,9 +174,8 @@ process.patPhotons.photonIDSources = cms.PSet(
 readFiles = cms.untracked.vstring()
 secFiles = cms.untracked.vstring()
 readFiles.extend( [
-    'dcap://cmsgridftp.fnal.gov:24125/pnfs/fnal.gov/usr/cms/WAX/11/store/user/weinberg/monoPhoton/skims/singlePhoton_run2012C_promptReco_v1/monoPhotonSkim_10_2_fmK.root'
-
-
+    'dcap://cmsgridftp.fnal.gov:24125/pnfs/fnal.gov/usr/cms/WAX/11/store/data/Run2012D/SinglePhoton/AOD/PromptReco-v1/000/204/576/22056EAE-9812-E211-918F-003048D2C0F4.root'       
+     #'dcap://cmsgridftp.fnal.gov:24125/pnfs/fnal.gov/usr/cms/WAX/11/store/data/Run2012D/PhotonHad/AOD/PromptReco-v1/000/204/576/EAD999B9-3213-E211-B07D-001D09F242EF.root'
     
     ] );
 
@@ -194,18 +224,18 @@ process.demo = cms.EDAnalyzer('Analyzer',
                               sigmaLabel25     = cms.untracked.InputTag("kt6PFJets25", "sigma"),
                               runphotons       = cms.untracked.bool(True),
                               rununcleanphotons= cms.untracked.bool(False),
-                              runHErechit      = cms.untracked.bool(True),
+                              runHErechit      = cms.untracked.bool(False),
                               runrechit        = cms.untracked.bool(True),
-                              runmet           = cms.untracked.bool(True),
+                              runmet           = cms.untracked.bool(False),
                               rungenmet        = cms.untracked.bool(False),
                               runPFmet         = cms.untracked.bool(True),
-                              runTCmet         = cms.untracked.bool(True),
-                              runjets          = cms.untracked.bool(True),
+                              runTCmet         = cms.untracked.bool(False),
+                              runjets          = cms.untracked.bool(False),
                               runpfjets        = cms.untracked.bool(True),
                               rungenjets        = cms.untracked.bool(False),
                               runelectrons     = cms.untracked.bool(True),
                               runtaus          = cms.untracked.bool(True),
-                              runDetailTauInfo = cms.untracked.bool(True),
+                              runDetailTauInfo = cms.untracked.bool(False),
                               runmuons         = cms.untracked.bool(True),
                               runcosmicmuons   = cms.untracked.bool(True),
                               rungenParticleCandidates = cms.untracked.bool(False),
@@ -219,7 +249,7 @@ process.demo = cms.EDAnalyzer('Analyzer',
                               runRPChit        = cms.untracked.bool(False),
                               #---------------
                               runcaloTower     = cms.untracked.bool(True),
-                              runBeamHaloSummary= cms.untracked.bool(True),
+                              runBeamHaloSummary= cms.untracked.bool(False),
                               runPileUp         = cms.untracked.bool(False),
                               isAOD             = cms.untracked.bool(True),
                               debug            = cms.untracked.bool(False),
@@ -229,8 +259,14 @@ process.demo = cms.EDAnalyzer('Analyzer',
                                                            cms.InputTag('phoPFIso:phIsoForGsfEle'),
                                                            cms.InputTag('phoPFIso:nhIsoForGsfEle'),
                                                            ),
-                              
-                              
+                              UCPhotons = cms.InputTag('photons::MonoHiSkim'),
+                              IsoValUCPhoton = cms.VInputTag(cms.InputTag('UCphoPFIso:chIsoForGsfEleUC'),
+                                                           cms.InputTag('UCphoPFIso:phIsoForGsfEleUC'),
+                                                           cms.InputTag('UCphoPFIso:nhIsoForGsfEleUC'),
+                                                           ),
+                              #----goes to uncleaned collection
+                              flagExcluded      = cms.untracked.vint32(),
+                              severitieExcluded = cms.untracked.vint32()                              
                               )
 
 
@@ -239,6 +275,7 @@ process.demo = cms.EDAnalyzer('Analyzer',
 #All paths are here
 process.p = cms.Path(
     process.AllMETFilters *
+   # process.ecalLaserCorrFilter*
     process.fastjetSequence25 *
     process.ak5PFJets *
     process.phoPFIso *
