@@ -127,7 +127,8 @@ class Analyzer : public edm::EDAnalyzer {
   //pfiso
   edm::InputTag inputTagPhotons_, inputTagUCPhotons_;
   std::vector<edm::InputTag> inputTagIsoValPhotonsPFId_, inputTagIsoValUCPhotonsPFId_;
-
+  std::vector<int> severitieExcluded_;
+  std::vector<int> flagExcluded_;
 
   edm::InputTag eleLabel_;
   edm::InputTag muoLabel_;
@@ -160,6 +161,7 @@ class Analyzer : public edm::EDAnalyzer {
 
   std::string outFile_;
   std::string hltlabel_;
+
 
   bool rungenParticleCandidates_;
   bool runphotons_;
@@ -270,6 +272,10 @@ class Analyzer : public edm::EDAnalyzer {
   float pfjet_phi[200];
   float pfjet_jecUncer[200];
   float pfjet_jecCorr[200];
+
+  //genRef ids      
+  int  pfjet_partonFlavor[200];                                                                                                                       
+  int  pfjet_partonStatus[200];
 
   float  pfjet_Charge[200];
   float  pfjet_CHF[200];
@@ -676,7 +682,7 @@ class Analyzer : public edm::EDAnalyzer {
   float PFisophoton03[200];
   float PFisoneutral03[200];
   float PFphotonssum03[200];
-
+  float PFphotonWorstChargedHadronIso[200];
 
 
 

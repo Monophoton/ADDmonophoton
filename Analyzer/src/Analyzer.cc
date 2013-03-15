@@ -12,7 +12,7 @@
 //
 // Original Author:  Sandhya Jain
 //         Created:  Fri Apr 17 11:00:06 CEST 2009
-// $Id: Analyzer.cc,v 1.74 2012/09/12 17:24:45 sandhya Exp $
+// $Id: Analyzer.cc,v 1.75 2012/11/09 23:30:34 schauhan Exp $
 //
 //
 
@@ -120,6 +120,7 @@
 
 #include "RecoEcal/EgammaCoreTools/interface/Mustache.h"
 #include "RecoEgamma/EgammaTools/interface/ConversionTools.h" 
+#include "EGamma/EGammaAnalysisTools/interface/PFIsolationEstimator.h"
 
 #include "CMGTools/External/interface/PileupJetIdentifier.h"
 #include "CMGTools/External/interface/PileupJetIdAlgo.h"
@@ -274,12 +275,17 @@ Analyzer::Analyzer(const edm::ParameterSet& iConfig):
   rhoLabel25_(iConfig.getUntrackedParameter<edm::InputTag>("rhoLabel25")),
   sigmaLabel25_(iConfig.getUntrackedParameter<edm::InputTag>("sigmaLabel25")),
   runcaloTower_(iConfig.getUntrackedParameter<bool>("runcaloTower")),
+  //severity flag for shower shape
+  flagExcluded_(iConfig.getUntrackedParameter<std::vector<int> >("flagExcluded")),
+  severitieExcluded_(iConfig.getUntrackedParameter<std::vector<int> >("severitieExcluded")),
   isAOD_(iConfig.getUntrackedParameter<bool>("isAOD")),
   //added for PFiso
   inputTagPhotons_(iConfig.getParameter<edm::InputTag>("Photons")),
   inputTagIsoValPhotonsPFId_(iConfig.getParameter< std::vector<edm::InputTag> >("IsoValPhoton")),
   inputTagUCPhotons_(iConfig.getParameter<edm::InputTag>("UCPhotons")),
   inputTagIsoValUCPhotonsPFId_(iConfig.getParameter< std::vector<edm::InputTag> >("IsoValUCPhoton")),
+
+  
 
   debug_(iConfig.getUntrackedParameter<bool>("debug")),
   
@@ -1450,6 +1456,8 @@ if(!isAOD_){
      
      edm::Handle<reco::PhotonCollection> photonH;
      bool found = iEvent.getByLabel(inputTagPhotons_,photonH);
+     reco::PhotonCollection::const_iterator recpho;
+
 
      if(!found ) {
        std::ostringstream  err;
@@ -1474,14 +1482,26 @@ if(!isAOD_){
      edm::View<pat::Photon>::const_iterator photon;
 
 
-
+     //----Set the cone for isolation using Estimator
+     PFIsolationEstimator isolator03_;
+     isolator03_.initializePhotonIsolation(kTRUE);
+     isolator03_.setConeSize(0.3);   
+     //get PF candiates
+     edm::Handle<reco::PFCandidateCollection> pfH;
+     iEvent.getByLabel(edm::InputTag("particleFlow"),pfH);
+     //vtx
+     Handle<reco::VertexCollection> VtxsH;                            
+     iEvent.getByLabel(Vertices_, VtxsH); 
 
      set<DetId> HERecHitSet;
      HERecHit_subset_n = 0;
      npho=0;
-     for(photon = phoHandle->begin();photon!=phoHandle->end();++photon){
 
-       for(unsigned ipho=0; ipho<nrecopho;++ipho) {
+     for(photon = phoHandle->begin();photon!=phoHandle->end();++photon){//pat photons
+
+       //recpho=photonH->begin();
+       for(unsigned ipho=0; ipho<nrecopho; ++ipho){ //reco photon
+
 	 reco::PhotonRef myPhotonRef(photonH,ipho);
 
          if (myPhotonRef->et() != photon->et()) continue;
@@ -1496,14 +1516,45 @@ if(!isAOD_){
          PFisophoton03[npho]  = ((*(*photonIsoVals)[1])[myPhotonRef]);
          PFisoneutral03[npho] = ((*(*photonIsoVals)[2])[myPhotonRef]);
          PFphotonssum03[npho] = (charged03+photon03+neutral03);
+
+
+           //-------------------------------------------------------
+           //Get VtxIso for the worst sum of charged hadron isolation
+           //-------------------------------------------------------
+
+          reco::VertexRef primVtxRef(VtxsH, 0);//primary vertex isolation
+          isolator03_.fGetIsolation( &*myPhotonRef,pfH.product(),primVtxRef,VtxsH);
+          //cout<<"Andrew = "<<(isolator03_.getIsolationCharged())<<"    Bhawna = "<<PFisocharged03[npho]<<endl;
+       
+          //loops over all vertices, takes maximum
+          PFphotonWorstChargedHadronIso[npho]=0;
+
+          for(int iv=0;iv<int(VtxsH->size());++iv)
+               {
+                  reco::VertexRef thisVtxRef(VtxsH, iv);
+                  isolator03_.fGetIsolation( &*myPhotonRef , pfH.product(),thisVtxRef, VtxsH);
+                  Float_t thisChargedHadronIso = isolator03_.getIsolationCharged();
+
+                  if(thisChargedHadronIso > PFphotonWorstChargedHadronIso[npho])PFphotonWorstChargedHadronIso[npho] = thisChargedHadronIso;
+                }//loop over vtx 
+
+               //cout<<PFphotonWorstChargedHadronIso[npho]<<endl;
+
 	 npho++;
 	 //std::cout<<"inside npho loop" << std::endl;
 	 //std::cout<<"Photon pt/eta/phi:" << photon->et()<<"\t"<<photon->eta() <<"\t"<< photon->phi()<<  std::endl;
-       }
+
+       } //loop over reco photon
+
        myphoton_container.push_back(*photon) ;
+
      }
 
+
+
      Photon_n = 0;
+
+
 
      if(myphoton_container.size()!=0){
        //std::cout<<"inside x loop" << std::endl;
@@ -1696,6 +1747,13 @@ if(!isAOD_){
 	     }
 	   }
 	 }// runHErechit_ && pho_isEB
+
+
+
+        //  phoChargedHadronIso[x] = isolator03_.getIsolationCharged();
+        //  phoNeutralHadronIso[x] = isolator03_.getIsolationNeutral();
+        //  phoPhotonIso[x]        = isolator03_.getIsolationPhoton();
+
          
 	 Photon_n++;
        }//end of for loop over x
@@ -1708,6 +1766,18 @@ if(!isAOD_){
        Handle<EcalRecHitCollection> Erechit;//endcap
        iEvent.getByLabel(rechitBLabel_,Brechit);
        iEvent.getByLabel(rechitELabel_,Erechit);
+
+      /*
+       edm::ESHandle<EcalSeverityLevelAlgo> sevlv;                                                                                                                                 
+       const EcalSeverityLevelAlgo* sevLevel = 0;
+                      
+       try {   iSetup.get<EcalSeverityLevelAlgoRcd>().get(sevlv);
+               sevLevel = sevlv.product();
+              }       
+            catch(cms::Exception& e){
+              edm::LogError("Analyzer") << "EcalSeverityLevelAlgoRcd is not available!!! " << e.what();
+             }        
+      */
 
        //this will be needed later for swiss corss
        EcalClusterLazyTools lazyTool(iEvent, iSetup,rechitBLabel_, rechitELabel_ );
@@ -1834,6 +1904,7 @@ if(!isAOD_){
 
             vector<float> stdCov = EcalClusterTools::covariances(seedClus,&(*barrelRecHits),&(*topology),&(*caloGeom));
             vector<float> crysCov = EcalClusterTools::localCovariances(seedClus,&(*barrelRecHits),&(*topology));
+                                                                      // flagExcluded_,severitieExcluded_, sevLevel, 4.7);
             pho_SigmaEtaPhi[x]   = sqrt(stdCov[1]);
             pho_SigmaIetaIphi[x] = sqrt(crysCov[1]);    
             pho_SigmaPhiPhi[x]   = sqrt(stdCov[2]);
@@ -2402,6 +2473,13 @@ if(!isAOD_){
        pfjet_HFEME[x]  = mypfjet_container[x].HFEMEnergy();
        pfjet_NCH[x]    = mypfjet_container[x].chargedMultiplicity();
        pfjet_NConstituents[x] = mypfjet_container[x].getPFConstituents().size();
+
+       //store gen jet refrence and ids
+        if( mypfjet_container[x].genParticleRef().isNonnull()){
+               pfjet_partonFlavor[x]  = mypfjet_container[x].genParticleRef()->pdgId();
+               pfjet_partonStatus[x]  = mypfjet_container[x].genParticleRef()->status();
+            }
+
  
        // b-tagging
        pfjet_TrackCountHiEffBJetTags[x] = mypfjet_container[x].bDiscriminator("trackCountingHighEffBJetTags");
@@ -2907,9 +2985,18 @@ if(rungenjets_){
        iEvent.getByLabel(rechitBLabel_,Brechit);
        iEvent.getByLabel(rechitELabel_,Erechit);
 
+       edm::ESHandle<EcalSeverityLevelAlgo> sevlv_uc;
+       const EcalSeverityLevelAlgo* sevLevel_uc = 0;
+
+       try {   iSetup.get<EcalSeverityLevelAlgoRcd>().get(sevlv_uc);
+               sevLevel_uc = sevlv_uc.product();
+              }            
+            catch(cms::Exception& e){
+              edm::LogError("Analyzer") << "EcalSeverityLevelAlgoRcd is not available!!! " << e.what();
+             }      
+
        //this will be needed later for swiss corss
        EcalClusterLazyTools lazyTool(iEvent, iSetup,rechitBLabel_, rechitELabel_ );
-
 
        const EcalRecHitCollection* barrelRecHits_uc= Brechit.product();
        const EcalRecHitCollection* endcapRecHits_uc= Erechit.product();
@@ -3030,7 +3117,10 @@ if(rungenjets_){
 	       cout<<"This photon candidate is an ECAL spike identified by Swiss Cross algorithm."<<endl;
 
             vector<float> stdCov_uc = EcalClusterTools::covariances(seedClus,&(*barrelRecHits_uc),&(*topology),&(*caloGeom));
-            vector<float> crysCov_uc = EcalClusterTools::localCovariances(seedClus,&(*barrelRecHits_uc),&(*topology));
+            vector<float> crysCov_uc = EcalClusterTools::localCovariances(seedClus,&(*barrelRecHits_uc),&(*topology),
+                                                                          flagExcluded_,severitieExcluded_,
+                                                                           sevLevel_uc, 4.7);
+                                                                          
             ucpho_SigmaEtaPhi[x_uc]   = sqrt(stdCov_uc[1]);
             ucpho_SigmaIetaIphi[x_uc] = sqrt(crysCov_uc[1]);    
             ucpho_SigmaPhiPhi[x_uc]   = sqrt(stdCov_uc[2]);
@@ -3301,6 +3391,9 @@ if(runPileUp_){
     myEvent->Branch("pfjet_HFHAE", pfjet_HFHAE, "pfjet_HFHAE[pfJet_n]/F");
     myEvent->Branch("pfjet_HFEME", pfjet_HFEME, "pfjet_HFEME[pfJet_n]/F");
     myEvent->Branch("pfjet_NConstituents", pfjet_NConstituents, "pfjet_NConstituents[pfJet_n]/I");
+
+    myEvent->Branch("pfJet_partonFlavor",pfjet_partonFlavor,"pfjet_partonFlavor[pfJet_n]/I");                                                         
+    myEvent->Branch("pfJet_partonStatus",pfjet_partonStatus,"pfjet_partonStatus[pfJet_n]/I");
 
    //PU based Jet ID
     myEvent->Branch("pujetIdFull_mva", pujetIdFull_mva,"pujetIdFull_mva[pfJet_n]/F");
@@ -3790,14 +3883,14 @@ if(runDetailTauInfo_){
     myEvent->Branch("Photon_dEtaTracksAtEcal",pho_dEtaTracksAtEcal,"pho_dEtaTracksAtEcal[Photon_n]/F");
 
     //Pfisolation variables
-
     myEvent->Branch("npho",&npho,"npho/I");
     myEvent->Branch("Photon_Electronveto",phoElectronveto,"phoElectronveto[npho]/O");
     myEvent->Branch("PFiso_Charged03",PFisocharged03,"PFisocharged03[npho]/F");
     myEvent->Branch("PFiso_Photon03",PFisophoton03,"PFisophoton03[npho]/F");
     myEvent->Branch("PFiso_Neutral03",PFisoneutral03,"PFisoneutral03[npho]/F");
     myEvent->Branch("PFiso_Sum03",PFphotonssum03,"PFphotonssum03[npho]/F");
-
+    ///vtxIso
+    myEvent->Branch("PFWorstiso_Charged03",PFphotonWorstChargedHadronIso,"PFphotonWorstChargedHadronIso[npho]/F");
 
 
     
