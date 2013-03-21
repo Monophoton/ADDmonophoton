@@ -12,7 +12,7 @@
 //
 // Original Author:  Sandhya Jain
 //         Created:  Fri Apr 17 11:00:06 CEST 2009
-// $Id: Analyzer.cc,v 1.75 2012/11/09 23:30:34 schauhan Exp $
+// $Id: Analyzer.cc,v 1.76 2013/03/15 17:09:06 schauhan Exp $
 //
 //
 
@@ -43,7 +43,7 @@
 #include "DataFormats/CaloRecHit/interface/CaloCluster.h"
 #include "DataFormats/CaloRecHit/interface/CaloClusterFwd.h"
 #include "DataFormats/Common/interface/RefToBase.h"
-
+#include "CommonTools/Utils/interface/StringToEnumValue.h"
 #include "DataFormats/ParticleFlowReco/interface/PFClusterFwd.h"
 #include "DataFormats/ParticleFlowReco/interface/PFCluster.h"
 #include "DataFormats/ParticleFlowCandidate/interface/PFCandidate.h"
@@ -82,6 +82,7 @@
 #include "Geometry/CaloTopology/interface/EcalEndcapTopology.h"
 #include "DataFormats/EcalRecHit/interface/EcalRecHitCollections.h"
 #include "RecoLocalCalo/EcalRecAlgos/interface/EcalSeverityLevelAlgo.h"
+#include "RecoLocalCalo/EcalRecAlgos/interface/EcalSeverityLevelAlgoRcd.h"
 #include "RecoEcal/EgammaCoreTools/interface/EcalClusterLazyTools.h"
 #include "RecoEcal/EgammaCoreTools/interface/EcalTools.h"
 //#include "RecoLocalCalo/EcalRecAlgos/interface/EcalCleaningAlgo.h"
@@ -117,7 +118,7 @@
 #include "JetMETCorrections/Objects/interface/JetCorrectionsRecord.h"
 #include "CondFormats/JetMETObjects/interface/JetCorrectorParameters.h"
 
-
+#include "RecoEgamma/EgammaPhotonProducers/interface/PhotonProducer.h"
 #include "RecoEcal/EgammaCoreTools/interface/Mustache.h"
 #include "RecoEgamma/EgammaTools/interface/ConversionTools.h" 
 #include "EGamma/EGammaAnalysisTools/interface/PFIsolationEstimator.h"
@@ -275,9 +276,16 @@ Analyzer::Analyzer(const edm::ParameterSet& iConfig):
   rhoLabel25_(iConfig.getUntrackedParameter<edm::InputTag>("rhoLabel25")),
   sigmaLabel25_(iConfig.getUntrackedParameter<edm::InputTag>("sigmaLabel25")),
   runcaloTower_(iConfig.getUntrackedParameter<bool>("runcaloTower")),
-  //severity flag for shower shape
+
+  //severity flag for shower shape cleaned
+  flagnamesEB(iConfig.getParameter<std::vector<std::string> >("RecHitFlagToBeExcludedEB")),
+  flagnamesEE(iConfig.getParameter<std::vector<std::string> >("RecHitFlagToBeExcludedEE")),
+  severitynamesEB(iConfig.getParameter<std::vector<std::string> >("RecHitSeverityToBeExcludedEB")),
+  severitynamesEE(iConfig.getParameter<std::vector<std::string> >("RecHitSeverityToBeExcludedEE")),
+  //severity flag for shower shape ** FOR UNCLEANED **
   flagExcluded_(iConfig.getUntrackedParameter<std::vector<int> >("flagExcluded")),
   severitieExcluded_(iConfig.getUntrackedParameter<std::vector<int> >("severitieExcluded")),
+
   isAOD_(iConfig.getUntrackedParameter<bool>("isAOD")),
   //added for PFiso
   inputTagPhotons_(iConfig.getParameter<edm::InputTag>("Photons")),
@@ -292,6 +300,11 @@ Analyzer::Analyzer(const edm::ParameterSet& iConfig):
   init_(false)
 {
   
+  //PAss them to localCovariance function for iphiphi estiamtesion
+  flagsexclEB_= StringToEnumValue<EcalRecHit::Flags>(flagnamesEB);
+  flagsexclEE_= StringToEnumValue<EcalRecHit::Flags>(flagnamesEE);
+  severitiesexclEB_= StringToEnumValue<EcalSeverityLevel::SeverityLevel>(severitynamesEB);
+  severitiesexclEE_= StringToEnumValue<EcalSeverityLevel::SeverityLevel>(severitynamesEE);
 
 
   all_triggers.clear();
@@ -1767,18 +1780,10 @@ if(!isAOD_){
        iEvent.getByLabel(rechitBLabel_,Brechit);
        iEvent.getByLabel(rechitELabel_,Erechit);
 
-      /*
-       edm::ESHandle<EcalSeverityLevelAlgo> sevlv;                                                                                                                                 
-       const EcalSeverityLevelAlgo* sevLevel = 0;
-                      
-       try {   iSetup.get<EcalSeverityLevelAlgoRcd>().get(sevlv);
-               sevLevel = sevlv.product();
-              }       
-            catch(cms::Exception& e){
-              edm::LogError("Analyzer") << "EcalSeverityLevelAlgoRcd is not available!!! " << e.what();
-             }        
-      */
-
+      
+       edm::ESHandle<EcalSeverityLevelAlgo> sevlv;                                                                                                           iSetup.get<EcalSeverityLevelAlgoRcd>().get(sevlv);
+       const EcalSeverityLevelAlgo* sevLevel = sevlv.product();
+                     
        //this will be needed later for swiss corss
        EcalClusterLazyTools lazyTool(iEvent, iSetup,rechitBLabel_, rechitELabel_ );
 
@@ -1903,8 +1908,8 @@ if(!isAOD_){
 	       cout<<"This photon candidate is an ECAL spike identified by Swiss Cross algorithm."<<endl;
 
             vector<float> stdCov = EcalClusterTools::covariances(seedClus,&(*barrelRecHits),&(*topology),&(*caloGeom));
-            vector<float> crysCov = EcalClusterTools::localCovariances(seedClus,&(*barrelRecHits),&(*topology));
-                                                                      // flagExcluded_,severitieExcluded_, sevLevel, 4.7);
+            vector<float> crysCov = EcalClusterTools::localCovariances(seedClus,&(*barrelRecHits),&(*topology),
+                                                                       flagsexclEB_,severitiesexclEB_, sevLevel, 4.7);
             pho_SigmaEtaPhi[x]   = sqrt(stdCov[1]);
             pho_SigmaIetaIphi[x] = sqrt(crysCov[1]);    
             pho_SigmaPhiPhi[x]   = sqrt(stdCov[2]);
@@ -1940,7 +1945,9 @@ if(!isAOD_){
 	     }
 
              vector<float> stdCov = EcalClusterTools::covariances(seedClus,&(*endcapRecHits),&(*topology),&(*caloGeom));
-             vector<float> crysCov = EcalClusterTools::localCovariances(seedClus,&(*endcapRecHits),&(*topology));
+             vector<float> crysCov = EcalClusterTools::localCovariances(seedClus,&(*endcapRecHits),&(*topology),
+                                                                         flagsexclEE_,severitiesexclEE_, sevLevel, 4.7);
+
              pho_SigmaEtaPhi[x]   = sqrt(stdCov[1]);
              pho_SigmaIetaIphi[x] = sqrt(crysCov[1]);   
              pho_SigmaPhiPhi[x]   = sqrt(stdCov[2]);
@@ -2986,14 +2993,9 @@ if(rungenjets_){
        iEvent.getByLabel(rechitELabel_,Erechit);
 
        edm::ESHandle<EcalSeverityLevelAlgo> sevlv_uc;
-       const EcalSeverityLevelAlgo* sevLevel_uc = 0;
+       iSetup.get<EcalSeverityLevelAlgoRcd>().get(sevlv_uc);
+       const EcalSeverityLevelAlgo* sevLevel_uc = sevlv_uc.product();
 
-       try {   iSetup.get<EcalSeverityLevelAlgoRcd>().get(sevlv_uc);
-               sevLevel_uc = sevlv_uc.product();
-              }            
-            catch(cms::Exception& e){
-              edm::LogError("Analyzer") << "EcalSeverityLevelAlgoRcd is not available!!! " << e.what();
-             }      
 
        //this will be needed later for swiss corss
        EcalClusterLazyTools lazyTool(iEvent, iSetup,rechitBLabel_, rechitELabel_ );
@@ -3119,7 +3121,7 @@ if(rungenjets_){
             vector<float> stdCov_uc = EcalClusterTools::covariances(seedClus,&(*barrelRecHits_uc),&(*topology),&(*caloGeom));
             vector<float> crysCov_uc = EcalClusterTools::localCovariances(seedClus,&(*barrelRecHits_uc),&(*topology),
                                                                           flagExcluded_,severitieExcluded_,
-                                                                           sevLevel_uc, 4.7);
+                                                                          sevLevel_uc, 4.7);
                                                                           
             ucpho_SigmaEtaPhi[x_uc]   = sqrt(stdCov_uc[1]);
             ucpho_SigmaIetaIphi[x_uc] = sqrt(crysCov_uc[1]);    
@@ -3156,7 +3158,9 @@ if(rungenjets_){
 	     }
 
              vector<float> stdCov_uc = EcalClusterTools::covariances(seedClus,&(*endcapRecHits_uc),&(*topology),&(*caloGeom));
-             vector<float> crysCov_uc = EcalClusterTools::localCovariances(seedClus,&(*endcapRecHits_uc),&(*topology));
+             vector<float> crysCov_uc = EcalClusterTools::localCovariances(seedClus,&(*endcapRecHits_uc),&(*topology),
+                                                                            flagExcluded_,severitieExcluded_,
+                                                                           sevLevel_uc, 4.7);
              ucpho_SigmaEtaPhi[x_uc]   = sqrt(stdCov_uc[1]);
              ucpho_SigmaIetaIphi[x_uc] = sqrt(crysCov_uc[1]);   
              ucpho_SigmaPhiPhi[x_uc]   = sqrt(stdCov_uc[2]);

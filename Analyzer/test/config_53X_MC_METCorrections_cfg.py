@@ -6,6 +6,9 @@ process.load("Configuration.Geometry.GeometryIdeal_cff")
 process.load("Configuration.StandardSequences.MagneticField_cff")
 process.load("Configuration.StandardSequences.FrontierConditions_GlobalTag_cff")
 process.load("FWCore.MessageLogger.MessageLogger_cfi")
+process.load("RecoLocalCalo.EcalRecAlgos.EcalSeverityLevelESProducer_cfi")
+from RecoEcal.EgammaClusterProducers.hybridSuperClusters_cfi import *
+from RecoEcal.EgammaClusterProducers.multi5x5BasicClusters_cfi import *
 
 ## global tag for >=CMSSW_533
 process.GlobalTag.globaltag = cms.string('START53_V18::All')
@@ -215,7 +218,11 @@ process.demo = cms.EDAnalyzer('Analyzer',
                                                            ),
                               #----goes to uncleaned collection
                               flagExcluded      = cms.untracked.vint32(),
-                              severitieExcluded = cms.untracked.vint32()
+                              severitieExcluded = cms.untracked.vint32(),
+                              RecHitFlagToBeExcludedEB = cleanedHybridSuperClusters.RecHitFlagToBeExcluded,
+                              RecHitSeverityToBeExcludedEB = cleanedHybridSuperClusters.RecHitSeverityToBeExcluded,
+                              RecHitFlagToBeExcludedEE = multi5x5BasicClustersCleaned.RecHitFlagToBeExcluded,
+                              RecHitSeverityToBeExcludedEE = cleanedHybridSuperClusters.RecHitSeverityToBeExcluded
                               )
 
 

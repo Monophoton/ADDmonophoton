@@ -9,6 +9,9 @@ process.load("Configuration.Geometry.GeometryIdeal_cff")
 process.load("Configuration.StandardSequences.MagneticField_cff")
 process.load("Configuration.StandardSequences.FrontierConditions_GlobalTag_cff")
 process.load("FWCore.MessageLogger.MessageLogger_cfi")
+process.load("RecoLocalCalo.EcalRecAlgos.EcalSeverityLevelESProducer_cfi")
+from RecoEcal.EgammaClusterProducers.hybridSuperClusters_cfi import *
+from RecoEcal.EgammaClusterProducers.multi5x5BasicClusters_cfi import *
 
 ##--hcal laser filter
 process.load("EventFilter.HcalRawToDigi.hcallasereventfilter2012_cfi")
@@ -266,7 +269,11 @@ process.demo = cms.EDAnalyzer('Analyzer',
                                                            ),
                               #----goes to uncleaned collection
                               flagExcluded      = cms.untracked.vint32(),
-                              severitieExcluded = cms.untracked.vint32()                              
+                              severitieExcluded = cms.untracked.vint32(),
+                              RecHitFlagToBeExcludedEB = cleanedHybridSuperClusters.RecHitFlagToBeExcluded,
+                              RecHitSeverityToBeExcludedEB = cleanedHybridSuperClusters.RecHitSeverityToBeExcluded,
+                              RecHitFlagToBeExcludedEE = multi5x5BasicClustersCleaned.RecHitFlagToBeExcluded,
+                              RecHitSeverityToBeExcludedEE = cleanedHybridSuperClusters.RecHitSeverityToBeExcluded                             
                               )
 
 
@@ -275,7 +282,7 @@ process.demo = cms.EDAnalyzer('Analyzer',
 #All paths are here
 process.p = cms.Path(
     process.AllMETFilters *
-   # process.ecalLaserCorrFilter*
+   #process.ecalLaserCorrFilter*
     process.fastjetSequence25 *
     process.ak5PFJets *
     process.phoPFIso *
@@ -291,6 +298,6 @@ process.p = cms.Path(
 process.MessageLogger.cerr.FwkReport.reportEvery = cms.untracked.int32(1)
 
 # process all the events
-process.maxEvents = cms.untracked.PSet( input = cms.untracked.int32(50) )
+process.maxEvents = cms.untracked.PSet( input = cms.untracked.int32(5) )
 
 

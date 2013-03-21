@@ -127,6 +127,15 @@ class Analyzer : public edm::EDAnalyzer {
   //pfiso
   edm::InputTag inputTagPhotons_, inputTagUCPhotons_;
   std::vector<edm::InputTag> inputTagIsoValPhotonsPFId_, inputTagIsoValUCPhotonsPFId_;
+  const std::vector<std::string> flagnamesEB;
+  const std::vector<std::string> flagnamesEE;
+  const std::vector<std::string> severitynamesEB;
+  const std::vector<std::string> severitynamesEE;
+ 
+  std::vector<int> flagsexclEB_;
+  std::vector<int> flagsexclEE_;
+  std::vector<int> severitiesexclEB_;
+  std::vector<int> severitiesexclEE_;
   std::vector<int> severitieExcluded_;
   std::vector<int> flagExcluded_;
 
